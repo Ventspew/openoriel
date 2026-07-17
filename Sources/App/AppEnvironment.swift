@@ -23,6 +23,7 @@ final class AppEnvironment {
     var showPrivacyShield = false
     var showDownloads = false
     var showFindInPage = false
+    var showSettings = false
     var findQuery = ""
 
     var activeTab: BrowserTab? { tabs.activeTab }

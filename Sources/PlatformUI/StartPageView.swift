@@ -34,20 +34,15 @@ struct StartPageView: View {
                     ])
                 }
 
-                HStack(spacing: 12) {
-                    Button {
-                        tab.openProductSite()
-                    } label: {
-                        Label(BrowserConstants.productWebsiteHost, systemImage: "globe")
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) {
+                        productButton
+                        publisherButton
                     }
-                    .buttonStyle(.borderedProminent)
-
-                    Button {
-                        tab.openPublisherSite()
-                    } label: {
-                        Label("Made by \(BrowserConstants.publisherName)", systemImage: "building.2")
+                    VStack(spacing: 10) {
+                        productButton
+                        publisherButton
                     }
-                    .buttonStyle(.bordered)
                 }
                 .font(.subheadline.weight(.semibold))
 
@@ -65,6 +60,28 @@ struct StartPageView: View {
             )
             .ignoresSafeArea()
         }
+    }
+
+    private var productButton: some View {
+        Button {
+            tab.openProductSite()
+        } label: {
+            Label(BrowserConstants.productWebsiteHost, systemImage: "globe")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .accessibilityHint("Opens the official Oriel website")
+    }
+
+    private var publisherButton: some View {
+        Button {
+            tab.openPublisherSite()
+        } label: {
+            Label("Made by \(BrowserConstants.publisherName)", systemImage: "building.2")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .accessibilityHint("Opens the publisher website")
     }
 
     private var header: some View {

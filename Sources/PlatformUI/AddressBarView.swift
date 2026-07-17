@@ -45,6 +45,7 @@ struct AddressBarView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: OrielTheme.controlRadius, style: .continuous))
+        .accessibilityElement(children: .contain)
     }
 
     private var securitySymbol: String {

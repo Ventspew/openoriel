@@ -37,6 +37,8 @@ xcodebuild -scheme Oriel -destination 'platform=macOS' build
 - [Architecture](docs/ARCHITECTURE.md)
 - [Privacy limitations](docs/PRIVACY_LIMITATIONS.md)
 - [Entitlements](docs/ENTITLEMENTS.md)
+- [App Store readiness](docs/APP_STORE_READINESS.md)
+- [QA checklist](docs/QA_CHECKLIST.md)
 
 ## Non-goals
 

@@ -2,6 +2,8 @@ import SwiftUI
 
 struct BrowserShellView: View {
     @Environment(AppEnvironment.self) private var environment
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         @Bindable var environment = environment
@@ -12,69 +14,64 @@ struct BrowserShellView: View {
                 #if os(macOS)
                 macShell(tab: tab, environment: environment)
                 #else
-                iosShell(tab: tab, environment: environment)
+                if horizontalSizeClass == .regular {
+                    iPadShell(tab: tab, environment: environment)
+                } else {
+                    iPhoneShell(tab: tab, environment: environment)
+                }
                 #endif
             } else {
-                ProgressView()
+                ProgressView("Starting Oriel…")
+                    .accessibilityLabel("Starting Oriel")
             }
         }
         .sheet(isPresented: $environment.showAbout) {
             AboutOrielView()
-                #if os(macOS)
-                .frame(width: 420, height: 480)
-                #endif
+                .orielSheetChrome()
         }
         .sheet(isPresented: $environment.showTabOverview) {
             TabOverviewView()
-                #if os(macOS)
-                .frame(minWidth: 520, minHeight: 420)
-                #endif
+                .orielSheetChrome(preferLargeOnCompact: true)
         }
         .sheet(isPresented: $environment.showBookmarks) {
             BookmarksView()
-                #if os(macOS)
-                .frame(minWidth: 420, minHeight: 480)
-                #endif
+                .orielSheetChrome()
         }
         .sheet(isPresented: $environment.showHistory) {
             HistoryView()
-                #if os(macOS)
-                .frame(minWidth: 420, minHeight: 480)
-                #endif
+                .orielSheetChrome()
         }
         .sheet(isPresented: $environment.showPrivacyShield) {
             PrivacyShieldView()
-                #if os(macOS)
-                .frame(minWidth: 440, minHeight: 560)
-                #endif
+            #if os(macOS)
+                .frame(minWidth: 460, idealWidth: 520, minHeight: 640)
+            #endif
         }
         .sheet(isPresented: $environment.showDownloads) {
             DownloadsView()
-                #if os(macOS)
-                .frame(minWidth: 480, minHeight: 420)
-                #endif
+                .orielSheetChrome()
+        }
+        .sheet(isPresented: $environment.showSettings) {
+            SettingsView()
+                .orielSheetChrome()
         }
         .onChange(of: environment.settings.restorePreviousSession) { _, newValue in
             environment.sessionStore.restorePreviousSession = newValue
         }
     }
 
+    // MARK: - iPhone (compact)
+
     #if os(iOS)
     @ViewBuilder
-    private func iosShell(tab: BrowserTab, environment: AppEnvironment) -> some View {
+    private func iPhoneShell(tab: BrowserTab, environment: AppEnvironment) -> some View {
         @Bindable var environment = environment
         VStack(spacing: 0) {
             if tab.isPrivate { privateBanner }
             progressBar(for: tab)
             content(for: tab, environment: environment)
             if environment.showFindInPage {
-                FindInPageBar(
-                    query: $environment.findQuery,
-                    onSubmit: { environment.performFind(forward: true) },
-                    onNext: { environment.performFind(forward: true) },
-                    onPrevious: { environment.performFind(forward: false) },
-                    onClose: { environment.closeFind() }
-                )
+                findBar(environment: environment)
             }
 
             VStack(spacing: 8) {
@@ -84,32 +81,93 @@ struct BrowserShellView: View {
                     hideKeyboard()
                 }
 
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     NavigationControlsView(tab: tab)
-                    Spacer(minLength: 8)
-                    shieldButton(environment: environment)
-                    chromeMenu(environment: environment, tab: tab)
-                    Button {
-                        environment.showTabOverview = true
-                    } label: {
-                        Label("\(environment.tabs.tabs.count)", systemImage: "square.on.square")
-                            .labelStyle(.titleAndIcon)
-                    }
-                    .accessibilityLabel("Tabs")
+                    Spacer(minLength: 4)
+                    trailingChrome(environment: environment, tab: tab, compact: true)
                 }
-                .padding(.horizontal, 4)
             }
-            .padding(.horizontal, OrielTheme.chromePadding)
+            .padding(.horizontal, OrielLayout.phoneChromePadding)
             .padding(.top, 8)
-            .padding(.bottom, 10)
+            .padding(.bottom, 8)
             .background(.bar)
+        }
+    }
+
+    // MARK: - iPad (regular width)
+
+    @ViewBuilder
+    private func iPadShell(tab: BrowserTab, environment: AppEnvironment) -> some View {
+        @Bindable var environment = environment
+        VStack(spacing: 0) {
+            if tab.isPrivate { privateBanner }
+
+            HStack(spacing: 12) {
+                NavigationControlsView(tab: tab)
+                AddressBarView(tab: tab) {
+                    tab.searchEngine = environment.settings.searchEngine
+                    tab.submitAddressBar()
+                    hideKeyboard()
+                }
+                trailingChrome(environment: environment, tab: tab, compact: false)
+            }
+            .padding(.horizontal, OrielLayout.padChromePadding)
+            .padding(.vertical, 10)
+            .background(.bar)
+
+            progressBar(for: tab)
+            content(for: tab, environment: environment)
+            if environment.showFindInPage {
+                findBar(environment: environment)
+            }
         }
     }
 
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
+
+    @ViewBuilder
+    private func trailingChrome(environment: AppEnvironment, tab: BrowserTab, compact: Bool) -> some View {
+        HStack(spacing: compact ? 10 : 14) {
+            shieldButton(environment: environment)
+            if !compact {
+                Button {
+                    environment.showDownloads = true
+                } label: {
+                    Image(systemName: environment.downloads.hasActiveDownloads ? "arrow.down.circle.fill" : "arrow.down.circle")
+                }
+                .accessibilityLabel("Downloads")
+            }
+            chromeMenu(environment: environment, tab: tab)
+            Button {
+                environment.showTabOverview = true
+            } label: {
+                if compact {
+                    Image(systemName: "square.on.square")
+                        .accessibilityLabel("Tabs, \(environment.tabs.tabs.count)")
+                } else {
+                    Label("\(environment.tabs.tabs.count)", systemImage: "square.on.square")
+                }
+            }
+            .accessibilityLabel("Tabs")
+            .accessibilityValue("\(environment.tabs.tabs.count)")
+        }
+    }
+
+    private func findBar(environment: AppEnvironment) -> some View {
+        @Bindable var environment = environment
+        return FindInPageBar(
+            query: $environment.findQuery,
+            onSubmit: { environment.performFind(forward: true) },
+            onNext: { environment.performFind(forward: true) },
+            onPrevious: { environment.performFind(forward: false) },
+            onClose: { environment.closeFind() }
+        )
+    }
     #endif
+
+    // MARK: - macOS
 
     #if os(macOS)
     @ViewBuilder
@@ -197,6 +255,8 @@ struct BrowserShellView: View {
                         .background(selected ? Color.accentColor.opacity(0.18) : Color.clear, in: Capsule())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(item.displayTitle)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
                 }
             }
             .padding(.horizontal, 10)
@@ -206,10 +266,14 @@ struct BrowserShellView: View {
     }
     #endif
 
+    // MARK: - Shared
+
     private var privateBanner: some View {
-        Text("Private Tab — history and session restore are off for this tab")
+        Text("Private Tab — history and session restore are off")
             .font(.caption.weight(.medium))
+            .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
+            .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(Color.purple.opacity(0.18))
             .accessibilityLabel("Private browsing tab")
@@ -222,6 +286,7 @@ struct BrowserShellView: View {
             Image(systemName: environment.privacy.contentBlockingEnabled ? "shield.lefthalf.filled" : "shield.slash")
         }
         .accessibilityLabel("Privacy Shields")
+        .accessibilityHint("Shows tracker blocking, HTTPS upgrades, and site permissions")
         .help("Privacy Shields")
     }
 
@@ -249,10 +314,8 @@ struct BrowserShellView: View {
 
             Divider()
 
-            Button("Find in Page…") {
-                environment.showFindInPage = true
-            }
-            .disabled(tab.isShowingStartPage)
+            Button("Find in Page…") { environment.showFindInPage = true }
+                .disabled(tab.isShowingStartPage)
 
             Button(tab.requestsDesktopSite ? "Request Mobile Website" : "Request Desktop Website") {
                 tab.toggleDesktopSite()
@@ -268,6 +331,7 @@ struct BrowserShellView: View {
             Button("History") { environment.showHistory = true }
             Button("Downloads") { environment.showDownloads = true }
             Button("Shields") { environment.showPrivacyShield = true }
+            Button("Settings") { environment.showSettings = true }
 
             Divider()
 
@@ -279,7 +343,6 @@ struct BrowserShellView: View {
         .accessibilityLabel("More")
     }
 
-    /// Keep WKWebView mounted so Home does not wipe back/forward history.
     @ViewBuilder
     private func content(for tab: BrowserTab, environment: AppEnvironment) -> some View {
         let showStart = tab.isShowingStartPage && tab.navigation.lastErrorMessage == nil
@@ -306,9 +369,11 @@ struct BrowserShellView: View {
             .id(tab.id)
             .opacity(showStart || showError ? 0 : 1)
             .allowsHitTesting(!(showStart || showError))
+            .accessibilityHidden(showStart || showError)
 
             if showStart {
                 StartPageView(tab: tab)
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
             } else if let message = tab.navigation.lastErrorMessage {
                 ErrorPageView(
                     message: message,
@@ -318,6 +383,7 @@ struct BrowserShellView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: showStart)
     }
 
     @ViewBuilder
@@ -327,9 +393,28 @@ struct BrowserShellView: View {
                 .progressViewStyle(.linear)
                 .tint(Color.accentColor)
                 .frame(height: 2)
-                .animation(.easeOut(duration: 0.15), value: tab.navigation.estimatedProgress)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: tab.navigation.estimatedProgress)
+                .accessibilityLabel("Loading")
+                .accessibilityValue("\(Int(tab.navigation.estimatedProgress * 100)) percent")
         } else {
             Color.clear.frame(height: 2)
         }
+    }
+}
+
+// MARK: - Sheet presentation helpers
+
+private extension View {
+    @ViewBuilder
+    func orielSheetChrome(preferLargeOnCompact: Bool = false) -> some View {
+        #if os(iOS)
+        self
+            .presentationDetents(preferLargeOnCompact ? [.large] : [.medium, .large])
+            .presentationDragIndicator(.visible)
+        #elseif os(macOS)
+        self.frame(minWidth: 420, minHeight: 480)
+        #else
+        self
+        #endif
     }
 }

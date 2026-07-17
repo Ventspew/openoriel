@@ -103,6 +103,11 @@ struct OrielApp: App {
                 }
                 .keyboardShortcut("i", modifiers: [.command, .shift])
 
+                Button("Settings…") {
+                    environment.showSettings = true
+                }
+                .keyboardShortcut(",", modifiers: .command)
+
                 Button("Bookmark This Page") {
                     environment.bookmarkActivePage()
                 }

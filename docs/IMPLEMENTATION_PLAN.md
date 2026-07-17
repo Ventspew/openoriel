@@ -73,17 +73,17 @@ Success criteria: project builds for iOS Simulator and macOS; user can type a UR
 | **4** | Downloads, permissions, find-in-page, desktop site, shortcuts | Feature-complete MVP |
 | **5** | Accessibility, tests, performance, App Store readiness | Ship checklist |
 
-## Phase 4 status
+## Phase 5 status
 
 Implemented:
 
-- Navigation chrome fix: WebView stays mounted under the start page so Home/Back/Forward keep history
-- Clearer back/forward/home/reload button disabled states and hit targets
-- Downloads manager + Downloads UI (cancel / retry)
-- Find in page bar (`⌘F`)
-- Request Desktop / Mobile Website
-- Per-site camera/mic/location permission decisions in Shields
-- Extra keyboard shortcuts (back/forward/home/find/downloads)
+- Shields UI rewrite for readable small/large screens (stacked stats, segmented permissions, scrollable list)
+- Adaptive chrome: iPhone bottom bar, iPad top bar, Mac toolbar
+- Sheet detents for iPhone/iPad
+- Settings sheet (search engine + session restore)
+- Accessibility labels/hints + Reduce Motion awareness
+- App Store readiness + QA checklist docs
+- Extra UI test for Shields sheet
 
 ## Non-goals (all phases)
 

@@ -23,10 +23,11 @@ final class Phase4FeatureTests: XCTestCase {
     func testPermissionDefaultsToAsk() async {
         await MainActor.run {
             let manager = WebsitePermissionManager()
-            XCTAssertEqual(manager.decision(for: "unique-test-host.example", permission: .camera), .ask)
-            manager.setDecision(.allow, for: "unique-test-host.example", permission: .camera)
-            XCTAssertEqual(manager.decision(for: "unique-test-host.example", permission: .camera), .allow)
-            XCTAssertEqual(manager.grantedPermissions(for: "unique-test-host.example"), [.camera])
+            let host = "test-\(UUID().uuidString).example"
+            XCTAssertEqual(manager.decision(for: host, permission: .camera), .ask)
+            manager.setDecision(.allow, for: host, permission: .camera)
+            XCTAssertEqual(manager.decision(for: host, permission: .camera), .allow)
+            XCTAssertEqual(manager.grantedPermissions(for: host), [.camera])
         }
     }
 }

@@ -3,13 +3,18 @@ import SwiftUI
 /// Back / forward / reload / home controls with clear disabled states and hit targets.
 struct NavigationControlsView: View {
     @Bindable var tab: BrowserTab
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     private var isStartPage: Bool {
         URLParser.isStartPage(tab.navigation.url)
     }
 
+    private var buttonSize: CGFloat {
+        horizontalSizeClass == .compact ? OrielLayout.compactNavButtonSize : OrielLayout.navButtonSize
+    }
+
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: horizontalSizeClass == .compact ? 2 : 6) {
             navButton(
                 systemName: "chevron.backward",
                 label: "Back",
@@ -57,13 +62,14 @@ struct NavigationControlsView: View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.body.weight(.semibold))
-                .frame(width: 36, height: 36)
+                .frame(width: buttonSize, height: buttonSize)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.borderless)
         .disabled(!enabled)
         .opacity(enabled ? 1 : 0.35)
         .accessibilityLabel(label)
+        .accessibilityHint(enabled ? "" : "Unavailable")
         .help(label)
     }
 }
