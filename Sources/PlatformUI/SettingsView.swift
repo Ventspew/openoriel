@@ -22,7 +22,7 @@ struct SettingsView: View {
                                     Text(engine.displayName)
                                         .foregroundStyle(.primary)
                                     if engine == .google {
-                                        Text("Web search via Google")
+                                        Text("Web search + Google Account sign-in")
                                             .font(.footnote)
                                             .foregroundStyle(.secondary)
                                     } else if engine == .duckDuckGo {
@@ -63,6 +63,15 @@ struct SettingsView: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                     .accessibilityLabel("Appearance")
+                }
+
+                Section {
+                    Toggle("Enable JavaScript by default", isOn: $settings.javaScriptEnabledByDefault)
+                } header: {
+                    Text("JavaScript")
+                } footer: {
+                    Text("New tabs use this default. Use the JS button in the toolbar to toggle the current tab instantly (iPhone, iPad, and Mac).")
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Section("Homepage") {

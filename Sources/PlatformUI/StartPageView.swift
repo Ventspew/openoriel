@@ -94,6 +94,19 @@ struct StartPageView: View {
 
             enginePicker
 
+            if activeEngine == .google {
+                Button {
+                    if let url = URL(string: "https://accounts.google.com/signin") {
+                        tab.load(url)
+                    }
+                } label: {
+                    Label("Sign in to Google Account", systemImage: "person.crop.circle")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .accessibilityHint("Opens Google Account sign-in in this tab. Use a normal tab, not Private.")
+            }
+
             HStack {
                 Spacer()
                 Button("Settings") {

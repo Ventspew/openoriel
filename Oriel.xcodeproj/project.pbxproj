@@ -15,10 +15,13 @@
 		0B37DDC67D87E467B4FBF91E /* OrielLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964B007F398281F78B5719E7 /* OrielLayout.swift */; };
 		1ADCF553BB2449889BF1E2A5 /* BrowserShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9596246F720EF499196A3B2 /* BrowserShellView.swift */; };
 		1D1FE1CB23854CA116937A27 /* URLParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AE1527CE617BF10774B6D67 /* URLParser.swift */; };
+		1D254871364C1678CB16A207 /* AuthPopupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEDB4889A8C4E62AD9FED133 /* AuthPopupView.swift */; };
 		24661EE7DF1F76D44B03023D /* BrowserConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = F77C0F612CCA391C44840B85 /* BrowserConstants.swift */; };
 		26759CC73B147E486F86A151 /* DownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22D99CFADC7A4D062B595BC /* DownloadsView.swift */; };
+		2C979EAC1971EEC277DA434A /* AuthHostAllowlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A5E7802EEE2452CAFA9B91E /* AuthHostAllowlist.swift */; };
 		31CD8FE1951535233E663D49 /* NavigationControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 899DAF18D972B3BA4A1EA5EC /* NavigationControlsView.swift */; };
 		31E51D1FB99CE01A6477B29C /* WebViewCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0135155E8C8C82FFAD7A65B /* WebViewCoordinator.swift */; };
+		349DFBD51AABBBF5967555B1 /* AuthAndJavaScriptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 011CB4F0CA40D216F227077B /* AuthAndJavaScriptTests.swift */; };
 		4DBA4F9AF3E7A1D14A5BE719 /* TabOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E57EB5D6608140050A9EF32F /* TabOverviewView.swift */; };
 		50162F7C67210582B090D16E /* JSONFileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14528446EC763702DBF33729 /* JSONFileStore.swift */; };
 		51F92CF8E35B68BD2D6F142E /* HTTPSUpgrade.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91FADAFD7D5FF406A6D6E367 /* HTTPSUpgrade.swift */; };
@@ -75,6 +78,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		011CB4F0CA40D216F227077B /* AuthAndJavaScriptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthAndJavaScriptTests.swift; sourceTree = "<group>"; };
 		02CBC7705D9621792C8BF524 /* ErrorPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorPageView.swift; sourceTree = "<group>"; };
 		0F64E5EADB8EC24B65AAD5FC /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		1274D8E8A0638DAF2DBD4CD3 /* Oriel.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Oriel.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -82,6 +86,7 @@
 		14528446EC763702DBF33729 /* JSONFileStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONFileStore.swift; sourceTree = "<group>"; };
 		161F0A55C73E58B7E28FEF17 /* AddressBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressBarView.swift; sourceTree = "<group>"; };
 		184A1F63A6D4A135C3297AFE /* OrielUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OrielUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A5E7802EEE2452CAFA9B91E /* AuthHostAllowlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthHostAllowlist.swift; sourceTree = "<group>"; };
 		2217E60267513166ABDC37AF /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		2CAA503AA1BB5B6FE0606DF0 /* URLParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLParserTests.swift; sourceTree = "<group>"; };
 		3836F6EAEB7B99DF994A4A21 /* OrielTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrielTheme.swift; sourceTree = "<group>"; };
@@ -109,6 +114,7 @@
 		B1809F1262455BCB12BC805A /* BrowserWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserWebView.swift; sourceTree = "<group>"; };
 		B809DD2283CD4045BA7442C0 /* OrielTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OrielTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B8DE8EFCF1E30C51C131D42F /* AboutOrielView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutOrielView.swift; sourceTree = "<group>"; };
+		BEDB4889A8C4E62AD9FED133 /* AuthPopupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthPopupView.swift; sourceTree = "<group>"; };
 		C1808B252AD7CA5B9316D569 /* NavigationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationState.swift; sourceTree = "<group>"; };
 		C223CB51AB8532708D4195C6 /* NavigationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationPolicy.swift; sourceTree = "<group>"; };
 		C3BEFD3827F6D61B94816542 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
@@ -202,6 +208,7 @@
 		92573FB191B89EF740616840 /* OrielTests */ = {
 			isa = PBXGroup;
 			children = (
+				011CB4F0CA40D216F227077B /* AuthAndJavaScriptTests.swift */,
 				80CF124D5D1BB84658AB30EF /* Phase2StoreTests.swift */,
 				A45097DEF5699530F969BE06 /* Phase3PrivacyTests.swift */,
 				D80B0019A1802BBCD08249E2 /* Phase4FeatureTests.swift */,
@@ -222,6 +229,7 @@
 		B072441E5A7647BC0FC8D6E1 /* Privacy */ = {
 			isa = PBXGroup;
 			children = (
+				1A5E7802EEE2452CAFA9B91E /* AuthHostAllowlist.swift */,
 				91FADAFD7D5FF406A6D6E367 /* HTTPSUpgrade.swift */,
 				EEAD19F44096849D14681327 /* PrivacySettings.swift */,
 				D27573BAEF1DEFB9720D8056 /* PrivacyStats.swift */,
@@ -321,6 +329,7 @@
 			children = (
 				B8DE8EFCF1E30C51C131D42F /* AboutOrielView.swift */,
 				161F0A55C73E58B7E28FEF17 /* AddressBarView.swift */,
+				BEDB4889A8C4E62AD9FED133 /* AuthPopupView.swift */,
 				92DEC41377429AF5865F7209 /* BookmarksView.swift */,
 				C9596246F720EF499196A3B2 /* BrowserShellView.swift */,
 				E22D99CFADC7A4D062B595BC /* DownloadsView.swift */,
@@ -460,6 +469,8 @@
 				EF2FF8C6FB1DC6C617AEDFAA /* AboutOrielView.swift in Sources */,
 				68C0D3A56B2B78146A91293E /* AddressBarView.swift in Sources */,
 				08347FFA0F20DF4B5C438EA3 /* AppEnvironment.swift in Sources */,
+				2C979EAC1971EEC277DA434A /* AuthHostAllowlist.swift in Sources */,
+				1D254871364C1678CB16A207 /* AuthPopupView.swift in Sources */,
 				FC6D97CF2D1D3BA20807E11A /* Bookmark.swift in Sources */,
 				86F277DDB86FD2CAC07B8036 /* BookmarkStore.swift in Sources */,
 				96B6BC4B7E61B59656BCFED2 /* BookmarksView.swift in Sources */,
@@ -512,6 +523,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				349DFBD51AABBBF5967555B1 /* AuthAndJavaScriptTests.swift in Sources */,
 				64CD74DA1E3F121404C0DA82 /* Phase2StoreTests.swift in Sources */,
 				D474FA419C43BB337A404141 /* Phase3PrivacyTests.swift in Sources */,
 				03A58F71719329648F6B3590 /* Phase4FeatureTests.swift in Sources */,

@@ -10,7 +10,7 @@ struct SiteShieldSettings: Codable, Equatable, Sendable {
 struct PrivacySettingsSnapshot: Codable, Equatable, Sendable {
     var contentBlockingEnabled: Bool = true
     var httpsUpgradeEnabled: Bool = true
-    var blockThirdPartyCookies: Bool = true
+    var blockThirdPartyCookies: Bool = false
     var siteSettings: [String: SiteShieldSettings] = [:]
 }
 
@@ -42,7 +42,8 @@ final class PrivacySettings {
         } else {
             contentBlockingEnabled = true
             httpsUpgradeEnabled = true
-            blockThirdPartyCookies = true
+            // Off by default so Google Account and similar OAuth popups can keep session cookies.
+            blockThirdPartyCookies = false
             siteSettings = [:]
         }
     }

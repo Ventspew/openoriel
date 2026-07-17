@@ -11,12 +11,15 @@ typealias PlatformViewRepresentable = NSViewRepresentable
 struct BrowserWebView: PlatformViewRepresentable {
     let tab: BrowserTab
     var contentRuleList: WKContentRuleList?
-    var blockThirdPartyCookies: Bool = true
+    var blockThirdPartyCookies: Bool = false
     var contentBlockingEnabled: Bool = true
     var matchesBlockedHint: (URL) -> Bool = { _ in false }
     var onBlockedNavigation: () -> Void = {}
     var onDownload: ((URL, String?) -> Void)?
     var permissionManager: WebsitePermissionManager?
+    var onPopupCreated: ((WKWebView) -> Void)?
+    var onPopupClosed: ((WKWebView) -> Void)?
+    var onPopupTitleChanged: ((String?) -> Void)?
 
     #if os(iOS)
     func makeUIView(context: Context) -> WKWebView {
@@ -43,7 +46,9 @@ struct BrowserWebView: PlatformViewRepresentable {
             matchesBlockedHint: matchesBlockedHint,
             onBlockedNavigation: onBlockedNavigation,
             onDownload: onDownload,
-            permissionManager: permissionManager
+            permissionManager: permissionManager,
+            onPopupCreated: onPopupCreated,
+            onPopupClosed: onPopupClosed
         )
     }
 
@@ -52,8 +57,10 @@ struct BrowserWebView: PlatformViewRepresentable {
         configuration.websiteDataStore = tab.isPrivate
             ? .nonPersistent()
             : .default()
-        configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+        configuration.defaultWebpagePreferences.allowsContentJavaScript = tab.javaScriptEnabled
         configuration.preferences.isElementFullscreenEnabled = true
+        // Allow window.open / Google account chooser popups.
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
 
         if contentBlockingEnabled, let contentRuleList {
             configuration.userContentController.add(contentRuleList)
@@ -72,6 +79,7 @@ struct BrowserWebView: PlatformViewRepresentable {
         }
 
         context.coordinator.observe(webView)
+        context.coordinator.onPopupTitleChanged = onPopupTitleChanged
         tab.webView = webView
         tab.refreshNavigationChrome()
 
@@ -92,6 +100,11 @@ struct BrowserWebView: PlatformViewRepresentable {
         context.coordinator.onBlockedNavigation = onBlockedNavigation
         context.coordinator.onDownload = onDownload
         context.coordinator.permissionManager = permissionManager
+        context.coordinator.onPopupCreated = onPopupCreated
+        context.coordinator.onPopupClosed = onPopupClosed
+        context.coordinator.onPopupTitleChanged = onPopupTitleChanged
+
+        webView.configuration.defaultWebpagePreferences.allowsContentJavaScript = tab.javaScriptEnabled
 
         let desiredUA = tab.requestsDesktopSite ? BrowserConstants.desktopUserAgent : nil
         if webView.customUserAgent != desiredUA {

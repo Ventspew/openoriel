@@ -63,6 +63,11 @@ final class BrowserSettings {
         didSet { defaults.set(homepageURLString, forKey: homepageKey) }
     }
 
+    /// Default for new tabs; existing tabs keep their own toggle until changed.
+    var javaScriptEnabledByDefault: Bool {
+        didSet { defaults.set(javaScriptEnabledByDefault, forKey: javaScriptKey) }
+    }
+
     var homepageURL: URL {
         if let url = URL(string: homepageURLString), url.scheme != nil {
             return url
@@ -76,6 +81,7 @@ final class BrowserSettings {
     private let appearanceKey = "oriel.appearance"
     private let newTabBehaviorKey = "oriel.newTabBehavior"
     private let homepageKey = "oriel.homepageURL"
+    private let javaScriptKey = "oriel.javaScriptEnabled"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -104,6 +110,11 @@ final class BrowserSettings {
         }
         self.homepageURLString = defaults.string(forKey: homepageKey)
             ?? BrowserConstants.productWebsiteURL.absoluteString
+        if defaults.object(forKey: javaScriptKey) == nil {
+            self.javaScriptEnabledByDefault = true
+        } else {
+            self.javaScriptEnabledByDefault = defaults.bool(forKey: javaScriptKey)
+        }
     }
 
     private func persistSearchEngine() {

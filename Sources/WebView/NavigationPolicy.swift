@@ -27,6 +27,7 @@ enum NavigationPolicy {
 
         if context.contentBlockingEnabled,
            navigationAction.targetFrame?.isMainFrame == false,
+           !AuthHostAllowlist.shouldBypassContentBlocking(for: url),
            context.matchesBlockedHint(url) {
             context.onBlocked()
             return .cancel

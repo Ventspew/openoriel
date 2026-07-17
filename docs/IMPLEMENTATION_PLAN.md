@@ -91,6 +91,8 @@ Implemented:
 
 - Explicit search-engine choice (DuckDuckGo, **Google**, Bing, Ecosia) on start page + Settings
 - Oriel-branded start-page search field (opens the selected provider; no own index)
+- Google Account sign-in: real OAuth popup windows, auth-host allowlist, Sign in shortcut
+- Toolbar **JS** toggle (iPhone / iPad / Mac) + Settings default for new tabs
 - Google searches use web-results params (`udm=14`) for a calmer results page
 - Address bar placeholder shows the active engine (“Search with Google…”)
 - Settings gear in chrome; appearance (system/light/dark)

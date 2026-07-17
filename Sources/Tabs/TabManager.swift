@@ -18,6 +18,8 @@ final class TabManager {
     var searchEngine: SearchEngine
     var onTabFinishedNavigation: ((BrowserTab) -> Void)?
     var onSessionChanged: (() -> Void)?
+    /// Supplies the default JavaScript preference for newly created tabs.
+    var javaScriptEnabledProvider: (() -> Bool)?
 
     var activeTab: BrowserTab? {
         guard let activeTabID else { return tabs.first }
@@ -43,6 +45,7 @@ final class TabManager {
                     searchEngine: searchEngine,
                     initialURL: url
                 )
+                tab.javaScriptEnabled = javaScriptEnabledProvider?() ?? true
                 tab.navigation.title = item.title
                 return tab
             }
@@ -169,6 +172,7 @@ final class TabManager {
 
     private func makeTab(url: URL? = nil, isPrivate: Bool = false) -> BrowserTab {
         let tab = BrowserTab(isPrivate: isPrivate, searchEngine: searchEngine, initialURL: url)
+        tab.javaScriptEnabled = javaScriptEnabledProvider?() ?? true
         tab.onNavigationFinished = { [weak self] finished in
             self?.onTabFinishedNavigation?(finished)
             self?.notifySessionChanged()

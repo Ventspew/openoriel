@@ -55,6 +55,10 @@ struct BrowserShellView: View {
             SettingsView()
                 .orielSheetChrome()
         }
+        .sheet(item: $environment.authPopup) { popup in
+            AuthPopupView(state: popup)
+                .orielSheetChrome(preferLargeOnCompact: true)
+        }
         .onChange(of: environment.settings.restorePreviousSession) { _, newValue in
             environment.sessionStore.restorePreviousSession = newValue
         }
@@ -130,6 +134,7 @@ struct BrowserShellView: View {
     @ViewBuilder
     private func trailingChrome(environment: AppEnvironment, tab: BrowserTab, compact: Bool) -> some View {
         HStack(spacing: compact ? 10 : 14) {
+            javaScriptButton(tab: tab)
             shieldButton(environment: environment)
             if !compact {
                 Button {
@@ -219,6 +224,8 @@ struct BrowserShellView: View {
 
                 shieldButton(environment: environment)
 
+                javaScriptButton(tab: tab)
+
                 Button {
                     environment.showSettings = true
                 } label: {
@@ -304,6 +311,36 @@ struct BrowserShellView: View {
         .help("Privacy Shields")
     }
 
+    private func javaScriptButton(tab: BrowserTab) -> some View {
+        Button {
+            tab.toggleJavaScript()
+        } label: {
+            Text("JS")
+                .font(.caption.weight(.bold))
+                .monospaced()
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(
+                    tab.javaScriptEnabled
+                        ? Color.accentColor.opacity(0.18)
+                        : Color.orange.opacity(0.22),
+                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                )
+                .foregroundStyle(tab.javaScriptEnabled ? Color.primary : Color.orange)
+                .overlay {
+                    if !tab.javaScriptEnabled {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(Color.orange.opacity(0.7), lineWidth: 1)
+                    }
+                }
+        }
+        .accessibilityLabel(tab.javaScriptEnabled ? "JavaScript on" : "JavaScript off")
+        .accessibilityHint("Toggles JavaScript for this tab and reloads the page")
+        .accessibilityValue(tab.javaScriptEnabled ? "Enabled" : "Disabled")
+        .help(tab.javaScriptEnabled ? "Disable JavaScript" : "Enable JavaScript")
+        .disabled(tab.isShowingStartPage)
+    }
+
     @ViewBuilder
     private func chromeMenu(environment: AppEnvironment, tab: BrowserTab) -> some View {
         Menu {
@@ -333,6 +370,11 @@ struct BrowserShellView: View {
 
             Button(tab.requestsDesktopSite ? "Request Mobile Website" : "Request Desktop Website") {
                 tab.toggleDesktopSite()
+            }
+            .disabled(tab.isShowingStartPage)
+
+            Button(tab.javaScriptEnabled ? "Disable JavaScript" : "Enable JavaScript") {
+                tab.toggleJavaScript()
             }
             .disabled(tab.isShowingStartPage)
 
@@ -389,7 +431,16 @@ struct BrowserShellView: View {
                     environment.downloads.enqueue(url: url, suggestedFileName: name)
                     environment.showDownloads = true
                 },
-                permissionManager: environment.permissions
+                permissionManager: environment.permissions,
+                onPopupCreated: { webView in
+                    environment.presentAuthPopup(webView)
+                },
+                onPopupClosed: { _ in
+                    environment.dismissAuthPopup()
+                },
+                onPopupTitleChanged: { title in
+                    environment.updateAuthPopupTitle(title)
+                }
             )
             .id(tab.id)
             .opacity(showStart || showError ? 0 : 1)

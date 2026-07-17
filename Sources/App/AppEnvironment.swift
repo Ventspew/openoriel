@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import WebKit
 #if os(iOS)
 import UIKit
 #elseif os(macOS)
@@ -30,6 +31,7 @@ final class AppEnvironment {
     var showFindInPage = false
     var showSettings = false
     var findQuery = ""
+    var authPopup: WebAuthPopupState?
 
     var activeTab: BrowserTab? { tabs.activeTab }
 
@@ -68,6 +70,9 @@ final class AppEnvironment {
         let snapshot = resolvedSession.load()
         let manager = TabManager(searchEngine: resolvedSettings.searchEngine, restoring: snapshot)
         self.tabs = manager
+        manager.javaScriptEnabledProvider = { [weak self] in
+            self?.settings.javaScriptEnabledByDefault ?? true
+        }
         manager.homepageProvider = { [weak self] in
             guard let self else { return nil }
             switch self.settings.newTabBehavior {
@@ -148,6 +153,20 @@ final class AppEnvironment {
         return url
     }
 
+    func presentAuthPopup(_ webView: WKWebView) {
+        authPopup = WebAuthPopupState(webView: webView, title: webView.title?.nilIfEmpty ?? "Sign in")
+    }
+
+    func updateAuthPopupTitle(_ title: String?) {
+        guard let title = title?.nilIfEmpty else { return }
+        authPopup?.title = title
+    }
+
+    func dismissAuthPopup() {
+        authPopup?.webView.stopLoading()
+        authPopup = nil
+    }
+
     func wireTabPrivacyHooks(for tab: BrowserTab? = nil) {
         let targets = tab.map { [$0] } ?? tabs.tabs
         for item in targets {
@@ -159,5 +178,12 @@ final class AppEnvironment {
                 self?.privacyStats.recordHTTPSUpgrade()
             }
         }
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }

@@ -79,5 +79,22 @@
     "action": {
       "type": "block"
     }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*",
+      "if-domain": [
+        "*accounts.google.com",
+        "*myaccount.google.com",
+        "*accounts.youtube.com",
+        "*oauth2.googleapis.com",
+        "*appleid.apple.com",
+        "*login.live.com",
+        "*login.microsoftonline.com"
+      ]
+    },
+    "action": {
+      "type": "ignore-previous-rules"
+    }
   }
 ]

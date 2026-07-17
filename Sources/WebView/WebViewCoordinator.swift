@@ -9,8 +9,11 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     var onBlockedNavigation: () -> Void
     var onDownload: ((URL, String?) -> Void)?
     var permissionManager: WebsitePermissionManager?
+    var onPopupCreated: ((WKWebView) -> Void)?
+    var onPopupClosed: ((WKWebView) -> Void)?
 
     private var observations: [NSKeyValueObservation] = []
+    private var popupTitleObservation: NSKeyValueObservation?
 
     init(
         tab: BrowserTab,
@@ -18,7 +21,9 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         matchesBlockedHint: @escaping (URL) -> Bool = { _ in false },
         onBlockedNavigation: @escaping () -> Void = {},
         onDownload: ((URL, String?) -> Void)? = nil,
-        permissionManager: WebsitePermissionManager? = nil
+        permissionManager: WebsitePermissionManager? = nil,
+        onPopupCreated: ((WKWebView) -> Void)? = nil,
+        onPopupClosed: ((WKWebView) -> Void)? = nil
     ) {
         self.tab = tab
         self.contentBlockingEnabled = contentBlockingEnabled
@@ -26,6 +31,8 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         self.onBlockedNavigation = onBlockedNavigation
         self.onDownload = onDownload
         self.permissionManager = permissionManager
+        self.onPopupCreated = onPopupCreated
+        self.onPopupClosed = onPopupClosed
     }
 
     func observe(_ webView: WKWebView) {
@@ -72,14 +79,17 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     func webView(
         _ webView: WKWebView,
         decidePolicyFor navigationAction: WKNavigationAction,
-        decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        preferences: WKWebpagePreferences,
+        decisionHandler: @escaping (WKNavigationActionPolicy, WKWebpagePreferences) -> Void
     ) {
+        preferences.allowsContentJavaScript = tab.javaScriptEnabled
         let context = NavigationPolicy.Context(
             contentBlockingEnabled: contentBlockingEnabled,
             matchesBlockedHint: matchesBlockedHint,
             onBlocked: onBlockedNavigation
         )
-        decisionHandler(NavigationPolicy.decision(for: navigationAction, context: context))
+        let policy = NavigationPolicy.decision(for: navigationAction, context: context)
+        decisionHandler(policy, preferences)
     }
 
     func webView(
@@ -97,14 +107,14 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     }
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-        if !tab.isShowingStartPage {
+        if webView === tab.webView, !tab.isShowingStartPage {
             tab.navigation.isLoading = true
             tab.navigation.lastErrorMessage = nil
         }
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        if !tab.isShowingStartPage {
+        if webView === tab.webView, !tab.isShowingStartPage {
             tab.navigation.isLoading = false
             tab.navigation.estimatedProgress = 1
             tab.navigation.title = webView.title ?? ""
@@ -114,7 +124,9 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             }
             tab.onNavigationFinished?(tab)
         }
-        tab.refreshNavigationChrome()
+        if webView === tab.webView {
+            tab.refreshNavigationChrome()
+        }
     }
 
     func webView(
@@ -122,6 +134,7 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         didFail navigation: WKNavigation!,
         withError error: Error
     ) {
+        guard webView === tab.webView else { return }
         handleError(error)
     }
 
@@ -130,6 +143,7 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         didFailProvisionalNavigation navigation: WKNavigation!,
         withError error: Error
     ) {
+        guard webView === tab.webView else { return }
         handleError(error)
     }
 
@@ -149,12 +163,31 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         for navigationAction: WKNavigationAction,
         windowFeatures: WKWindowFeatures
     ) -> WKWebView? {
-        if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
-            if URLParser.isAllowedNavigation(url) {
-                tab.load(url)
+        // Must return a WKWebView built with WebKit's configuration so Google OAuth
+        // keeps cookies / opener linkage. Loading in the same tab breaks sign-in.
+        let popup = WKWebView(frame: .zero, configuration: configuration)
+        popup.navigationDelegate = self
+        popup.uiDelegate = self
+        popup.allowsBackForwardNavigationGestures = true
+        #if os(iOS)
+        popup.scrollView.contentInsetAdjustmentBehavior = .automatic
+        #endif
+
+        popupTitleObservation?.invalidate()
+        popupTitleObservation = popup.observe(\.title, options: [.new]) { [weak self] view, _ in
+            Task { @MainActor in
+                self?.onPopupTitleChanged?(view.title)
             }
         }
-        return nil
+
+        onPopupCreated?(popup)
+        return popup
+    }
+
+    var onPopupTitleChanged: ((String?) -> Void)?
+
+    func webViewDidClose(_ webView: WKWebView) {
+        onPopupClosed?(webView)
     }
 
     @available(iOS 15.0, macOS 12.0, *)
@@ -181,7 +214,6 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         case .deny:
             decisionHandler(.deny)
         case .ask:
-            // Default to prompt once; persist as ask until user sets in Shields.
             decisionHandler(.prompt)
         }
     }

@@ -97,7 +97,10 @@ struct PrivacyShieldView: View {
                 labeledToggle("HTTPS upgrades", subtitle: "Prefer https when it looks safe")
             }
             Toggle(isOn: $privacy.blockThirdPartyCookies) {
-                labeledToggle("Limit third-party cookies", subtitle: "Best-effort within WebKit")
+                labeledToggle(
+                    "Limit third-party cookies",
+                    subtitle: "May break Google Account and other sign-in flows; leave off to stay signed in"
+                )
             }
         } header: {
             Text("Global shields")

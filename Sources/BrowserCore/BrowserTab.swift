@@ -14,6 +14,9 @@ final class BrowserTab: Identifiable {
     /// Prefer desktop user agent for this tab when true.
     var requestsDesktopSite = false
 
+    /// When false, page scripts are blocked (reload required to apply).
+    var javaScriptEnabled = true
+
     /// Weak reference so the SwiftUI `BrowserWebView` can drive load/back/forward.
     weak var webView: WKWebView?
 
@@ -160,6 +163,23 @@ final class BrowserTab: Identifiable {
         }
     }
 
+    func toggleJavaScript() {
+        javaScriptEnabled.toggle()
+        applyJavaScriptPreference()
+        if !isShowingStartPage {
+            webView?.reload()
+        }
+    }
+
+    func setJavaScriptEnabled(_ enabled: Bool) {
+        guard javaScriptEnabled != enabled else { return }
+        javaScriptEnabled = enabled
+        applyJavaScriptPreference()
+        if !isShowingStartPage {
+            webView?.reload()
+        }
+    }
+
     func findInPage(_ query: String, forward: Bool = true) {
         guard !query.isEmpty else {
             clearFindInPage()
@@ -220,5 +240,9 @@ final class BrowserTab: Identifiable {
         } else {
             webView.customUserAgent = nil
         }
+    }
+
+    private func applyJavaScriptPreference() {
+        webView?.configuration.defaultWebpagePreferences.allowsContentJavaScript = javaScriptEnabled
     }
 }
