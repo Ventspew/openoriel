@@ -21,6 +21,7 @@ final class AppEnvironment {
     let contentBlocker: ContentBlockerManager
     let downloads: DownloadManager
     let permissions: WebsitePermissionManager
+    let extensions: WebExtensionManager
 
     var showAbout = false
     var showTabOverview = false
@@ -30,6 +31,7 @@ final class AppEnvironment {
     var showDownloads = false
     var showFindInPage = false
     var showSettings = false
+    var showExtensions = false
     var findQuery = ""
     var authPopup: WebAuthPopupState?
 
@@ -44,7 +46,8 @@ final class AppEnvironment {
         privacyStats: PrivacyStats? = nil,
         contentBlocker: ContentBlockerManager? = nil,
         downloads: DownloadManager? = nil,
-        permissions: WebsitePermissionManager? = nil
+        permissions: WebsitePermissionManager? = nil,
+        extensions: WebExtensionManager? = nil
     ) {
         let resolvedSettings = settings ?? BrowserSettings()
         let resolvedBookmarks = bookmarks ?? BookmarkStore()
@@ -55,6 +58,7 @@ final class AppEnvironment {
         let resolvedBlocker = contentBlocker ?? ContentBlockerManager()
         let resolvedDownloads = downloads ?? DownloadManager()
         let resolvedPermissions = permissions ?? WebsitePermissionManager()
+        let resolvedExtensions = extensions ?? WebExtensionManager()
 
         self.settings = resolvedSettings
         self.bookmarks = resolvedBookmarks
@@ -65,6 +69,7 @@ final class AppEnvironment {
         self.contentBlocker = resolvedBlocker
         self.downloads = resolvedDownloads
         self.permissions = resolvedPermissions
+        self.extensions = resolvedExtensions
         resolvedSession.restorePreviousSession = resolvedSettings.restorePreviousSession
 
         let snapshot = resolvedSession.load()

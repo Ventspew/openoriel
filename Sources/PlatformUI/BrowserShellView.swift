@@ -4,6 +4,9 @@ struct BrowserShellView: View {
     @Environment(AppEnvironment.self) private var environment
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    #if os(macOS)
+    @Environment(\.openSettings) private var openSettings
+    #endif
 
     var body: some View {
         @Bindable var environment = environment
@@ -43,18 +46,21 @@ struct BrowserShellView: View {
         }
         .sheet(isPresented: $environment.showPrivacyShield) {
             PrivacyShieldView()
-            #if os(macOS)
-                .frame(minWidth: 460, idealWidth: 520, minHeight: 640)
-            #endif
+                .orielSheetChrome(preferLargeOnCompact: true)
         }
         .sheet(isPresented: $environment.showDownloads) {
             DownloadsView()
                 .orielSheetChrome()
         }
+        .sheet(isPresented: $environment.showExtensions) {
+            ExtensionsView()
+                .orielSheetChrome(preferLargeOnCompact: true)
+        }
+        #if os(iOS)
         .sheet(isPresented: $environment.showSettings) {
             SettingsView()
-                .orielSheetChrome()
         }
+        #endif
         .sheet(item: $environment.authPopup) { popup in
             AuthPopupView(state: popup)
                 .orielSheetChrome(preferLargeOnCompact: true)
@@ -62,6 +68,21 @@ struct BrowserShellView: View {
         .onChange(of: environment.settings.restorePreviousSession) { _, newValue in
             environment.sessionStore.restorePreviousSession = newValue
         }
+        #if os(macOS)
+        .onChange(of: environment.showSettings) { _, shouldOpen in
+            guard shouldOpen else { return }
+            openSettings()
+            environment.showSettings = false
+        }
+        #endif
+    }
+
+    private func openAppSettings() {
+        #if os(macOS)
+        openSettings()
+        #else
+        environment.showSettings = true
+        #endif
     }
 
     // MARK: - iPhone (compact)
@@ -145,7 +166,7 @@ struct BrowserShellView: View {
                 .accessibilityLabel("Downloads")
             }
             Button {
-                environment.showSettings = true
+                openAppSettings()
             } label: {
                 Image(systemName: "gearshape")
             }
@@ -227,11 +248,18 @@ struct BrowserShellView: View {
                 javaScriptButton(tab: tab)
 
                 Button {
-                    environment.showSettings = true
+                    openAppSettings()
                 } label: {
                     Image(systemName: "gearshape")
                 }
                 .help("Settings")
+
+                Button {
+                    environment.showExtensions = true
+                } label: {
+                    Image(systemName: "puzzlepiece.extension")
+                }
+                .help("Extensions")
 
                 Button {
                     environment.showDownloads = true
@@ -397,8 +425,9 @@ struct BrowserShellView: View {
             Button("Bookmarks") { environment.showBookmarks = true }
             Button("History") { environment.showHistory = true }
             Button("Downloads") { environment.showDownloads = true }
+            Button("Extensions") { environment.showExtensions = true }
             Button("Shields") { environment.showPrivacyShield = true }
-            Button("Settings") { environment.showSettings = true }
+            Button("Settings") { openAppSettings() }
 
             Divider()
 
@@ -440,7 +469,8 @@ struct BrowserShellView: View {
                 },
                 onPopupTitleChanged: { title in
                     environment.updateAuthPopupTitle(title)
-                }
+                },
+                webExtensionController: environment.extensions.webExtensionControllerForConfiguration
             )
             .id(tab.id)
             .opacity(showStart || showError ? 0 : 1)
@@ -488,7 +518,7 @@ private extension View {
             .presentationDetents(preferLargeOnCompact ? [.large] : [.medium, .large])
             .presentationDragIndicator(.visible)
         #elseif os(macOS)
-        self.frame(minWidth: 420, minHeight: 480)
+        self.frame(minWidth: 480, idealWidth: 560, minHeight: 420, idealHeight: 560)
         #else
         self
         #endif

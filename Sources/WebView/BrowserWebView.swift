@@ -20,6 +20,7 @@ struct BrowserWebView: PlatformViewRepresentable {
     var onPopupCreated: ((WKWebView) -> Void)?
     var onPopupClosed: ((WKWebView) -> Void)?
     var onPopupTitleChanged: ((String?) -> Void)?
+    var webExtensionController: AnyObject?
 
     #if os(iOS)
     func makeUIView(context: Context) -> WKWebView {
@@ -53,18 +54,13 @@ struct BrowserWebView: PlatformViewRepresentable {
     }
 
     private func makeWebView(context: Context) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = tab.isPrivate
-            ? .nonPersistent()
-            : .default()
-        configuration.defaultWebpagePreferences.allowsContentJavaScript = tab.javaScriptEnabled
-        configuration.preferences.isElementFullscreenEnabled = true
-        // Allow window.open / Google account chooser popups.
-        configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
-
-        if contentBlockingEnabled, let contentRuleList {
-            configuration.userContentController.add(contentRuleList)
-        }
+        let configuration = SharedWebViewConfiguration.make(
+            isPrivate: tab.isPrivate,
+            javaScriptEnabled: tab.javaScriptEnabled,
+            contentRuleList: contentRuleList,
+            contentBlockingEnabled: contentBlockingEnabled,
+            webExtensionController: webExtensionController
+        )
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator

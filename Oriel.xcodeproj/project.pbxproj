@@ -22,6 +22,7 @@
 		31CD8FE1951535233E663D49 /* NavigationControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 899DAF18D972B3BA4A1EA5EC /* NavigationControlsView.swift */; };
 		31E51D1FB99CE01A6477B29C /* WebViewCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0135155E8C8C82FFAD7A65B /* WebViewCoordinator.swift */; };
 		349DFBD51AABBBF5967555B1 /* AuthAndJavaScriptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 011CB4F0CA40D216F227077B /* AuthAndJavaScriptTests.swift */; };
+		3932192408C35FE5FC9FEC9F /* SharedWebViewConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2DD7DD24BDE86B71C879ECF /* SharedWebViewConfiguration.swift */; };
 		4DBA4F9AF3E7A1D14A5BE719 /* TabOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E57EB5D6608140050A9EF32F /* TabOverviewView.swift */; };
 		50162F7C67210582B090D16E /* JSONFileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14528446EC763702DBF33729 /* JSONFileStore.swift */; };
 		51F92CF8E35B68BD2D6F142E /* HTTPSUpgrade.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91FADAFD7D5FF406A6D6E367 /* HTTPSUpgrade.swift */; };
@@ -40,6 +41,7 @@
 		95A9EC4E34689A7B91D39AB7 /* ContentBlockerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39A58A41442546BAFBEF499F /* ContentBlockerManager.swift */; };
 		96B6BC4B7E61B59656BCFED2 /* BookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92DEC41377429AF5865F7209 /* BookmarksView.swift */; };
 		9BF3B06A0A3DC3F2F0355EFB /* TabManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECD387DE816D2B801EC559E8 /* TabManager.swift */; };
+		A53B10583588B79D0D2C81C5 /* ExtensionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E7572E8423A86AB009847E /* ExtensionsView.swift */; };
 		AC30E92C2EF5916B7B7FD08B /* PrivacyStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = D27573BAEF1DEFB9720D8056 /* PrivacyStats.swift */; };
 		B3F82F73100905AEFFD03844 /* PrivacySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEAD19F44096849D14681327 /* PrivacySettings.swift */; };
 		C0D710DE823E78C7F52F7F02 /* OrielTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3836F6EAEB7B99DF994A4A21 /* OrielTheme.swift */; };
@@ -56,6 +58,7 @@
 		EA8342244336627EE154A27D /* SearchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F54728DFA5496279551E4EA /* SearchEngine.swift */; };
 		EF2FF8C6FB1DC6C617AEDFAA /* AboutOrielView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DE8EFCF1E30C51C131D42F /* AboutOrielView.swift */; };
 		F65077EB32B9828050571EBE /* OrielUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58FEB09C6E8430F39C280882 /* OrielUITests.swift */; };
+		F81321072E214A6BFD7217E2 /* WebExtensionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DA7212A964CD575F5A4A3A1 /* WebExtensionManager.swift */; };
 		FC6D97CF2D1D3BA20807E11A /* Bookmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6A822F31A4AE4EE6022DEB5 /* Bookmark.swift */; };
 		FF5F8E058A1A7C1D9328AC1B /* OrielApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAB969C9258A7150A1F20633 /* OrielApp.swift */; };
 /* End PBXBuildFile section */
@@ -94,9 +97,11 @@
 		3FE54710A619EF58CFCB2E6E /* FindInPageBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindInPageBar.swift; sourceTree = "<group>"; };
 		42A52F5546410287192EEE0A /* HistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStore.swift; sourceTree = "<group>"; };
 		4B4D781F01B4230D02642A54 /* Phase6SearchSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase6SearchSettingsTests.swift; sourceTree = "<group>"; };
+		4DA7212A964CD575F5A4A3A1 /* WebExtensionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebExtensionManager.swift; sourceTree = "<group>"; };
 		58FEB09C6E8430F39C280882 /* OrielUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrielUITests.swift; sourceTree = "<group>"; };
 		5C3EA3422E88A2E42E32F212 /* BookmarkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkStore.swift; sourceTree = "<group>"; };
 		5FF4D181DFA1DDA6883D30DC /* DownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadManager.swift; sourceTree = "<group>"; };
+		67E7572E8423A86AB009847E /* ExtensionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionsView.swift; sourceTree = "<group>"; };
 		6F54728DFA5496279551E4EA /* SearchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchEngine.swift; sourceTree = "<group>"; };
 		7AA6FA08B917C0F4A81D7E1C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7ABA8781AB579187B7E33D8C /* HistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryEntry.swift; sourceTree = "<group>"; };
@@ -117,6 +122,7 @@
 		BEDB4889A8C4E62AD9FED133 /* AuthPopupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthPopupView.swift; sourceTree = "<group>"; };
 		C1808B252AD7CA5B9316D569 /* NavigationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationState.swift; sourceTree = "<group>"; };
 		C223CB51AB8532708D4195C6 /* NavigationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationPolicy.swift; sourceTree = "<group>"; };
+		C2DD7DD24BDE86B71C879ECF /* SharedWebViewConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedWebViewConfiguration.swift; sourceTree = "<group>"; };
 		C3BEFD3827F6D61B94816542 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		C6A822F31A4AE4EE6022DEB5 /* Bookmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bookmark.swift; sourceTree = "<group>"; };
 		C9596246F720EF499196A3B2 /* BrowserShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserShellView.swift; sourceTree = "<group>"; };
@@ -195,6 +201,14 @@
 			path = Tests;
 			sourceTree = "<group>";
 		};
+		8D296896DC7C9738C6B2F791 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				4DA7212A964CD575F5A4A3A1 /* WebExtensionManager.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
 		8FD0BA2C584893393FBBC938 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -252,6 +266,7 @@
 			children = (
 				B1809F1262455BCB12BC805A /* BrowserWebView.swift */,
 				C223CB51AB8532708D4195C6 /* NavigationPolicy.swift */,
+				C2DD7DD24BDE86B71C879ECF /* SharedWebViewConfiguration.swift */,
 				A0135155E8C8C82FFAD7A65B /* WebViewCoordinator.swift */,
 			);
 			path = WebView;
@@ -313,6 +328,7 @@
 				DAAEFA357E432123327E2569 /* BrowserCore */,
 				E396DBE6BF4F7E3A206FD3D5 /* ContentBlocking */,
 				4647E01A9DBE11B445960A5B /* Downloads */,
+				8D296896DC7C9738C6B2F791 /* Extensions */,
 				395D595E81BAC94C5CDEB6CA /* History */,
 				1E1A291CCF0885F5C5BF1F6D /* Persistence */,
 				EDEBC1B20E7B2AF5159A138D /* PlatformUI */,
@@ -334,6 +350,7 @@
 				C9596246F720EF499196A3B2 /* BrowserShellView.swift */,
 				E22D99CFADC7A4D062B595BC /* DownloadsView.swift */,
 				02CBC7705D9621792C8BF524 /* ErrorPageView.swift */,
+				67E7572E8423A86AB009847E /* ExtensionsView.swift */,
 				3FE54710A619EF58CFCB2E6E /* FindInPageBar.swift */,
 				83AC3BB6323513845985F125 /* HistoryView.swift */,
 				899DAF18D972B3BA4A1EA5EC /* NavigationControlsView.swift */,
@@ -483,6 +500,7 @@
 				6224D04B29955F0788EA7752 /* DownloadManager.swift in Sources */,
 				26759CC73B147E486F86A151 /* DownloadsView.swift in Sources */,
 				E5EB1A0B4E5FDD540720A749 /* ErrorPageView.swift in Sources */,
+				A53B10583588B79D0D2C81C5 /* ExtensionsView.swift in Sources */,
 				C7CE512183F858E2CFED4869 /* FindInPageBar.swift in Sources */,
 				51F92CF8E35B68BD2D6F142E /* HTTPSUpgrade.swift in Sources */,
 				C7C8D536888C9D8934F32329 /* HistoryEntry.swift in Sources */,
@@ -501,10 +519,12 @@
 				EA8342244336627EE154A27D /* SearchEngine.swift in Sources */,
 				CA539354A2824DDEFA4B6001 /* SessionStore.swift in Sources */,
 				09F8040CD43137215655C1F9 /* SettingsView.swift in Sources */,
+				3932192408C35FE5FC9FEC9F /* SharedWebViewConfiguration.swift in Sources */,
 				062CFFBE06CF8D1B9D60EAAD /* StartPageView.swift in Sources */,
 				9BF3B06A0A3DC3F2F0355EFB /* TabManager.swift in Sources */,
 				4DBA4F9AF3E7A1D14A5BE719 /* TabOverviewView.swift in Sources */,
 				1D1FE1CB23854CA116937A27 /* URLParser.swift in Sources */,
+				F81321072E214A6BFD7217E2 /* WebExtensionManager.swift in Sources */,
 				31E51D1FB99CE01A6477B29C /* WebViewCoordinator.swift in Sources */,
 				5ED519D072255305339E095E /* WebsiteDataCleaner.swift in Sources */,
 				94815792778A372D451887CF /* WebsitePermissionManager.swift in Sources */,

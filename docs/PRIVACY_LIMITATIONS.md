@@ -25,6 +25,7 @@ Oriel is made by [inveil.net](https://inveil.net). This document states what pri
 | Custom TLS / certificate pinning for all sites | Must not disable system certificate validation |
 | Reading every blocked request payload | Content blockers report limited callback detail |
 | Replacing WebKit privacy model | Apple does not allow alternative engines in App Store browsers on iOS |
+| Full Chrome Web Store one-click install | Store install APIs are Chrome-only; Oriel loads packages via `WKWebExtension` on macOS |
 | Cross-app tracking prevention outside WebKit | Other apps and system services are out of scope |
 | Perfect “incognito” against the network | Destination sites and network operators still see traffic |
 | Bypass publisher paywalls / DRM | Explicitly out of scope and not implemented |

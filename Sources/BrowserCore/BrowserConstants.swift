@@ -13,6 +13,9 @@ enum BrowserConstants {
     static let startPageHost = "oriel.start"
     static let aboutScheme = "oriel"
 
+    /// Chrome Web Store (browse only — one-click install into Oriel is not available).
+    static let chromeWebStoreURL = URL(string: "https://chromewebstore.google.com/")!
+
     /// Safari-like desktop Safari UA for “Request Desktop Website”.
     static let desktopUserAgent =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"

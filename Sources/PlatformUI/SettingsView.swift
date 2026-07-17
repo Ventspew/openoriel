@@ -46,7 +46,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Search engine")
                 } footer: {
-                    Text("Oriel does not host its own search index. Queries open \(settings.searchEngine.displayName)'s results page. Also used when you type words in the address bar instead of a website address.")
+                    Text("Oriel does not host its own search index. Queries open \(settings.searchEngine.displayName)'s results page.")
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -60,8 +60,12 @@ struct SettingsView: View {
                             Text(mode.displayName).tag(mode)
                         }
                     }
+                    #if os(macOS)
+                    .pickerStyle(.radioGroup)
+                    #else
                     .pickerStyle(.segmented)
                     .labelsHidden()
+                    #endif
                     .accessibilityLabel("Appearance")
                 }
 
@@ -70,7 +74,7 @@ struct SettingsView: View {
                 } header: {
                     Text("JavaScript")
                 } footer: {
-                    Text("New tabs use this default. Use the JS button in the toolbar to toggle the current tab instantly (iPhone, iPad, and Mac).")
+                    Text("New tabs use this default. Use the JS button in the toolbar to toggle the current tab.")
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -90,6 +94,34 @@ struct SettingsView: View {
                     }
                 }
 
+                Section {
+                    Button {
+                        environment.showExtensions = true
+                        #if os(iOS)
+                        dismiss()
+                        #endif
+                    } label: {
+                        Label("Extensions…", systemImage: "puzzlepiece.extension")
+                    }
+                    #if os(macOS)
+                    Button {
+                        environment.openURLInNewTab(BrowserConstants.chromeWebStoreURL)
+                    } label: {
+                        Label("Browse Chrome Web Store", systemImage: "safari")
+                    }
+                    #endif
+                } header: {
+                    Text("Extensions")
+                } footer: {
+                    #if os(macOS)
+                    Text("Install .zip / .crx / unpacked Manifest V2–V3 extensions. Chrome Web Store one-click install is not available; download a package, then install it in Oriel.")
+                        .fixedSize(horizontal: false, vertical: true)
+                    #else
+                    Text("Full Chrome-style extensions are not available on iPhone and iPad.")
+                        .fixedSize(horizontal: false, vertical: true)
+                    #endif
+                }
+
                 Section("About") {
                     LabeledContent("Product", value: BrowserConstants.productName)
                     LabeledContent("Website", value: BrowserConstants.productWebsiteHost)
@@ -98,19 +130,19 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            #if os(iOS)
+            #if os(macOS)
+            .formStyle(.grouped)
+            #else
             .navigationBarTitleDisplayMode(.inline)
             .listStyle(.insetGrouped)
-            #endif
+            .presentationDetents(horizontalSizeClass == .compact ? [.large] : [.medium, .large])
+            .presentationDragIndicator(.visible)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
                 }
             }
+            #endif
         }
-        #if os(iOS)
-        .presentationDetents(horizontalSizeClass == .compact ? [.large] : [.medium, .large])
-        .presentationDragIndicator(.visible)
-        #endif
     }
 }
