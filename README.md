@@ -1,8 +1,10 @@
-# Oriel
+# Oriel (openoriel)
 
-**Oriel** is a privacy-minded native browser for iOS, iPadOS, and macOS.
+**Oriel** is a privacy-minded native browser for iOS, iPadOS, and macOS — named after a bay window: a sheltered place to look out at the world.
 
-Made by **[inveil.net](https://inveil.net)**.
+- **Official website:** [openoriel.com](https://openoriel.com)
+- **Made by:** [inveil.net](https://inveil.net)
+- **GitHub:** [github.com/macdirtycow/openoriel](https://github.com/macdirtycow/openoriel)
 
 Built with Swift, SwiftUI, and Apple’s WebKit (`WKWebView`). Original UI and branding — not a Safari or Brave clone.
 
@@ -15,7 +17,8 @@ Built with Swift, SwiftUI, and Apple’s WebKit (`WKWebView`). Original UI and b
 ## Setup
 
 ```bash
-cd ~/Projects/Oriel
+git clone https://github.com/macdirtycow/openoriel.git
+cd openoriel
 xcodegen generate
 open Oriel.xcodeproj
 ```
