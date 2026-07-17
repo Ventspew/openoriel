@@ -1,0 +1,93 @@
+import Foundation
+import Observation
+import WebKit
+
+/// A single browser tab. Phase 1 uses one instance; TabManager arrives in Phase 2.
+@Observable
+@MainActor
+final class BrowserTab: Identifiable {
+    let id: UUID
+    let isPrivate: Bool
+    var searchEngine: SearchEngine
+    var navigation = NavigationState()
+
+    /// Weak reference so the SwiftUI `BrowserWebView` can drive load/back/forward.
+    weak var webView: WKWebView?
+
+    init(
+        id: UUID = UUID(),
+        isPrivate: Bool = false,
+        searchEngine: SearchEngine = .duckDuckGo,
+        initialURL: URL? = nil
+    ) {
+        self.id = id
+        self.isPrivate = isPrivate
+        self.searchEngine = searchEngine
+        if let initialURL {
+            navigation.url = initialURL
+            navigation.syncAddressBarFromURL()
+        } else {
+            navigation.url = URLParser.startPageURL
+            navigation.addressBarText = ""
+        }
+    }
+
+    func submitAddressBar() {
+        let url = URLParser.resolve(navigation.addressBarText, searchEngine: searchEngine)
+        load(url)
+    }
+
+    func load(_ url: URL) {
+        navigation.lastErrorMessage = nil
+        navigation.url = url
+        navigation.syncAddressBarFromURL()
+
+        if URLParser.isStartPage(url) {
+            navigation.isLoading = false
+            navigation.estimatedProgress = 0
+            navigation.title = BrowserConstants.productName
+            // Stay on native start page — do not ask WKWebView to load oriel://
+            return
+        }
+
+        guard URLParser.isAllowedNavigation(url) else {
+            navigation.lastErrorMessage = "This address uses an unsupported or blocked scheme."
+            return
+        }
+
+        navigation.isLoading = true
+        webView?.load(URLRequest(url: url))
+    }
+
+    func goBack() {
+        webView?.goBack()
+    }
+
+    func goForward() {
+        webView?.goForward()
+    }
+
+    func reload() {
+        if URLParser.isStartPage(navigation.url) {
+            return
+        }
+        if navigation.lastErrorMessage != nil, let url = navigation.url {
+            load(url)
+            return
+        }
+        webView?.reload()
+    }
+
+    func stopLoading() {
+        webView?.stopLoading()
+        navigation.isLoading = false
+    }
+
+    func goHome() {
+        load(URLParser.startPageURL)
+    }
+
+    func openPublisherSite() {
+        load(BrowserConstants.publisherURL)
+    }
+}
