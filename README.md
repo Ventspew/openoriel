@@ -6,6 +6,7 @@ Native browser for iOS, iPadOS, and macOS — Swift, SwiftUI, WebKit.
 - Publisher: https://inveil.net
 - Bundle ID: `net.inveil.oriel`
 
+Marketing site source lives in [`site/`](site/).
 ## Build
 
 Requires Xcode 16+, [XcodeGen](https://github.com/yonaskolb/XcodeGen), iOS/iPadOS 17+, macOS 14+ (WebExtensions need macOS 15.4+).

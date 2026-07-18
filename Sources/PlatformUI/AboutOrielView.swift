@@ -2,44 +2,78 @@ import SwiftUI
 
 struct AboutOrielView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                OrielMark(size: 72)
+            ScrollView {
+                VStack(spacing: 22) {
+                    OrielMark(size: 78)
+                        .shadow(color: OrielTheme.brandTeal.opacity(0.22), radius: 18, y: 6)
+                        .padding(.top, 12)
 
-                Text(BrowserConstants.productName)
-                    .font(.largeTitle.weight(.bold))
+                    VStack(spacing: 8) {
+                        Text(BrowserConstants.productName)
+                            .font(.system(size: 36, weight: .semibold, design: .serif))
+                            .tracking(-0.6)
 
-                Text("A native browser for Apple platforms.")
-                    .foregroundStyle(.secondary)
+                        Text("A calm view of the web.")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
 
-                VStack(spacing: 8) {
-                    Text("Official website")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Link(BrowserConstants.productWebsiteHost, destination: BrowserConstants.productWebsiteURL)
-                        .font(.headline)
+                        Text("A native browser for Apple platforms.")
+                            .font(.subheadline)
+                            .foregroundStyle(.tertiary)
+                    }
 
-                    Text("Made by \(BrowserConstants.publisherName)")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 8)
-                    Link(BrowserConstants.publisherName, destination: BrowserConstants.publisherURL)
+                    VStack(spacing: 14) {
+                        aboutLink(
+                            title: "Website",
+                            value: BrowserConstants.productWebsiteHost,
+                            url: BrowserConstants.productWebsiteURL
+                        )
+                        aboutLink(
+                            title: "Publisher",
+                            value: BrowserConstants.publisherName,
+                            url: BrowserConstants.publisherURL
+                        )
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        OrielTheme.surfaceFill(for: colorScheme),
+                        in: RoundedRectangle(cornerRadius: OrielTheme.sectionRadius, style: .continuous)
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: OrielTheme.sectionRadius, style: .continuous)
+                            .strokeBorder(OrielTheme.hairline(for: colorScheme), lineWidth: 1)
+                    }
+                    .padding(.top, 8)
+
+                    Text("Uses Apple’s WebKit framework. Privacy protections are limited by what WebKit and the OS expose.")
                         .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
+
+                    Text("© 2025–2026 \(BrowserConstants.publisherName)")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .padding(.top, 4)
                 }
-                .padding(.top, 4)
-
-                Text("Uses Apple’s WebKit framework. Privacy protections are limited by what WebKit and the OS expose.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-
-                Spacer()
+                .padding(24)
+                .frame(maxWidth: 480)
+                .frame(maxWidth: .infinity)
             }
-            .padding(24)
-            .frame(maxWidth: 480)
+            .background {
+                Group {
+                    if colorScheme == .dark {
+                        OrielTheme.startPageBackgroundDark
+                    } else {
+                        OrielTheme.startPageBackground
+                    }
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
@@ -49,5 +83,19 @@ struct AboutOrielView: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
         }
+    }
+
+    private func aboutLink(title: String, value: String, url: URL) -> some View {
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.6)
+            Link(value, destination: url)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(OrielTheme.brandPrimary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }

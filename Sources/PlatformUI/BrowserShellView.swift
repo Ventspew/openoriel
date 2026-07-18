@@ -344,9 +344,19 @@ struct BrowserShellView: View {
                                     .onTapGesture { environment.tabs.closeTab(id: item.id) }
                             }
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(selected ? Color.accentColor.opacity(0.18) : Color.clear, in: Capsule())
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 7)
+                        .background(
+                            selected ? OrielTheme.brandPrimary.opacity(0.16) : Color.primary.opacity(0.04),
+                            in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        )
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .strokeBorder(
+                                    selected ? OrielTheme.brandPrimary.opacity(0.28) : Color.clear,
+                                    lineWidth: 1
+                                )
+                        }
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(item.displayTitle)
@@ -354,7 +364,7 @@ struct BrowserShellView: View {
                 }
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.vertical, 7)
         }
         .background(.bar)
     }
@@ -364,12 +374,13 @@ struct BrowserShellView: View {
 
     private var privateBanner: some View {
         Text("Private Tab — history and session restore are off")
-            .font(.caption.weight(.medium))
+            .font(.caption.weight(.semibold))
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color.purple.opacity(0.18))
+            .padding(.vertical, 7)
+            .foregroundStyle(OrielTheme.brandPrimary)
+            .background(OrielTheme.brandPrimary.opacity(0.12))
             .accessibilityLabel("Private browsing tab")
     }
 

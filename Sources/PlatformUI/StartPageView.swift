@@ -7,6 +7,7 @@ struct StartPageView: View {
     let tab: BrowserTab
 
     @State private var query = ""
+    @State private var appeared = false
     @FocusState private var searchFocused: Bool
 
     private var activeEngine: SearchEngine {
@@ -15,10 +16,10 @@ struct StartPageView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 40) {
+            VStack(alignment: .leading, spacing: 36) {
                 hero
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 56)
+                    .padding(.top, 48)
 
                 if !environment.bookmarks.favorites.isEmpty {
                     section(title: "Favorites") {
@@ -46,13 +47,15 @@ struct StartPageView: View {
                 }
 
                 footerLinks
-                    .padding(.top, 8)
+                    .padding(.top, 4)
 
                 Spacer(minLength: 48)
             }
             .padding(.horizontal, 28)
             .frame(maxWidth: 560)
             .frame(maxWidth: .infinity)
+            .opacity(appeared || reduceMotion ? 1 : 0)
+            .offset(y: appeared || reduceMotion ? 0 : 10)
         }
         .background {
             Group {
@@ -64,22 +67,33 @@ struct StartPageView: View {
             }
         }
         .onAppear {
-            if !reduceMotion {
+            if reduceMotion {
+                appeared = true
                 searchFocused = true
+            } else {
+                withAnimation(.easeOut(duration: 0.45)) {
+                    appeared = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    searchFocused = true
+                }
             }
         }
     }
 
     private var hero: some View {
-        VStack(spacing: 22) {
-            VStack(spacing: 6) {
+        VStack(spacing: 20) {
+            VStack(spacing: 10) {
+                OrielMark(size: 44)
+                    .shadow(color: OrielTheme.brandTeal.opacity(0.18), radius: 12, y: 4)
+
                 Text(BrowserConstants.productName)
-                    .font(.system(size: 44, weight: .semibold, design: .serif))
-                    .tracking(-0.8)
+                    .font(.system(size: 46, weight: .semibold, design: .serif))
+                    .tracking(-1.0)
                     .foregroundStyle(.primary)
 
                 Text("A calm view of the web.")
-                    .font(.body)
+                    .font(.title3.weight(.regular))
                     .foregroundStyle(.secondary)
             }
             .accessibilityElement(children: .combine)
@@ -87,10 +101,10 @@ struct StartPageView: View {
             searchField
 
             Text("via \(activeEngine.displayName)")
-                .font(.caption.weight(.medium))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(.tertiary)
                 .textCase(.uppercase)
-                .tracking(0.6)
+                .tracking(0.8)
 
             enginePicker
 
@@ -101,7 +115,7 @@ struct StartPageView: View {
                     }
                 } label: {
                     Text("Sign in to Google")
-                        .font(.subheadline.weight(.medium))
+                        .font(.subheadline.weight(.semibold))
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(OrielTheme.brandPrimary)
@@ -114,7 +128,7 @@ struct StartPageView: View {
         HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .font(.body.weight(.medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(searchFocused ? OrielTheme.brandPrimary : Color.secondary)
 
             TextField("Search or enter address", text: $query)
                 .textFieldStyle(.plain)
@@ -133,8 +147,9 @@ struct StartPageView: View {
                 Button {
                     query = ""
                 } label: {
-                    Image(systemName: "xmark")
-                        .font(.caption.weight(.semibold))
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.body)
+                        .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
@@ -144,10 +159,18 @@ struct StartPageView: View {
             Button(action: submitSearch) {
                 Text("Go")
                     .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(
+                        query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? Color.primary.opacity(0.06)
+                        : OrielTheme.brandPrimary.opacity(0.16),
+                        in: Capsule()
+                    )
                     .foregroundStyle(
                         query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         ? Color.secondary
-                        : Color.primary
+                        : OrielTheme.brandPrimary
                     )
             }
             .buttonStyle(.plain)
@@ -157,22 +180,27 @@ struct StartPageView: View {
         .padding(.horizontal, 16)
         .frame(height: OrielTheme.searchFieldHeight)
         .background(
-            colorScheme == .dark
-                ? Color.white.opacity(0.06)
-                : Color.white.opacity(0.85),
+            OrielTheme.surfaceFill(for: colorScheme),
             in: RoundedRectangle(cornerRadius: OrielTheme.searchFieldRadius, style: .continuous)
         )
         .overlay {
             RoundedRectangle(cornerRadius: OrielTheme.searchFieldRadius, style: .continuous)
                 .strokeBorder(
-                    Color.primary.opacity(searchFocused ? 0.28 : 0.12),
-                    lineWidth: 1
+                    searchFocused
+                        ? OrielTheme.brandPrimary.opacity(0.45)
+                        : OrielTheme.hairline(for: colorScheme),
+                    lineWidth: searchFocused ? 1.5 : 1
                 )
         }
+        .shadow(
+            color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.06),
+            radius: searchFocused ? 16 : 10,
+            y: 4
+        )
     }
 
     private var enginePicker: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 18) {
             ForEach(SearchEngine.allCases) { engine in
                 let selected = activeEngine == engine
                 Button {
@@ -182,11 +210,11 @@ struct StartPageView: View {
                     Text(engine.displayName)
                         .font(.caption.weight(selected ? .semibold : .regular))
                         .foregroundStyle(selected ? Color.primary : Color.secondary)
-                        .padding(.bottom, 2)
+                        .padding(.bottom, 3)
                         .overlay(alignment: .bottom) {
-                            Rectangle()
+                            Capsule()
                                 .fill(selected ? OrielTheme.brandPrimary : Color.clear)
-                                .frame(height: 1.5)
+                                .frame(height: 2)
                         }
                 }
                 .buttonStyle(.plain)
@@ -227,13 +255,23 @@ struct StartPageView: View {
     }
 
     private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
-                .tracking(0.8)
+                .tracking(0.9)
             content()
+                .padding(.horizontal, 14)
+                .padding(.vertical, 4)
+                .background(
+                    OrielTheme.surfaceFill(for: colorScheme),
+                    in: RoundedRectangle(cornerRadius: OrielTheme.sectionRadius, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: OrielTheme.sectionRadius, style: .continuous)
+                        .strokeBorder(OrielTheme.hairline(for: colorScheme), lineWidth: 1)
+                }
         }
     }
 
@@ -258,7 +296,7 @@ struct StartPageView: View {
                                 .lineLimit(1)
                         }
                         Spacer(minLength: 0)
-                        Image(systemName: "chevron.right")
+                        Image(systemName: "arrow.up.right")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.tertiary)
                     }
@@ -269,7 +307,7 @@ struct StartPageView: View {
 
                 if index < items.count - 1 {
                     Divider()
-                        .opacity(0.45)
+                        .opacity(0.4)
                 }
             }
         }

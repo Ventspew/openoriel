@@ -93,7 +93,7 @@ struct PrivacyShieldView: View {
             Toggle(isOn: $privacy.contentBlockingEnabled) {
                 labeledToggle(
                     "Block trackers & ads",
-                    subtitle: "EasyList + EasyPrivacy + cosmetic hiding, plus YouTube ad blocking"
+                    subtitle: "Bundled filter lists + DuckDuckGo tracker hosts, cosmetics, and YouTube blocking"
                 )
             }
             Toggle(isOn: $privacy.httpsUpgradeEnabled) {
@@ -108,7 +108,7 @@ struct PrivacyShieldView: View {
         } header: {
             Text("Global shields")
         } footer: {
-            Text("Shields use Apple’s content blocker engine (like Safari). Most web ads and many YouTube ads are blocked; some first-party YouTube streams can still slip through.")
+            Text("Shields use Apple’s content blocker engine (like Safari). Most web ads and many YouTube ads are blocked; some first-party or consent-gated stacks can still slip through.")
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

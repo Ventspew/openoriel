@@ -46,8 +46,12 @@ struct AddressBarView: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.vertical, 9)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: OrielTheme.controlRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: OrielTheme.controlRadius, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+        }
         .accessibilityElement(children: .contain)
     }
 
@@ -65,8 +69,11 @@ struct AddressBarView: View {
     }
 
     private var securityColor: Color {
+        if URLParser.isStartPage(tab.navigation.url) {
+            return OrielTheme.brandPrimary
+        }
         if tab.navigation.url?.scheme?.lowercased() == "https" {
-            return .secondary
+            return OrielTheme.brandPrimary.opacity(0.85)
         }
         if tab.navigation.lastErrorMessage != nil {
             return .orange
