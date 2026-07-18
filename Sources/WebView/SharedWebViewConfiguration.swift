@@ -12,6 +12,7 @@ enum SharedWebViewConfiguration {
         contentRuleLists: [WKContentRuleList],
         contentBlockingEnabled: Bool,
         blockAutoplay: Bool = true,
+        fingerprintingProtection: Bool = true,
         webExtensionController: AnyObject? = nil
     ) -> WKWebViewConfiguration {
         let configuration = WKWebViewConfiguration()
@@ -27,6 +28,16 @@ enum SharedWebViewConfiguration {
         }
 
         let ucc = configuration.userContentController
+        if fingerprintingProtection {
+            ucc.addUserScript(
+                WKUserScript(
+                    source: FingerprintingProtectionScript.source,
+                    injectionTime: .atDocumentStart,
+                    forMainFrameOnly: false,
+                    in: .page
+                )
+            )
+        }
         if contentBlockingEnabled {
             for list in contentRuleLists {
                 ucc.add(list)
@@ -59,6 +70,12 @@ enum SharedWebViewConfiguration {
 
         #if os(macOS)
         if #available(macOS 15.4, *),
+           !isPrivate,
+           let controller = webExtensionController as? WKWebExtensionController {
+            configuration.webExtensionController = controller
+        }
+        #elseif os(iOS)
+        if #available(iOS 18.4, *),
            !isPrivate,
            let controller = webExtensionController as? WKWebExtensionController {
             configuration.webExtensionController = controller

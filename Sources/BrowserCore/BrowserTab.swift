@@ -25,6 +25,9 @@ final class BrowserTab: Identifiable {
     /// Pinned tabs stay toward the front of the strip / overview.
     var isPinned = false
 
+    /// Optional tab group membership.
+    var groupID: UUID?
+
     /// Page zoom factor (1.0 = actual size).
     var zoomFactor: Double = 1.0
 
@@ -44,6 +47,9 @@ final class BrowserTab: Identifiable {
     var shouldUpgradeHTTPS: ((URL) -> Bool)?
     var onHTTPSUpgrade: (() -> Void)?
     var shouldStripTracking: (() -> Bool)?
+    var shouldUseDuckPlayer: (() -> Bool)?
+    var isHTTPSOnlyMode: (() -> Bool)?
+    var elementHideScript: (() -> String)?
 
     init(
         id: UUID = UUID(),
@@ -90,17 +96,37 @@ final class BrowserTab: Identifiable {
         navigation.lastErrorMessage = nil
 
         var destination = url
-        if !URLParser.isStartPage(url) {
-            let upgradeEnabled = shouldUpgradeHTTPS?(destination) ?? true
+        if !URLParser.isStartPage(url) && !URLParser.isDuckPlayerPage(url) {
+            let upgradeEnabled = (shouldUpgradeHTTPS?(destination) ?? true) || (isHTTPSOnlyMode?() ?? false)
             let result = HTTPSUpgrade.upgradeIfNeeded(destination, enabled: upgradeEnabled)
             if result.didUpgrade {
                 destination = result.url
                 onHTTPSUpgrade?()
             }
+
+            if isHTTPSOnlyMode?() == true,
+               destination.scheme?.lowercased() == "http",
+               let host = destination.host?.lowercased(),
+               host != "localhost",
+               !host.hasSuffix(".local") {
+                navigation.url = destination
+                navigation.syncAddressBarFromURL()
+                navigation.isLoading = false
+                navigation.lastErrorMessage = "HTTPS-Only Mode blocked this insecure (HTTP) page."
+                refreshNavigationChrome()
+                return
+            }
+
             let stripEnabled = shouldStripTracking?() ?? true
             let stripped = TrackingParameterStripper.strip(destination, enabled: stripEnabled)
             if stripped.didStrip {
                 destination = stripped.url
+            }
+
+            if shouldUseDuckPlayer?() == true,
+               DuckPlayer.isYouTubeWatchURL(destination),
+               let videoID = DuckPlayer.videoID(from: destination) {
+                destination = DuckPlayer.playerURL(forVideoID: videoID)
             }
         }
 
@@ -109,6 +135,17 @@ final class BrowserTab: Identifiable {
 
         if URLParser.isStartPage(destination) {
             showStartPagePreservingWebHistory()
+            return
+        }
+
+        if URLParser.isDuckPlayerPage(destination),
+           let videoID = URLParser.duckPlayerVideoID(from: destination) {
+            navigation.isLoading = true
+            let html = DuckPlayer.embedHTML(videoID: videoID)
+            webView?.loadHTMLString(html, baseURL: URL(string: "https://www.youtube-nocookie.com"))
+            navigation.isLoading = false
+            navigation.title = "Oriel Player"
+            refreshNavigationChrome()
             return
         }
 
@@ -121,6 +158,33 @@ final class BrowserTab: Identifiable {
         applyUserAgent(for: destination)
         webView?.load(URLRequest(url: destination))
         refreshNavigationChrome()
+    }
+
+    func startElementPicker() {
+        webView?.evaluateJavaScript(ElementHideStore.pickerSource, in: nil, in: .page) { _ in }
+    }
+
+    func cancelElementPicker() {
+        webView?.evaluateJavaScript(ElementHideStore.cancelPickerSource, in: nil, in: .page) { _ in }
+    }
+
+    func applyElementHideRules() {
+        guard let script = elementHideScript?(), !script.isEmpty else { return }
+        webView?.evaluateJavaScript(script, in: nil, in: .page) { _ in }
+    }
+
+    func togglePictureInPicture() {
+        webView?.evaluateJavaScript(PictureInPictureScript.enable, in: nil, in: .page) { _ in }
+    }
+
+    func enableMediaControls() {
+        webView?.evaluateJavaScript(PictureInPictureScript.mediaControls, in: nil, in: .page) { _ in }
+    }
+
+    var isShowingPDF: Bool {
+        guard let url = navigation.url else { return false }
+        if url.pathExtension.lowercased() == "pdf" { return true }
+        return webView?.url?.pathExtension.lowercased() == "pdf"
     }
 
     func goBack() {

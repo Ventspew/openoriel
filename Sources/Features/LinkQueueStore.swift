@@ -43,6 +43,11 @@ final class LinkQueueStore {
         persist()
     }
 
+    func replaceAll(_ items: [QueuedLink]) {
+        self.items = items
+        persist()
+    }
+
     func clear() {
         items = []
         persist()

@@ -44,9 +44,13 @@ final class WebExtensionManager {
             isSupported = false
             lastError = "Web extensions require macOS 15.4 or later."
         }
+        #elseif os(iOS)
+        // WKWebExtension exists on newer iOS, but Oriel’s package/CWS install pipeline is still macOS-first.
+        isSupported = false
+        lastError = "Web extension install is available on macOS 15.4+. iPhone/iPad support is coming next."
         #else
         isSupported = false
-        lastError = "Chrome-style web extensions are not available in Oriel on iPhone and iPad."
+        lastError = "Web extensions are not available on this platform."
         #endif
     }
 
@@ -502,6 +506,20 @@ final class WebExtensionHost: NSObject, WKWebExtensionControllerDelegate {
             )
             popover.show(relativeTo: rect, of: anchor, preferredEdge: .minY)
         }
+    }
+}
+#elseif os(iOS)
+/// iOS host for WKWebExtension — popup presentation is limited; actions still load.
+@available(iOS 18.4, *)
+final class WebExtensionHost: NSObject, WKWebExtensionControllerDelegate {
+    func webExtensionController(
+        _ controller: WKWebExtensionController,
+        presentActionPopup action: WKWebExtension.Action,
+        for extensionContext: WKWebExtensionContext
+    ) async throws {
+        // Popup UI varies by OS version; content scripts / background still run.
+        _ = action
+        _ = extensionContext
     }
 }
 #endif

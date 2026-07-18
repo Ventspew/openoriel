@@ -7,17 +7,19 @@ struct SessionSnapshot: Codable, Equatable, Sendable {
         var title: String
         var isPrivate: Bool
         var isPinned: Bool
+        var groupID: UUID?
 
-        init(id: UUID, urlString: String, title: String, isPrivate: Bool, isPinned: Bool = false) {
+        init(id: UUID, urlString: String, title: String, isPrivate: Bool, isPinned: Bool = false, groupID: UUID? = nil) {
             self.id = id
             self.urlString = urlString
             self.title = title
             self.isPrivate = isPrivate
             self.isPinned = isPinned
+            self.groupID = groupID
         }
 
         enum CodingKeys: String, CodingKey {
-            case id, urlString, title, isPrivate, isPinned
+            case id, urlString, title, isPrivate, isPinned, groupID
         }
 
         init(from decoder: Decoder) throws {
@@ -27,12 +29,33 @@ struct SessionSnapshot: Codable, Equatable, Sendable {
             title = try c.decode(String.self, forKey: .title)
             isPrivate = try c.decode(Bool.self, forKey: .isPrivate)
             isPinned = try c.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
+            groupID = try c.decodeIfPresent(UUID.self, forKey: .groupID)
         }
     }
 
     var tabs: [TabSnapshot]
     var activeTabID: UUID?
+    var groups: [TabGroup]
     var savedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case tabs, activeTabID, groups, savedAt
+    }
+
+    init(tabs: [TabSnapshot], activeTabID: UUID?, groups: [TabGroup] = [], savedAt: Date) {
+        self.tabs = tabs
+        self.activeTabID = activeTabID
+        self.groups = groups
+        self.savedAt = savedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        tabs = try c.decode([TabSnapshot].self, forKey: .tabs)
+        activeTabID = try c.decodeIfPresent(UUID.self, forKey: .activeTabID)
+        groups = try c.decodeIfPresent([TabGroup].self, forKey: .groups) ?? []
+        savedAt = try c.decode(Date.self, forKey: .savedAt)
+    }
 }
 
 @MainActor

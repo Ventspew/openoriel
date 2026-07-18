@@ -90,6 +90,13 @@ final class DownloadManager {
         items.removeAll { $0.id == id }
     }
 
+    func clearAll() {
+        for item in items where item.state == .downloading {
+            cancel(item.id)
+        }
+        items.removeAll()
+    }
+
     private func start(itemID: UUID, url: URL? = nil) {
         guard let source = url ?? items.first(where: { $0.id == itemID })?.sourceURL else { return }
         let task = session.downloadTask(with: source) { [weak self] tempURL, response, error in

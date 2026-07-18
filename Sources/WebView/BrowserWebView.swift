@@ -12,6 +12,7 @@ struct BrowserWebView: PlatformViewRepresentable {
     let tab: BrowserTab
     var contentRuleLists: [WKContentRuleList] = []
     var blockThirdPartyCookies: Bool = false
+    var fingerprintingProtection: Bool = true
     var contentBlockingEnabled: Bool = true
     var matchesBlockedHint: (URL) -> Bool = { _ in false }
     var onBlockedNavigation: (URL) -> Void = { _ in }
@@ -23,6 +24,8 @@ struct BrowserWebView: PlatformViewRepresentable {
     var onOpenURLInNewTab: ((URL) -> Void)?
     var onEnqueueURLForLater: ((URL) -> Void)?
     var shouldStripTracking: () -> Bool = { true }
+    var shouldUseDuckPlayer: () -> Bool = { true }
+    var onElementHidden: ((String, String) -> Void)?
     var onInstallChromeExtension: ((String) -> Void)?
     var onManageChromeExtensions: (() -> Void)?
     var webExtensionController: AnyObject?
@@ -64,6 +67,8 @@ struct BrowserWebView: PlatformViewRepresentable {
             onOpenURLInNewTab: onOpenURLInNewTab,
             onEnqueueURLForLater: onEnqueueURLForLater,
             shouldStripTracking: shouldStripTracking,
+            shouldUseDuckPlayer: shouldUseDuckPlayer,
+            onElementHidden: onElementHidden,
             onInstallChromeExtension: onInstallChromeExtension,
             onManageChromeExtensions: onManageChromeExtensions,
             installedChromeStoreIDs: installedChromeStoreIDs
@@ -77,6 +82,7 @@ struct BrowserWebView: PlatformViewRepresentable {
             contentRuleLists: contentRuleLists,
             contentBlockingEnabled: contentBlockingEnabled,
             blockAutoplay: blockAutoplay,
+            fingerprintingProtection: fingerprintingProtection,
             webExtensionController: webExtensionController
         )
 
@@ -120,12 +126,21 @@ struct BrowserWebView: PlatformViewRepresentable {
             )
         }
 
+        let hideHandler = context.coordinator.hideElementScriptMessageHandler()
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "orielHideElement")
+        webView.configuration.userContentController.add(hideHandler, contentWorld: .page, name: "orielHideElement")
+
         context.coordinator.observe(webView)
         context.coordinator.onPopupTitleChanged = onPopupTitleChanged
         context.coordinator.youTubeAdBlockingEnabled = contentBlockingEnabled
         context.coordinator.appliedContentBlockerGeneration = contentBlockerGeneration
+        context.coordinator.appliedThirdPartyCookieBlocking = blockThirdPartyCookies
         tab.webView = webView
         tab.refreshNavigationChrome()
+
+        Task { @MainActor in
+            await ThirdPartyCookieBlocker.apply(to: webView, enabled: blockThirdPartyCookies)
+        }
 
         if let url = tab.navigation.url, !URLParser.isStartPage(url) {
             webView.load(URLRequest(url: url))
@@ -153,6 +168,8 @@ struct BrowserWebView: PlatformViewRepresentable {
         context.coordinator.onOpenURLInNewTab = onOpenURLInNewTab
         context.coordinator.onEnqueueURLForLater = onEnqueueURLForLater
         context.coordinator.shouldStripTracking = shouldStripTracking
+        context.coordinator.shouldUseDuckPlayer = shouldUseDuckPlayer
+        context.coordinator.onElementHidden = onElementHidden
         context.coordinator.onInstallChromeExtension = onInstallChromeExtension
         context.coordinator.onManageChromeExtensions = onManageChromeExtensions
         context.coordinator.installedChromeStoreIDs = installedChromeStoreIDs
@@ -170,6 +187,13 @@ struct BrowserWebView: PlatformViewRepresentable {
             } else {
                 webView.evaluateJavaScript(YouTubeAdBlockScript.disableSource, in: nil, in: .page) { _ in }
                 webView.evaluateJavaScript(AdvancedPageCleanupScript.disableSource, in: nil, in: .page) { _ in }
+            }
+        }
+
+        if context.coordinator.appliedThirdPartyCookieBlocking != blockThirdPartyCookies {
+            context.coordinator.appliedThirdPartyCookieBlocking = blockThirdPartyCookies
+            Task { @MainActor in
+                await ThirdPartyCookieBlocker.apply(to: webView, enabled: blockThirdPartyCookies)
             }
         }
 

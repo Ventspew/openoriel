@@ -11,7 +11,44 @@ struct PrivacySettingsSnapshot: Codable, Equatable, Sendable {
     var contentBlockingEnabled: Bool = true
     var httpsUpgradeEnabled: Bool = true
     var blockThirdPartyCookies: Bool = false
+    var fingerprintingProtection: Bool = true
+    var duckPlayerEnabled: Bool = true
+    var httpsOnlyMode: Bool = false
     var siteSettings: [String: SiteShieldSettings] = [:]
+
+    enum CodingKeys: String, CodingKey {
+        case contentBlockingEnabled, httpsUpgradeEnabled, blockThirdPartyCookies
+        case fingerprintingProtection, duckPlayerEnabled, httpsOnlyMode, siteSettings
+    }
+
+    init(
+        contentBlockingEnabled: Bool = true,
+        httpsUpgradeEnabled: Bool = true,
+        blockThirdPartyCookies: Bool = false,
+        fingerprintingProtection: Bool = true,
+        duckPlayerEnabled: Bool = true,
+        httpsOnlyMode: Bool = false,
+        siteSettings: [String: SiteShieldSettings] = [:]
+    ) {
+        self.contentBlockingEnabled = contentBlockingEnabled
+        self.httpsUpgradeEnabled = httpsUpgradeEnabled
+        self.blockThirdPartyCookies = blockThirdPartyCookies
+        self.fingerprintingProtection = fingerprintingProtection
+        self.duckPlayerEnabled = duckPlayerEnabled
+        self.httpsOnlyMode = httpsOnlyMode
+        self.siteSettings = siteSettings
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        contentBlockingEnabled = try c.decodeIfPresent(Bool.self, forKey: .contentBlockingEnabled) ?? true
+        httpsUpgradeEnabled = try c.decodeIfPresent(Bool.self, forKey: .httpsUpgradeEnabled) ?? true
+        blockThirdPartyCookies = try c.decodeIfPresent(Bool.self, forKey: .blockThirdPartyCookies) ?? false
+        fingerprintingProtection = try c.decodeIfPresent(Bool.self, forKey: .fingerprintingProtection) ?? true
+        duckPlayerEnabled = try c.decodeIfPresent(Bool.self, forKey: .duckPlayerEnabled) ?? true
+        httpsOnlyMode = try c.decodeIfPresent(Bool.self, forKey: .httpsOnlyMode) ?? false
+        siteSettings = try c.decodeIfPresent([String: SiteShieldSettings].self, forKey: .siteSettings) ?? [:]
+    }
 }
 
 @MainActor
@@ -25,8 +62,23 @@ final class PrivacySettings {
         didSet { persist() }
     }
 
-    /// Documented limitation: WebKit cookie policy varies by OS; we apply best-effort configuration.
+    /// When enabled, Oriel attaches a WebKit `block-cookies` rule for third-party loads.
     var blockThirdPartyCookies: Bool {
+        didSet { persist() }
+    }
+
+    /// Spoof canvas / audio / WebGL / hardware signals (best-effort).
+    var fingerprintingProtection: Bool {
+        didSet { persist() }
+    }
+
+    /// Open YouTube watch links in Oriel Player (youtube-nocookie embed).
+    var duckPlayerEnabled: Bool {
+        didSet { persist() }
+    }
+
+    /// Block plain HTTP navigations that cannot be upgraded (localhost exempt).
+    var httpsOnlyMode: Bool {
         didSet { persist() }
     }
 
@@ -38,12 +90,18 @@ final class PrivacySettings {
             contentBlockingEnabled = loaded.contentBlockingEnabled
             httpsUpgradeEnabled = loaded.httpsUpgradeEnabled
             blockThirdPartyCookies = loaded.blockThirdPartyCookies
+            fingerprintingProtection = loaded.fingerprintingProtection
+            duckPlayerEnabled = loaded.duckPlayerEnabled
+            httpsOnlyMode = loaded.httpsOnlyMode
             siteSettings = loaded.siteSettings
         } else {
             contentBlockingEnabled = true
             httpsUpgradeEnabled = true
             // Off by default so Google Account and similar OAuth popups can keep session cookies.
             blockThirdPartyCookies = false
+            fingerprintingProtection = true
+            duckPlayerEnabled = true
+            httpsOnlyMode = false
             siteSettings = [:]
         }
     }
@@ -88,6 +146,9 @@ final class PrivacySettings {
             contentBlockingEnabled: contentBlockingEnabled,
             httpsUpgradeEnabled: httpsUpgradeEnabled,
             blockThirdPartyCookies: blockThirdPartyCookies,
+            fingerprintingProtection: fingerprintingProtection,
+            duckPlayerEnabled: duckPlayerEnabled,
+            httpsOnlyMode: httpsOnlyMode,
             siteSettings: siteSettings
         )
         try? JSONFileStore.save(snapshot, to: fileName)

@@ -182,6 +182,34 @@ struct SettingsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
+                Section {
+                    Toggle("iCloud Sync", isOn: Binding(
+                        get: { environment.icloudSync.isEnabled },
+                        set: {
+                            environment.icloudSync.isEnabled = $0
+                            if $0 { environment.icloudSync.pushAll() }
+                        }
+                    ))
+                    Button("Autofill Password for This Site") {
+                        Task { await environment.autofillPasswordForActivePage() }
+                    }
+                    Button("Profiles…") {
+                        environment.showProfiles = true
+                        if showsDoneButton { dismiss() }
+                    }
+                    #if os(macOS)
+                    Toggle("Vertical Tabs", isOn: Binding(
+                        get: { environment.useVerticalTabs },
+                        set: { environment.setVerticalTabsEnabled($0) }
+                    ))
+                    #endif
+                } header: {
+                    Text("Accounts & layout")
+                } footer: {
+                    Text("iCloud Sync mirrors bookmarks, Open Later, and a few appearance settings via iCloud Key-Value storage. Passwords use the system Keychain picker.")
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 Section("Homepage") {
                     Picker("New tab opens", selection: $settings.newTabBehavior) {
                         ForEach(NewTabBehavior.allCases) { behavior in
@@ -224,7 +252,7 @@ struct SettingsView: View {
                     Text("On chromewebstore.google.com, click Add to Oriel to install. You can also load a .zip / .crx / folder manually.")
                         .fixedSize(horizontal: false, vertical: true)
                     #else
-                    Text("Full Chrome-style extensions are not available on iPhone and iPad.")
+                    Text("Web extension install is available on macOS 15.4+. iPhone/iPad support is planned next.")
                         .fixedSize(horizontal: false, vertical: true)
                     #endif
                 }

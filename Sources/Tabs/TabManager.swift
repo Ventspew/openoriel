@@ -14,6 +14,7 @@ final class TabManager {
     private(set) var tabs: [BrowserTab] = []
     private(set) var activeTabID: UUID?
     private(set) var closedTabs: [ClosedTabRecord] = []
+    private(set) var groups: [TabGroup] = []
 
     var searchEngine: SearchEngine
     var onTabFinishedNavigation: ((BrowserTab) -> Void)?
@@ -47,9 +48,11 @@ final class TabManager {
                 )
                 tab.javaScriptEnabled = javaScriptEnabledProvider?() ?? true
                 tab.isPinned = item.isPinned
+                tab.groupID = item.groupID
                 tab.navigation.title = item.title
                 return tab
             }
+            groups = snapshot.groups
             if restored.isEmpty {
                 tabs = [makeTab(isPrivate: false)]
             } else {
@@ -178,13 +181,67 @@ final class TabManager {
                     urlString: $0.restorableURL.absoluteString,
                     title: $0.displayTitle,
                     isPrivate: false,
-                    isPinned: $0.isPinned
+                    isPinned: $0.isPinned,
+                    groupID: $0.groupID
                 )
             },
             activeTabID: activeNormalID,
+            groups: groups,
             savedAt: .now
         )
     }
+
+    @discardableResult
+    func createGroup(name: String, colorName: String = "teal") -> TabGroup {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let group = TabGroup(
+            name: trimmed.isEmpty ? "Group \(groups.count + 1)" : trimmed,
+            colorName: colorName
+        )
+        groups.append(group)
+        notifySessionChanged()
+        return group
+    }
+
+    func renameGroup(id: UUID, name: String) {
+        guard let index = groups.firstIndex(where: { $0.id == id }) else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        groups[index].name = trimmed
+        notifySessionChanged()
+    }
+
+    func deleteGroup(id: UUID) {
+        groups.removeAll { $0.id == id }
+        for tab in tabs where tab.groupID == id {
+            tab.groupID = nil
+        }
+        notifySessionChanged()
+    }
+
+    func assign(tabID: UUID, toGroup groupID: UUID?) {
+        guard let tab = tabs.first(where: { $0.id == tabID }) else { return }
+        if let groupID {
+            guard groups.contains(where: { $0.id == groupID }) else { return }
+        }
+        tab.groupID = groupID
+        notifySessionChanged()
+    }
+
+    func closeAllPrivateTabs() {
+        let ids = tabs.filter(\.isPrivate).map(\.id)
+        for id in ids {
+            closeTab(id: id)
+        }
+    }
+
+    func closeAllTabs(includingPrivate: Bool) {
+        let ids = tabs.filter { includingPrivate || !$0.isPrivate }.map(\.id)
+        for id in ids {
+            closeTab(id: id)
+        }
+    }
+
 
     private func makeTab(url: URL? = nil, isPrivate: Bool = false) -> BrowserTab {
         let tab = BrowserTab(isPrivate: isPrivate, searchEngine: searchEngine, initialURL: url)

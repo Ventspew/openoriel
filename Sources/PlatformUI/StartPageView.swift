@@ -9,6 +9,8 @@ struct StartPageView: View {
 
     @State private var query = ""
     @State private var appeared = false
+    @State private var startSuggestions: [SearchSuggestion] = []
+    @State private var suggestionTask: Task<Void, Never>?
     @FocusState private var searchFocused: Bool
 
     private var activeEngine: SearchEngine {
@@ -53,8 +55,9 @@ struct StartPageView: View {
                         if !environment.bookmarks.favorites.isEmpty {
                             tileSection(
                                 title: "Favorites",
-                                items: environment.bookmarks.favorites.prefix(8).map {
-                                    ($0.title, $0.urlString)
+                                items: environment.bookmarks.favorites.prefix(8).compactMap { bookmark -> (String, String)? in
+                                    guard let url = bookmark.urlString else { return nil }
+                                    return (bookmark.title, url)
                                 }
                             )
                         }
@@ -66,8 +69,9 @@ struct StartPageView: View {
                     if !environment.bookmarks.favorites.isEmpty {
                         tileSection(
                             title: "Favorites",
-                            items: environment.bookmarks.favorites.prefix(8).map {
-                                ($0.title, $0.urlString)
+                            items: environment.bookmarks.favorites.prefix(8).compactMap { bookmark -> (String, String)? in
+                                guard let url = bookmark.urlString else { return nil }
+                                return (bookmark.title, url)
                             }
                         )
                     }
@@ -200,6 +204,9 @@ struct StartPageView: View {
     private var searchBlock: some View {
         VStack(spacing: 12) {
             searchField
+            if searchFocused && !startSuggestions.isEmpty {
+                startSuggestionList
+            }
             HStack {
                 Text("via \(activeEngine.displayName)")
                     .font(.caption.weight(.semibold))
@@ -343,6 +350,9 @@ struct StartPageView: View {
                 #endif
                 .focused($searchFocused)
                 .onSubmit(submitSearch)
+                .onChange(of: query) { _, newValue in
+                    scheduleStartSuggestions(for: newValue)
+                }
                 .accessibilityLabel("Oriel search")
                 .accessibilityHint("Searches with \(activeEngine.displayName) when the text is not a web address")
 
@@ -473,6 +483,74 @@ struct StartPageView: View {
         .foregroundStyle(.secondary)
     }
 
+    private var startSuggestionList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(startSuggestions) { item in
+                Button {
+                    applyStartSuggestion(item)
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: item.source == .bookmark ? "bookmark" : (item.source == .history ? "clock" : "magnifyingglass"))
+                            .font(.footnote)
+                            .foregroundStyle(accent)
+                            .frame(width: 18)
+                        Text(item.text)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                if item.id != startSuggestions.last?.id {
+                    Divider().padding(.leading, 40)
+                }
+            }
+        }
+        .background(
+            OrielTheme.surfaceFill(for: pageScheme),
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+        }
+    }
+
+    private func applyStartSuggestion(_ item: SearchSuggestion) {
+        if let url = item.url {
+            tab.load(url)
+        } else {
+            query = item.text
+            submitSearch()
+        }
+        startSuggestions = []
+        searchFocused = false
+    }
+
+    private func scheduleStartSuggestions(for raw: String) {
+        suggestionTask?.cancel()
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else {
+            startSuggestions = []
+            return
+        }
+        suggestionTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 220_000_000)
+            guard !Task.isCancelled else { return }
+            let results = await environment.searchSuggestions.suggestions(
+                for: trimmed,
+                engine: activeEngine,
+                history: environment.history,
+                bookmarks: environment.bookmarks
+            )
+            guard !Task.isCancelled else { return }
+            startSuggestions = results
+        }
+    }
+
     private func submitSearch() {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -480,6 +558,7 @@ struct StartPageView: View {
         tab.searchEngine = engine
         tab.load(URLParser.resolve(trimmed, searchEngine: engine))
         query = ""
+        startSuggestions = []
     }
 
     private func tileSection(title: String, items: [(String, String)]) -> some View {

@@ -112,7 +112,25 @@ struct PrivacyShieldView: View {
             Toggle(isOn: $privacy.blockThirdPartyCookies) {
                 labeledToggle(
                     "Limit third-party cookies",
-                    subtitle: "May break Google Account and other sign-in flows; leave off to stay signed in"
+                    subtitle: "Blocks cookies on third-party loads via WebKit content rules"
+                )
+            }
+            Toggle(isOn: $privacy.fingerprintingProtection) {
+                labeledToggle(
+                    "Fingerprinting protection",
+                    subtitle: "Noise canvas/audio and standardize WebGL / hardware signals"
+                )
+            }
+            Toggle(isOn: $privacy.httpsOnlyMode) {
+                labeledToggle(
+                    "HTTPS-Only Mode",
+                    subtitle: "Block plain HTTP pages that cannot be upgraded (localhost allowed)"
+                )
+            }
+            Toggle(isOn: $privacy.duckPlayerEnabled) {
+                labeledToggle(
+                    "Oriel Player for YouTube",
+                    subtitle: "Open watch links in a clean youtube-nocookie player"
                 )
             }
         } header: {

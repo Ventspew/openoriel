@@ -69,6 +69,18 @@ struct BrowserShellView: View {
             LinkQueueView()
                 .orielSheetChrome()
         }
+        .sheet(isPresented: $environment.showFireButton) {
+            FireButtonView()
+                .orielSheetChrome()
+        }
+        .sheet(isPresented: $environment.showTranslate) {
+            TranslatePageView()
+                .orielSheetChrome()
+        }
+        .sheet(isPresented: $environment.showProfiles) {
+            ProfilesView()
+                .orielSheetChrome()
+        }
         .sheet(item: $environment.authPopup) { popup in
             AuthPopupView(state: popup)
                 .orielSheetChrome(preferLargeOnCompact: true)
@@ -164,6 +176,14 @@ struct BrowserShellView: View {
             ) {
                 environment.showPrivacyShield = true
             }
+            chromeIconButton(
+                systemName: "flame.fill",
+                label: "Fire — clear browsing data",
+                accent: accent,
+                size: size
+            ) {
+                environment.showFireButton = true
+            }
             if !compact {
                 chromeIconButton(
                     systemName: environment.downloads.hasActiveDownloads ? "arrow.down.circle.fill" : "arrow.down.circle",
@@ -250,24 +270,30 @@ struct BrowserShellView: View {
         @Bindable var environment = environment
         GeometryReader { proxy in
             let isCompact = proxy.size.width < Self.compactChromeWidth
-            VStack(spacing: 0) {
-                if tab.isPrivate { privateBanner }
-                if environment.tabs.tabs.count > 1 {
-                    macTabStrip(environment: environment)
+            HStack(spacing: 0) {
+                if environment.useVerticalTabs, !isCompact, environment.tabs.tabs.count > 0 {
+                    macVerticalTabStrip(environment: environment)
+                        .frame(width: 220)
                 }
-                if isCompact {
-                    macCompactChrome(tab: tab, environment: environment)
-                }
-                progressBar(for: tab)
-                content(for: tab, environment: environment)
-                if environment.showFindInPage {
-                    FindInPageBar(
-                        query: $environment.findQuery,
-                        onSubmit: { environment.performFind(forward: true) },
-                        onNext: { environment.performFind(forward: true) },
-                        onPrevious: { environment.performFind(forward: false) },
-                        onClose: { environment.closeFind() }
-                    )
+                VStack(spacing: 0) {
+                    if tab.isPrivate { privateBanner }
+                    if !environment.useVerticalTabs, environment.tabs.tabs.count > 1 {
+                        macTabStrip(environment: environment)
+                    }
+                    if isCompact {
+                        macCompactChrome(tab: tab, environment: environment)
+                    }
+                    progressBar(for: tab)
+                    content(for: tab, environment: environment)
+                    if environment.showFindInPage {
+                        FindInPageBar(
+                            query: $environment.findQuery,
+                            onSubmit: { environment.performFind(forward: true) },
+                            onNext: { environment.performFind(forward: true) },
+                            onPrevious: { environment.performFind(forward: false) },
+                            onClose: { environment.closeFind() }
+                        )
+                    }
                 }
             }
             .toolbar {
@@ -305,6 +331,82 @@ struct BrowserShellView: View {
                 }
             }
         }
+    }
+
+    private func macVerticalTabStrip(environment: AppEnvironment) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Tabs")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button {
+                    environment.tabs.createTab(select: true)
+                    environment.wireTabPrivacyHooks()
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .buttonStyle(.borderless)
+                .help("New Tab")
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+
+            Divider()
+
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 4) {
+                    ForEach(environment.tabs.groups) { group in
+                        let groupTabs = environment.tabs.tabs.filter { $0.groupID == group.id }
+                        if !groupTabs.isEmpty {
+                            Text(group.name)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(group.color)
+                                .padding(.horizontal, 12)
+                                .padding(.top, 8)
+                            ForEach(groupTabs) { item in
+                                macVerticalTabRow(item, environment: environment)
+                            }
+                        }
+                    }
+                    let ungrouped = environment.tabs.tabs.filter { $0.groupID == nil }
+                    ForEach(ungrouped) { item in
+                        macVerticalTabRow(item, environment: environment)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 8)
+            }
+        }
+        .background(.bar)
+    }
+
+    private func macVerticalTabRow(_ item: BrowserTab, environment: AppEnvironment) -> some View {
+        let selected = item.id == environment.tabs.activeTabID
+        return Button {
+            environment.tabs.selectTab(id: item.id)
+        } label: {
+            HStack(spacing: 8) {
+                FaviconImage(pageURL: item.restorableURL, size: 14)
+                Text(item.displayTitle)
+                    .lineLimit(1)
+                    .font(.callout)
+                Spacer(minLength: 0)
+                if environment.tabs.tabs.count > 1, !item.isPinned {
+                    Image(systemName: "xmark")
+                        .font(.caption2.weight(.bold))
+                        .onTapGesture { environment.tabs.closeTab(id: item.id) }
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                selected ? environment.settings.brandColor.opacity(0.16) : Color.clear,
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     /// Single clean row: nav · centered address · tabs / more. No duplicate Settings/JS/Shields row.
@@ -501,6 +603,8 @@ struct BrowserShellView: View {
                     environment.showLinkQueue = true
                 }
                 Button("Shields") { environment.showPrivacyShield = true }
+                Button("Fire…", role: .destructive) { environment.showFireButton = true }
+                Button("Profiles…") { environment.showProfiles = true }
                 Button("Settings") { openAppSettings() }
             } else {
                 Button("New Tab") {
@@ -558,6 +662,35 @@ struct BrowserShellView: View {
                         tab.toggleFocusMode()
                     }
                     .disabled(tab.isShowingStartPage)
+                    Button("Translate Page…") {
+                        environment.showTranslate = true
+                    }
+                    .disabled(tab.isShowingStartPage)
+                    Button("Picture in Picture") {
+                        tab.togglePictureInPicture()
+                    }
+                    .disabled(tab.isShowingStartPage)
+                    Button("Show Media Controls") {
+                        tab.enableMediaControls()
+                    }
+                    .disabled(tab.isShowingStartPage)
+                    Button("Install as Web App") {
+                        Task { await environment.installCurrentPageAsWebApp() }
+                    }
+                    .disabled(tab.isShowingStartPage)
+                    Button("Autofill Password…") {
+                        Task { await environment.autofillPasswordForActivePage() }
+                    }
+                    .disabled(tab.isShowingStartPage)
+                    Button("Hide Element…") {
+                        tab.startElementPicker()
+                    }
+                    .disabled(tab.isShowingStartPage)
+                    Button("Clear Hidden Elements on Site") {
+                        environment.elementHide.clear(host: tab.navigation.url?.host)
+                        tab.reload()
+                    }
+                    .disabled(tab.isShowingStartPage)
                 }
 
                 Divider()
@@ -585,6 +718,8 @@ struct BrowserShellView: View {
                 }
                 .disabled(tab.isShowingStartPage)
                 Button("Shields") { environment.showPrivacyShield = true }
+                Button("Fire…", role: .destructive) { environment.showFireButton = true }
+                Button("Profiles…") { environment.showProfiles = true }
                 Button("Settings") { openAppSettings() }
 
                 Divider()
@@ -620,6 +755,7 @@ struct BrowserShellView: View {
                 tab: tab,
                 contentRuleLists: environment.contentBlocker.compiledLists,
                 blockThirdPartyCookies: environment.privacy.blockThirdPartyCookies,
+                fingerprintingProtection: environment.privacy.fingerprintingProtection,
                 contentBlockingEnabled: environment.contentBlockingEnabled(for: tab),
                 matchesBlockedHint: { url in
                     environment.contentBlocker.matchesBlockedHostHint(url)
@@ -649,6 +785,12 @@ struct BrowserShellView: View {
                 },
                 shouldStripTracking: {
                     environment.settings.stripTrackingParameters
+                },
+                shouldUseDuckPlayer: {
+                    environment.privacy.duckPlayerEnabled
+                },
+                onElementHidden: { host, selector in
+                    environment.elementHide.add(host: host, cssSelector: selector)
                 },
                 onInstallChromeExtension: { extensionID in
                     Task { @MainActor in

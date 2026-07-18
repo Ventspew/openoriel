@@ -4,14 +4,43 @@ struct TabOverviewView: View {
     @Environment(AppEnvironment.self) private var environment
     @Environment(\.dismiss) private var dismiss
 
+    @State private var query = ""
+    @State private var newGroupName = ""
+    @State private var showNewGroupAlert = false
+    @State private var renameGroupID: UUID?
+    @State private var renameGroupName = ""
+
     private let columns = [GridItem(.adaptive(minimum: 160), spacing: 12)]
+
+    private var filteredTabs: [BrowserTab] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let all = environment.tabs.tabs
+        guard !q.isEmpty else { return all }
+        return all.filter {
+            $0.displayTitle.lowercased().contains(q)
+                || $0.restorableURL.absoluteString.lowercased().contains(q)
+                || ($0.restorableURL.host?.lowercased().contains(q) ?? false)
+        }
+    }
+
+    private var ungroupedTabs: [BrowserTab] {
+        filteredTabs.filter { $0.groupID == nil }
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(environment.tabs.tabs) { tab in
-                        tabCard(tab)
+                LazyVStack(alignment: .leading, spacing: 20) {
+                    ForEach(environment.tabs.groups) { group in
+                        let tabs = filteredTabs.filter { $0.groupID == group.id }
+                        if query.isEmpty || !tabs.isEmpty {
+                            groupSection(group, tabs: tabs)
+                        }
+                    }
+
+                    if !ungroupedTabs.isEmpty || environment.tabs.groups.isEmpty {
+                        sectionHeader("Tabs", color: .secondary)
+                        tabGrid(ungroupedTabs)
                     }
                 }
                 .padding()
@@ -20,6 +49,7 @@ struct TabOverviewView: View {
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
+            .searchable(text: $query, prompt: "Search tabs")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
@@ -36,11 +66,87 @@ struct TabOverviewView: View {
                             environment.wireTabPrivacyHooks()
                             dismiss()
                         }
+                        Divider()
+                        Button("New Tab Group…") {
+                            newGroupName = ""
+                            showNewGroupAlert = true
+                        }
                     } label: {
                         Image(systemName: "plus")
                     }
                     .accessibilityLabel("New Tab")
                 }
+            }
+            .alert("New Tab Group", isPresented: $showNewGroupAlert) {
+                TextField("Group name", text: $newGroupName)
+                Button("Cancel", role: .cancel) {}
+                Button("Create") {
+                    _ = environment.tabs.createGroup(name: newGroupName)
+                }
+            }
+            .alert("Rename Group", isPresented: Binding(
+                get: { renameGroupID != nil },
+                set: { if !$0 { renameGroupID = nil } }
+            )) {
+                TextField("Group name", text: $renameGroupName)
+                Button("Cancel", role: .cancel) { renameGroupID = nil }
+                Button("Save") {
+                    if let id = renameGroupID {
+                        environment.tabs.renameGroup(id: id, name: renameGroupName)
+                    }
+                    renameGroupID = nil
+                }
+            }
+        }
+    }
+
+    private func groupSection(_ group: TabGroup, tabs: [BrowserTab]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                sectionHeader(group.name, color: group.color)
+                Spacer()
+                Menu {
+                    Button("Add Current Tab") {
+                        if let id = environment.tabs.activeTabID {
+                            environment.tabs.assign(tabID: id, toGroup: group.id)
+                        }
+                    }
+                    Button("Rename…") {
+                        renameGroupID = group.id
+                        renameGroupName = group.name
+                    }
+                    Button("Delete Group", role: .destructive) {
+                        environment.tabs.deleteGroup(id: group.id)
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if tabs.isEmpty {
+                Text("No tabs in this group")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                tabGrid(tabs)
+            }
+        }
+    }
+
+    private func sectionHeader(_ title: String, color: Color) -> some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(title)
+                .font(.headline)
+        }
+    }
+
+    private func tabGrid(_ tabs: [BrowserTab]) -> some View {
+        LazyVGrid(columns: columns, spacing: 12) {
+            ForEach(tabs) { tab in
+                tabCard(tab)
             }
         }
     }
@@ -68,6 +174,16 @@ struct TabOverviewView: View {
                 Menu {
                     Button(tab.isPinned ? "Unpin" : "Pin") {
                         environment.tabs.togglePin(id: tab.id)
+                    }
+                    Menu("Move to Group") {
+                        Button("Ungrouped") {
+                            environment.tabs.assign(tabID: tab.id, toGroup: nil)
+                        }
+                        ForEach(environment.tabs.groups) { group in
+                            Button(group.name) {
+                                environment.tabs.assign(tabID: tab.id, toGroup: group.id)
+                            }
+                        }
                     }
                     Button("Close", role: .destructive) {
                         environment.tabs.closeTab(id: tab.id)

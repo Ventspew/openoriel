@@ -4,6 +4,25 @@ import WebKit
 import UIKit
 #endif
 
+
+private final class WeakHideElementHandler: NSObject, WKScriptMessageHandler {
+    weak var target: WebViewCoordinator?
+
+    init(target: WebViewCoordinator) {
+        self.target = target
+    }
+
+    func userContentController(
+        _ userContentController: WKUserContentController,
+        didReceive message: WKScriptMessage
+    ) {
+        let body = message.body
+        Task { @MainActor [weak target] in
+            target?.handleHideElementMessage(body)
+        }
+    }
+}
+
 /// Avoids a retain cycle: `WKUserContentController` strongly retains script message handlers.
 private final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
     weak var target: WebViewCoordinator?
@@ -37,10 +56,13 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     var onOpenURLInNewTab: ((URL) -> Void)?
     var onEnqueueURLForLater: ((URL) -> Void)?
     var shouldStripTracking: () -> Bool = { true }
+    var shouldUseDuckPlayer: () -> Bool = { true }
+    var onElementHidden: ((String, String) -> Void)?
     var onInstallChromeExtension: ((String) -> Void)?
     var onManageChromeExtensions: (() -> Void)?
     var installedChromeStoreIDs: [String] = []
     var youTubeAdBlockingEnabled: Bool = true
+    var appliedThirdPartyCookieBlocking = false
     var appliedContentBlockerGeneration: Int = 0
 
     private var observations: [NSKeyValueObservation] = []
@@ -61,6 +83,8 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         onOpenURLInNewTab: ((URL) -> Void)? = nil,
         onEnqueueURLForLater: ((URL) -> Void)? = nil,
         shouldStripTracking: @escaping () -> Bool = { true },
+        shouldUseDuckPlayer: @escaping () -> Bool = { true },
+        onElementHidden: ((String, String) -> Void)? = nil,
         onInstallChromeExtension: ((String) -> Void)? = nil,
         onManageChromeExtensions: (() -> Void)? = nil,
         installedChromeStoreIDs: [String] = []
@@ -76,6 +100,8 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         self.onOpenURLInNewTab = onOpenURLInNewTab
         self.onEnqueueURLForLater = onEnqueueURLForLater
         self.shouldStripTracking = shouldStripTracking
+        self.shouldUseDuckPlayer = shouldUseDuckPlayer
+        self.onElementHidden = onElementHidden
         self.onInstallChromeExtension = onInstallChromeExtension
         self.onManageChromeExtensions = onManageChromeExtensions
         self.installedChromeStoreIDs = installedChromeStoreIDs
@@ -207,6 +233,15 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
                     return
                 }
             }
+
+            if isMainFrame,
+               shouldUseDuckPlayer(),
+               DuckPlayer.isYouTubeWatchURL(url),
+               let videoID = DuckPlayer.videoID(from: url) {
+                decisionHandler(.cancel, preferences)
+                tab.load(DuckPlayer.playerURL(forVideoID: videoID))
+                return
+            }
         }
         let context = NavigationPolicy.Context(
             contentBlockingEnabled: contentBlockingEnabled,
@@ -247,13 +282,18 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         if webView === tab.webView, !tab.isShowingStartPage {
             tab.navigation.isLoading = false
             tab.navigation.estimatedProgress = 1
-            tab.navigation.title = webView.title ?? ""
-            if let url = webView.url {
-                tab.navigation.url = url
-                tab.navigation.syncAddressBarFromURL()
+            if URLParser.isDuckPlayerPage(tab.navigation.url) {
+                tab.navigation.title = "Oriel Player"
+            } else {
+                tab.navigation.title = webView.title ?? ""
+                if let url = webView.url {
+                    tab.navigation.url = url
+                    tab.navigation.syncAddressBarFromURL()
+                }
             }
             tab.onNavigationFinished?(tab)
             tab.applyPageEnhancementsAfterLoad()
+            tab.applyElementHideRules()
             #if os(macOS)
             injectInstalledExtensionIDs(into: webView)
             #endif
@@ -278,6 +318,20 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         webView.evaluateJavaScript(script, in: nil, in: .page) { _ in }
     }
     #endif
+
+
+    func hideElementScriptMessageHandler() -> WKScriptMessageHandler {
+        WeakHideElementHandler(target: self)
+    }
+
+    func handleHideElementMessage(_ body: Any) {
+        guard let dict = body as? [String: Any],
+              let selector = dict["selector"] as? String,
+              let host = dict["host"] as? String,
+              !selector.isEmpty,
+              !host.isEmpty else { return }
+        onElementHidden?(host, selector)
+    }
 
     func injectYouTubeAdBlockIfNeeded(into webView: WKWebView) {
         guard youTubeAdBlockingEnabled, contentBlockingEnabled else {

@@ -23,6 +23,11 @@ final class AppEnvironment {
     let permissions: WebsitePermissionManager
     let extensions: WebExtensionManager
     let linkQueue: LinkQueueStore
+    let searchSuggestions: SearchSuggestionProvider
+    let elementHide: ElementHideStore
+    let icloudSync: iCloudSyncService
+    let profiles: ProfileStore
+    let installedWebApps: InstalledWebAppStore
 
     var showAbout = false
     var showTabOverview = false
@@ -34,6 +39,10 @@ final class AppEnvironment {
     var showSettings = false
     var showExtensions = false
     var showLinkQueue = false
+    var showFireButton = false
+    var showTranslate = false
+    var showProfiles = false
+    var useVerticalTabs = false
     var findQuery = ""
     var authPopup: WebAuthPopupState?
 
@@ -50,7 +59,12 @@ final class AppEnvironment {
         downloads: DownloadManager? = nil,
         permissions: WebsitePermissionManager? = nil,
         extensions: WebExtensionManager? = nil,
-        linkQueue: LinkQueueStore? = nil
+        linkQueue: LinkQueueStore? = nil,
+        searchSuggestions: SearchSuggestionProvider? = nil,
+        elementHide: ElementHideStore? = nil,
+        icloudSync: iCloudSyncService? = nil,
+        profiles: ProfileStore? = nil,
+        installedWebApps: InstalledWebAppStore? = nil
     ) {
         let resolvedSettings = settings ?? BrowserSettings()
         let resolvedBookmarks = bookmarks ?? BookmarkStore()
@@ -75,6 +89,11 @@ final class AppEnvironment {
         self.permissions = resolvedPermissions
         self.extensions = resolvedExtensions
         self.linkQueue = resolvedLinkQueue
+        self.searchSuggestions = searchSuggestions ?? SearchSuggestionProvider()
+        self.elementHide = elementHide ?? ElementHideStore()
+        self.icloudSync = icloudSync ?? iCloudSyncService()
+        self.profiles = profiles ?? ProfileStore()
+        self.installedWebApps = installedWebApps ?? InstalledWebAppStore()
         resolvedSession.restorePreviousSession = resolvedSettings.restorePreviousSession
 
         let snapshot = resolvedSession.load()
@@ -104,6 +123,8 @@ final class AppEnvironment {
 
         wireTabPrivacyHooks()
         persistSession()
+        self.icloudSync.attach(bookmarks: resolvedBookmarks, settings: resolvedSettings, linkQueue: resolvedLinkQueue)
+        self.useVerticalTabs = UserDefaults.standard.bool(forKey: "oriel.verticalTabs")
 
         Task { await resolvedBlocker.prepare() }
     }
@@ -190,6 +211,16 @@ final class AppEnvironment {
             item.shouldStripTracking = { [weak self] in
                 self?.settings.stripTrackingParameters ?? true
             }
+            item.shouldUseDuckPlayer = { [weak self] in
+                self?.privacy.duckPlayerEnabled ?? true
+            }
+            item.isHTTPSOnlyMode = { [weak self] in
+                self?.privacy.httpsOnlyMode ?? false
+            }
+            item.elementHideScript = { [weak self] in
+                guard let self else { return "" }
+                return self.elementHide.injectionScript(forHost: item.navigation.url?.host)
+            }
         }
     }
 
@@ -207,6 +238,50 @@ final class AppEnvironment {
               let url = tab.navigation.url,
               !URLParser.isStartPage(url) else { return }
         enqueueLinkForLater(title: tab.displayTitle, url: url)
+    }
+
+    func setVerticalTabsEnabled(_ enabled: Bool) {
+        useVerticalTabs = enabled
+        UserDefaults.standard.set(enabled, forKey: "oriel.verticalTabs")
+    }
+
+    func autofillPasswordForActivePage() async {
+        guard let tab = activeTab,
+              let url = tab.navigation.url,
+              !URLParser.isStartPage(url),
+              let credential = await PasswordAutofillService.requestCredentials(for: url),
+              let webView = tab.webView else { return }
+        let user = credential.user.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
+        let pass = credential.password.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
+        let script = """
+        (function(){
+          var user = document.querySelector('input[type=email],input[type=text],input[name*=user i],input[name*=email i],input[autocomplete=username]');
+          var pass = document.querySelector('input[type=password]');
+          if (user) { user.focus(); user.value = '\(user)'; user.dispatchEvent(new Event('input',{bubbles:true})); }
+          if (pass) { pass.focus(); pass.value = '\(pass)'; pass.dispatchEvent(new Event('input',{bubbles:true})); }
+          return !!(user || pass);
+        })();
+        """
+        webView.evaluateJavaScript(script, in: nil, in: .page) { _ in }
+        icloudSync.pushAll()
+    }
+
+    func installCurrentPageAsWebApp() async {
+        guard let tab = activeTab,
+              let url = tab.navigation.url,
+              !URLParser.isStartPage(url),
+              let webView = tab.webView else { return }
+        let value: Any? = await withCheckedContinuation { cont in
+            webView.evaluateJavaScript(ProgressiveWebAppDetector.detectScript, in: nil, in: .page) { result in
+                switch result {
+                case .success(let v): cont.resume(returning: v)
+                case .failure: cont.resume(returning: nil)
+                }
+            }
+        }
+        let info = ProgressiveWebAppDetector.parseDetectResult(value, pageURL: url)
+            ?? ProgressiveWebAppInfo(name: tab.displayTitle, startURL: url, manifestURL: nil, iconURL: nil)
+        installedWebApps.install(info)
     }
 }
 
