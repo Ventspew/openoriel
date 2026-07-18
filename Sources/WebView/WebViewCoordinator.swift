@@ -220,6 +220,7 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         injectYouTubeAdBlockIfNeeded(into: webView)
+        injectPageCleanupIfNeeded(into: webView)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -237,6 +238,7 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             injectInstalledExtensionIDs(into: webView)
             #endif
             injectYouTubeAdBlockIfNeeded(into: webView)
+            injectPageCleanupIfNeeded(into: webView)
         }
         if webView === tab.webView {
             tab.refreshNavigationChrome()
@@ -265,6 +267,21 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         guard YouTubeAdBlockScript.shouldInject(for: webView.url) else { return }
         // Clear kill flag then (re)install — user script may already be present.
         let boot = "window.__orielYouTubeAdBlockKill = false;\n" + YouTubeAdBlockScript.source
+        webView.evaluateJavaScript(boot, in: nil, in: .page) { _ in }
+    }
+
+    func injectPageCleanupIfNeeded(into webView: WKWebView) {
+        guard contentBlockingEnabled else {
+            webView.evaluateJavaScript(AdvancedPageCleanupScript.disableSource, in: nil, in: .page) { _ in }
+            return
+        }
+        let boot =
+            "window.__orielPageCleanupKill = false;\n"
+            + "window.__orielPageCleanup = false;\n"
+            + "window.__orielLarousseKillInstalled = false;\n"
+            + AdvancedPageCleanupScript.documentStartSource
+            + "\n"
+            + AdvancedPageCleanupScript.source
         webView.evaluateJavaScript(boot, in: nil, in: .page) { _ in }
     }
 

@@ -21,9 +21,15 @@ converted (build-time) from:
 - Fanboy's Cookie List (https://www.fanboy.co.nz/)
   Same family of licences as EasyList
 
-- AdGuard filters (Base, Tracking, Social, Annoyances)
+- AdGuard filters (Base, Tracking, Social, Annoyances, French)
   https://adguard.com/ / https://filters.adtidy.org/
   See AdGuard filter licence terms for each list
+
+- DuckDuckGo Tracker Blocklists (apple-tds domain set)
+  https://github.com/duckduckgo/tracker-blocklists
+  Derived from DuckDuckGo Tracker Radar crawl data
+  https://github.com/duckduckgo/tracker-radar
+  Used as a block-host inventory (default:block + forced ad CDNs)
 
 Conversion uses AdGuard SafariConverterLib as an external build tool
 (https://github.com/AdguardTeam/SafariConverterLib, GNU GPLv3).

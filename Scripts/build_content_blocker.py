@@ -10,6 +10,9 @@ Requires ConverterTool (GPL-3.0 build tool — not linked into Oriel):
 Then:
 
   python3 Scripts/build_content_blocker.py
+
+Also pulls DuckDuckGo Tracker Blocklists (apple-tds) domain data:
+  https://github.com/duckduckgo/tracker-blocklists
 """
 
 from __future__ import annotations
@@ -34,10 +37,15 @@ FILTER_URLS = {
     "adguard-tracking.txt": "https://filters.adtidy.org/extension/safari/filters/3_optimized.txt",
     "adguard-social.txt": "https://filters.adtidy.org/extension/safari/filters/4_optimized.txt",
     "adguard-annoyances.txt": "https://filters.adtidy.org/extension/safari/filters/14_optimized.txt",
+    # French filter — covers Larousse `.pub`, Prisma Media placers, Hubvisor stacks
+    "adguard-french.txt": "https://filters.adtidy.org/extension/safari/filters/16_optimized.txt",
 }
 
+# DuckDuckGo Tracker Blocklists (derived from Tracker Radar crawl data)
+DDG_APPLE_TDS_URL = "https://staticcdn.duckduckgo.com/trackerblocking/v4/apple-tds.json"
+
 GROUPS = {
-    "ads": ["easylist.txt", "adguard-base.txt"],
+    "ads": ["easylist.txt", "adguard-base.txt", "adguard-french.txt"],
     "privacy": ["easyprivacy.txt", "adguard-tracking.txt"],
     "annoyances": ["fanboy-cookie.txt", "adguard-annoyances.txt", "adguard-social.txt"],
 }
@@ -53,12 +61,54 @@ ALLOWLIST_DOMAINS = [
     "*github.com",
 ]
 
-# Paths that must never be blocked on YouTube first-party (homepage / player).
-YOUTUBE_UNBLOCK = [
-    r"^[^:]+://+([^:/]+\.)?youtube\.com\/get_video\?",
-    r"^[^:]+://+([^:/]+\.)?youtube\.com\/get_video_info\?",
-    r"^[^:]+://+([^:/]+\.)?www\.youtube\.com\/get_video\?",
+# Domains DDG sometimes marks "ignore" but that still serve ads (Larousse stack).
+FORCE_BLOCK_HOSTS = [
+    "themoneytizer.com",
+    "ads.themoneytizer.com",
+    "ayads.co",
+    "hubvisor.io",
+    "cdn.hubvisor.io",
+    "viously.com",
+    "cdn.viously.com",
+    "getviously.com",
+    "sonar.viously.com",
+    "pmdstatic.net",
+    "prismamedia.com",
+    "prismamediadigital.com",
+    "prismaconnect.fr",
+    "googleadservices.com",
+    "popads.net",
+    "veinteractive.com",
+    "imagino.com",
+    "poool.fr",
+    "poool-subscribe.fr",
+    "sprkly.me",
+    "seedtag.com",
+    "pbstck.com",
+    "videoplayerhub.com",
 ]
+
+# Never turn these DDG "block" domains into WK rules (break sites / login / CDN).
+DDG_SKIP_HOSTS = {
+    "google.com",
+    "google.ch",
+    "google.com.au",
+    "gstatic.com",
+    "fonts.googleapis.com",
+    "maps.googleapis.com",
+    "www.googleapis.com",
+    "storage.googleapis.com",
+    "commondatastorage.googleapis.com",
+    "ampproject.org",
+    "youtube-nocookie.com",
+    "facebook.com",
+    "facebook.net",
+    "cdninstagram.com",
+    "amazon.com",
+    "ssl-images-amazon.com",
+    "twitch.tv",
+    "apple.com",
+}
 
 YOUTUBE_RULES = [
     {"trigger": {"url-filter": r".*youtube\.com\/pagead\/"}, "action": {"type": "block"}},
@@ -128,6 +178,7 @@ BASE_HOSTS = [
     "juicyads.com",
     "googletagservices.com",
     "pagead2.googlesyndication.com",
+    "googletagmanager.com",
 ]
 
 
@@ -138,14 +189,13 @@ def allowlist_rule() -> dict:
     }
 
 
-def download(name: str, url: str) -> Path:
+def download(name: str, url: str, *, force: bool = False) -> Path:
     WORK.mkdir(parents=True, exist_ok=True)
     path = WORK / name
-    if path.exists() and path.stat().st_size > 1000:
+    if not force and path.exists() and path.stat().st_size > 1000:
         print(f"Using cached {name}")
         return path
     print(f"Downloading {name}…")
-    # curl is more reliable than urllib SSL on some Python installs
     subprocess.check_call(
         ["curl", "-fsSL", "-A", "OrielFilterBuild/1.0", "-o", str(path), url]
     )
@@ -192,12 +242,33 @@ def convert_group(name: str, files: list[str], converter: Path) -> Path:
     return out
 
 
+# CDN / ad keywords that must never be re-allowed via ignore-previous-rules.
+BAD_EXCEPTION_MARKERS = (
+    "themoneytizer",
+    "hubvisor",
+    "viously",
+    "getviously",
+    "sascdn",
+    "smartadserver",
+    "ayads",
+    "seedtag",
+    "sprkly",
+    "pmdstatic",
+    "prismamedia",
+    "poool",
+    "teads",
+    "taboola",
+    "doubleclick",
+    "googlesyndication",
+    "googleadservices",
+)
+
+
 def should_drop(rule: dict) -> bool:
     if rule.get("action", {}).get("type") != "block":
         return False
     filt = rule.get("trigger", {}).get("url-filter", "")
     low = filt.lower()
-    # Keep YouTube playback / homepage working
     if "youtube" in low and "get_video" in low:
         return True
     return False
@@ -208,14 +279,54 @@ def should_drop_any(rule: dict) -> bool:
     act = rule.get("action", {}).get("type")
     filt = (rule.get("trigger", {}) or {}).get("url-filter", "").lower()
     if act == "ignore-previous-rules":
-        # AdGuard ships @@ for TheMoneytizer gen.js — that lets Larousse ads through.
-        if "themoneytizer" in filt:
+        if any(m in filt for m in BAD_EXCEPTION_MARKERS):
             return True
     return should_drop(rule) if act == "block" else False
 
 
-def sanitize(rules: list[dict]) -> list[dict]:
-    return [r for r in rules if not should_drop(r)]
+def load_ddg_block_hosts(path: Path) -> list[str]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    trackers = data.get("trackers") or {}
+    hosts: set[str] = set()
+    for domain, info in trackers.items():
+        if not isinstance(domain, str) or "." not in domain:
+            continue
+        low = domain.lower().strip(".")
+        if low in DDG_SKIP_HOSTS:
+            continue
+        if (info or {}).get("default") == "block":
+            hosts.add(low)
+    for h in FORCE_BLOCK_HOSTS:
+        hosts.add(h.lower())
+    # Entity domains for Prisma / Moneytizer even when tracker default is ignore
+    domains_map = data.get("domains") or {}
+    for domain, entity in domains_map.items():
+        ent = str(entity).lower()
+        if any(
+            x in ent
+            for x in (
+                "prisma media",
+                "the moneytizer",
+                "sublime skinz",
+                "smartadserver",
+                "teads",
+                "seedtag",
+            )
+        ):
+            hosts.add(domain.lower().strip("."))
+    return sorted(hosts)
+
+
+def host_block_rules(hosts: list[str]) -> list[dict]:
+    rules = []
+    for h in hosts:
+        rules.append(
+            {
+                "trigger": {"url-filter": ".*" + re.escape(h)},
+                "action": {"type": "block"},
+            }
+        )
+    return rules
 
 
 def write_chunked(prefix: str, rules: list[dict]) -> None:
@@ -243,7 +354,11 @@ def main() -> None:
     for name, url in FILTER_URLS.items():
         download(name, url)
 
-    # Clear previous generated lists (keep example-blocklist.json)
+    ddg_path = download("apple-tds.json", DDG_APPLE_TDS_URL, force=True)
+    ddg_hosts = load_ddg_block_hosts(ddg_path)
+    print(f"DuckDuckGo apple-tds: {len(ddg_hosts)} block hosts")
+
+    # Clear previous generated lists (keep example-blocklist + hand-maintained site-fixes)
     for pattern in (
         "oriel-ads*.json",
         "oriel-privacy*.json",
@@ -252,20 +367,23 @@ def main() -> None:
         "oriel-easyprivacy*.json",
         "oriel-cosmetic*.json",
         "oriel-base*.json",
+        "oriel-ddg*.json",
         "oriel-youtube-ads*.json",
     ):
         for old in OUT_DIR.glob(pattern):
             old.unlink()
 
-    base = [
-        {"trigger": {"url-filter": ".*" + re.escape(h)}, "action": {"type": "block"}}
-        for h in BASE_HOSTS
-    ]
-    write_chunked("oriel-base", base)
+    merged_hosts = sorted(set(BASE_HOSTS) | set(ddg_hosts) | set(FORCE_BLOCK_HOSTS))
+    print(f"oriel-base hosts: {len(merged_hosts)}")
+    write_chunked("oriel-base", host_block_rules(merged_hosts))
 
     for group, files in GROUPS.items():
         path = convert_group(group, files, converter)
-        rules = [r for r in json.loads(path.read_text(encoding="utf-8")) if not should_drop_any(r)]
+        rules = [
+            r
+            for r in json.loads(path.read_text(encoding="utf-8"))
+            if not should_drop_any(r)
+        ]
         print(f"{group}: {len(rules)} rules after sanitize")
         write_chunked(f"oriel-{group}", rules)
 
@@ -274,7 +392,7 @@ def main() -> None:
         json.dumps(yt, separators=(",", ":")), encoding="utf-8"
     )
     print(f"Wrote oriel-youtube-ads.json: {len(yt)} rules")
-    print("Done.")
+    print("Done. Hand-maintained oriel-site-fixes.json was left untouched.")
 
 
 if __name__ == "__main__":

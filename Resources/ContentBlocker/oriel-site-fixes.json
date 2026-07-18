@@ -1,14 +1,26 @@
 [
   {
-    "trigger": { "url-filter": ".*googletagmanager\\.com", "if-domain": ["*larousse.fr"] },
+    "trigger": { "url-filter": ".*googletagmanager\\.com", "if-domain": ["*larousse.fr", "larousse.fr", "www.larousse.fr"] },
     "action": { "type": "block" }
   },
   {
-    "trigger": { "url-filter": ".*googletagservices\\.com", "if-domain": ["*larousse.fr"] },
+    "trigger": { "url-filter": ".*googletagservices\\.com", "if-domain": ["*larousse.fr", "larousse.fr", "www.larousse.fr"] },
     "action": { "type": "block" }
   },
   {
-    "trigger": { "url-filter": ".*securepubads\\.g\\.doubleclick\\.net", "if-domain": ["*larousse.fr"] },
+    "trigger": { "url-filter": ".*securepubads\\.g\\.doubleclick\\.net", "if-domain": ["*larousse.fr", "larousse.fr", "www.larousse.fr"] },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*pagead2\\.googlesyndication\\.com", "if-domain": ["*larousse.fr", "larousse.fr", "www.larousse.fr"] },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*cdn\\.cookielaw\\.org", "if-domain": ["*larousse.fr", "larousse.fr", "www.larousse.fr"] },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*onetrust\\.com", "if-domain": ["*larousse.fr", "larousse.fr", "www.larousse.fr"] },
     "action": { "type": "block" }
   },
   {
@@ -40,6 +52,10 @@
     "action": { "type": "block" }
   },
   {
+    "trigger": { "url-filter": ".*sonar\\.viously\\.com" },
+    "action": { "type": "block" }
+  },
+  {
     "trigger": { "url-filter": ".*sascdn\\.com" },
     "action": { "type": "block" }
   },
@@ -60,6 +76,22 @@
     "action": { "type": "block" }
   },
   {
+    "trigger": { "url-filter": ".*pmdstatic\\.net" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*prismamedia\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*videoplayerhub\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*pbstck\\.com" },
+    "action": { "type": "block" }
+  },
+  {
     "trigger": { "url-filter": ".*assets\\.poool\\.fr" },
     "action": { "type": "block" }
   },
@@ -69,6 +101,10 @@
   },
   {
     "trigger": { "url-filter": ".*frontend\\.poool\\.fr" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*poool\\.fr" },
     "action": { "type": "block" }
   },
   {
@@ -88,14 +124,26 @@
     "action": { "type": "block" }
   },
   {
-    "trigger": { "url-filter": ".*cdn\\.cookielaw\\.org", "if-domain": ["*larousse.fr"] },
+    "trigger": { "url-filter": ".*googleadservices\\.com" },
     "action": { "type": "block" }
   },
   {
-    "trigger": { "url-filter": ".*", "if-domain": ["*larousse.fr"] },
+    "trigger": { "url-filter": ".*veinteractive\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*tag\\.imagino\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*imagino\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*", "if-domain": ["*larousse.fr", "larousse.fr", "www.larousse.fr"] },
     "action": {
       "type": "css-display-none",
-      "selector": ".ads-core-placer, [data-ads-core], #top-pave_prisma, #poool-widget, #poool-widget-content, .poool-widget, .poool-overlay, .viously, .viously-player, .viously-ui-container, .viously-sticked, .viously-sticked-bottom-right, .viously-sticked-top-right, #taboola-below-article-thumbnails, .taboola-wrapper, .OUTBRAIN, img[src*=\"encart_pub\"], a[href*=\"encart_pub\"], iframe[src*=\"viously\"], iframe[src*=\"smartadserver\"], iframe[src*=\"sascdn\"], iframe[src*=\"themoneytizer\"], iframe[src*=\"hubvisor\"], iframe[src*=\"doubleclick\"], iframe[src*=\"googlesyndication\"], iframe[id*=\"google_ads\"], #onetrust-banner-sdk, #onetrust-consent-sdk, .onetrust-pc-dark-filter, .ui-widget-overlay, div[id^=\"div-gpt-ad\"], ins.adsbygoogle"
+      "selector": ".ads-core-placer, .ads-core-placeholder, [data-ads-core], #top-pave_prisma, .pub, .pub-gtm, .gtm_olf1, .gtm_olf2, [class*=\"pub-gtm\"], [class*=\"gtm_olf\"], #poool-widget, #poool-widget-content, .poool-widget, .poool-overlay, [id^=\"poool\"], .viously, .viously-player, .viously-ui-container, .viously-sticked, .viously-sticked-bottom-right, .viously-sticked-top-right, [class*=\"viously\"], #taboola-below-article-thumbnails, .taboola-wrapper, .OUTBRAIN, .sponsoredPrisma, img[src*=\"encart_pub\"], a[href*=\"encart_pub\"], iframe[src*=\"viously\"], iframe[src*=\"smartadserver\"], iframe[src*=\"sascdn\"], iframe[src*=\"themoneytizer\"], iframe[src*=\"hubvisor\"], iframe[src*=\"doubleclick\"], iframe[src*=\"googlesyndication\"], iframe[src*=\"taboola\"], iframe[id*=\"google_ads\"], #onetrust-banner-sdk, #onetrust-consent-sdk, .onetrust-pc-dark-filter, .ui-widget-overlay, div[id^=\"div-gpt-ad\"], ins.adsbygoogle, [id^=\"google_ads_\"], aside[class*=\"advert\"], div[aria-label*=\"Advertisement\"]"
     }
   },
   {
