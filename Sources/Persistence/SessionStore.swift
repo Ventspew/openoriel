@@ -36,7 +36,7 @@ struct SessionSnapshot: Codable, Equatable, Sendable {
     var tabs: [TabSnapshot]
     var activeTabID: UUID?
     var groups: [TabGroup]
-    var savedAt: Date
+    var savedAt: Date // Mutable for iCloud LWW stamping.
 
     enum CodingKeys: String, CodingKey {
         case tabs, activeTabID, groups, savedAt

@@ -12,7 +12,7 @@ struct HistoryView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if filtered.isEmpty {
+                if filtered.isEmpty && environment.icloudSync.remoteSession?.tabs.isEmpty != false {
                     ContentUnavailableView(
                         "No History",
                         systemImage: "clock",
@@ -20,6 +20,32 @@ struct HistoryView: View {
                     )
                 } else if query.isEmpty {
                     List {
+                        if let remote = environment.icloudSync.remoteSession, !remote.tabs.isEmpty {
+                            Section("Tabs from other devices") {
+                                ForEach(remote.tabs, id: \.id) { tab in
+                                    Button {
+                                        if let url = URL(string: tab.urlString) {
+                                            environment.openURLInNewTab(url)
+                                            dismiss()
+                                        }
+                                    } label: {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(tab.title)
+                                                .foregroundStyle(.primary)
+                                            Text(tab.urlString)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                                .lineLimit(1)
+                                        }
+                                    }
+                                }
+                                Button("Replace local tabs with remote session") {
+                                    environment.applyRemoteSession(remote)
+                                    dismiss()
+                                }
+                                .foregroundStyle(.orange)
+                            }
+                        }
                         ForEach(environment.history.groupedByDay, id: \.day) { group in
                             Section(header: Text(sectionTitle(for: group.day))) {
                                 ForEach(group.entries) { entry in
@@ -28,6 +54,12 @@ struct HistoryView: View {
                             }
                         }
                     }
+                } else if filtered.isEmpty {
+                    ContentUnavailableView(
+                        "No Matches",
+                        systemImage: "magnifyingglass",
+                        description: Text("Try a different search.")
+                    )
                 } else {
                     List(filtered) { entry in
                         historyRow(entry)

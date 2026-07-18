@@ -52,6 +52,7 @@ final class HistoryStore {
             entries = Array(entries.prefix(maxEntries))
         }
         persist()
+        onDidChange?()
     }
 
     func search(_ query: String) -> [HistoryEntry] {
@@ -69,6 +70,7 @@ final class HistoryStore {
             entries.removeAll()
         }
         persist()
+        onDidChange?()
     }
 
     func clearLastHour() {
@@ -78,6 +80,38 @@ final class HistoryStore {
     func clearLastDay() {
         clear(olderThan: Date().addingTimeInterval(-86_400))
     }
+
+    /// Merge remote history (by id / URL), keeping the newest visit and capping size.
+    func mergeRemote(_ remote: [HistoryEntry]) {
+        guard !remote.isEmpty else { return }
+        var byID = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0) })
+        for item in remote {
+            if let existing = byID[item.id] {
+                if item.visitedAt > existing.visitedAt {
+                    byID[item.id] = item
+                }
+            } else if let match = byID.values.first(where: { $0.urlString == item.urlString }) {
+                if item.visitedAt > match.visitedAt {
+                    byID[match.id] = HistoryEntry(
+                        id: match.id,
+                        title: item.title,
+                        url: item.url ?? match.url ?? URL(string: "about:blank")!,
+                        visitedAt: item.visitedAt
+                    )
+                }
+            } else {
+                byID[item.id] = item
+            }
+        }
+        entries = byID.values.sorted { $0.visitedAt > $1.visitedAt }
+        if entries.count > maxEntries {
+            entries = Array(entries.prefix(maxEntries))
+        }
+        persist()
+        onDidChange?()
+    }
+
+    var onDidChange: (() -> Void)?
 
     private func load() {
         do {

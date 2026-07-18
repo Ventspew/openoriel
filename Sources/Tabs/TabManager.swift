@@ -191,6 +191,47 @@ final class TabManager {
         )
     }
 
+    /// Replace normal (non-private) tabs from a session snapshot. Keeps private tabs.
+    func replaceNormalTabs(from snapshot: SessionSnapshot) {
+        let privateOnes = tabs.filter(\.isPrivate)
+        let restored: [BrowserTab] = snapshot.tabs.compactMap { item in
+            guard !item.isPrivate else { return nil }
+            guard let url = URL(string: item.urlString) else { return nil }
+            let tab = BrowserTab(
+                id: item.id,
+                isPrivate: false,
+                searchEngine: searchEngine,
+                initialURL: url
+            )
+            tab.javaScriptEnabled = javaScriptEnabledProvider?() ?? true
+            tab.isPinned = item.isPinned
+            tab.groupID = item.groupID
+            tab.navigation.title = item.title
+            return tab
+        }
+        groups = snapshot.groups
+        if restored.isEmpty {
+            tabs = privateOnes.isEmpty ? [makeTab(isPrivate: false)] : privateOnes
+            if privateOnes.isEmpty {
+                activeTabID = tabs.first?.id
+            } else if let active = snapshot.activeTabID, tabs.contains(where: { $0.id == active }) {
+                activeTabID = active
+            } else {
+                activeTabID = tabs.first?.id
+            }
+        } else {
+            tabs = restored + privateOnes
+            reorderPinnedFirst()
+            if let active = snapshot.activeTabID, tabs.contains(where: { $0.id == active }) {
+                activeTabID = active
+            } else {
+                activeTabID = restored.first?.id
+            }
+        }
+        wireCallbacks()
+        notifySessionChanged()
+    }
+
     @discardableResult
     func createGroup(name: String, colorName: String = "teal") -> TabGroup {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)

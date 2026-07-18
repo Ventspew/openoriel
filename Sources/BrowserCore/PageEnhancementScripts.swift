@@ -1,34 +1,92 @@
 import Foundation
 
 enum PageEnhancementScripts {
-    /// Lightweight reader: extract main text and restyle.
+    /// Overlay reader that preserves the original page for a clean exit.
     static let readerMode = #"""
     (function() {
-      if (document.getElementById('oriel-reader-root')) {
-        location.reload();
+      var existing = document.getElementById('oriel-reader-overlay');
+      if (existing) {
+        existing.remove();
+        document.documentElement.style.overflow = '';
         return 'off';
       }
-      const article = document.querySelector('article') || document.querySelector('main') || document.body;
-      const title = document.title || '';
-      const clone = article.cloneNode(true);
-      clone.querySelectorAll('script, style, nav, footer, iframe, noscript, svg').forEach(n => n.remove());
-      const text = clone.innerText || clone.textContent || '';
-      if (text.trim().length < 80) { return 'too-short'; }
+
+      function scoreNode(el) {
+        if (!el || !el.tagName) return 0;
+        var tag = el.tagName.toLowerCase();
+        if (['script','style','nav','footer','header','aside','form','iframe','noscript','svg'].indexOf(tag) >= 0) return -1e9;
+        var text = (el.innerText || '').replace(/\s+/g, ' ').trim();
+        var len = text.length;
+        if (len < 80) return 0;
+        var score = len;
+        var cls = ((el.className || '') + ' ' + (el.id || '')).toLowerCase();
+        if (/article|content|post|entry|story|main/.test(cls) || tag === 'article' || tag === 'main') score *= 1.6;
+        if (/comment|sidebar|related|promo|footer|header|nav|menu|share/.test(cls)) score *= 0.25;
+        var ps = el.querySelectorAll('p').length;
+        score += ps * 40;
+        return score;
+      }
+
+      var candidates = Array.prototype.slice.call(document.querySelectorAll('article, main, [role="main"], .post, .article, .content, #content, #main'));
+      if (!candidates.length) candidates = Array.prototype.slice.call(document.body.querySelectorAll('div, section'));
+      var best = null, bestScore = 0;
+      candidates.forEach(function(el) {
+        var s = scoreNode(el);
+        if (s > bestScore) { bestScore = s; best = el; }
+      });
+      if (!best || bestScore < 120) best = document.querySelector('article') || document.querySelector('main') || document.body;
+
+      var clone = best.cloneNode(true);
+      clone.querySelectorAll('script, style, nav, footer, header, iframe, noscript, svg, form, button, .share, .social, [aria-hidden="true"]').forEach(function(n){ n.remove(); });
+      var text = (clone.innerText || clone.textContent || '').trim();
+      if (text.length < 80) return 'too-short';
+
+      var title = document.title || '';
+      var h1 = document.querySelector('h1');
+      if (h1 && h1.innerText.trim().length > 3) title = h1.innerText.trim();
+
       function esc(s) {
         return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       }
-      const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
-        + '<title>' + esc(title) + '</title><style>'
-        + 'body{margin:0;font:21px/1.6 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#f7f4ef;color:#1c1b19;padding:8vh 6vw;}'
-        + '@media(prefers-color-scheme:dark){body{background:#161513;color:#f2efe8;}}'
-        + '#oriel-reader-root{max-width:40rem;margin:0 auto;}h1{font-size:1.8rem;line-height:1.25;margin:0 0 1.2rem;}'
-        + 'p{margin:0 0 1rem;}img{max-width:100%;height:auto;border-radius:8px;}a{color:#0b6bcb;}'
-        + '</style></head><body><div id="oriel-reader-root"><h1>' + esc(title) + '</h1>'
-        + clone.innerHTML + '</div></body></html>';
-      document.open(); document.write(html); document.close();
+
+      var overlay = document.createElement('div');
+      overlay.id = 'oriel-reader-overlay';
+      overlay.setAttribute('role', 'dialog');
+      overlay.innerHTML = ''
+        + '<style>'
+        + '#oriel-reader-overlay{position:fixed;inset:0;z-index:2147483646;overflow:auto;background:#f4f1ea;color:#1c1b19;'
+        + 'font:21px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Georgia,serif;}'
+        + '@media(prefers-color-scheme:dark){#oriel-reader-overlay{background:#141311;color:#f2efe8;}}'
+        + '#oriel-reader-overlay .oriel-reader-inner{max-width:42rem;margin:0 auto;padding:max(24px,6vh) 6vw 12vh;}'
+        + '#oriel-reader-overlay h1{font-size:1.85rem;line-height:1.25;margin:0 0 1.25rem;font-weight:700;}'
+        + '#oriel-reader-overlay p,#oriel-reader-overlay li{margin:0 0 1rem;}'
+        + '#oriel-reader-overlay img,#oriel-reader-overlay video{max-width:100%;height:auto;border-radius:10px;}'
+        + '#oriel-reader-overlay a{color:#0b6bcb;}'
+        + '#oriel-reader-overlay.oriel-reader-lg{font-size:24px;}'
+        + '#oriel-reader-overlay.oriel-reader-sm{font-size:18px;}'
+        + '</style>'
+        + '<div class="oriel-reader-inner"><h1>' + esc(title) + '</h1>' + clone.innerHTML + '</div>';
+
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.appendChild(overlay);
+      overlay.scrollTop = 0;
       return 'on';
     })();
     """#
+
+    static func readerFontSize(_ size: String) -> String {
+        // size: sm | md | lg
+        """
+        (function() {
+          var o = document.getElementById('oriel-reader-overlay');
+          if (!o) return false;
+          o.classList.remove('oriel-reader-sm','oriel-reader-lg');
+          if ('\(size)' === 'sm') o.classList.add('oriel-reader-sm');
+          if ('\(size)' === 'lg') o.classList.add('oriel-reader-lg');
+          return true;
+        })();
+        """
+    }
 
     static let enableForceDark = #"""
     (function() {

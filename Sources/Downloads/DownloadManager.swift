@@ -1,9 +1,17 @@
 import Foundation
 import Observation
+import UniformTypeIdentifiers
 import WebKit
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 enum DownloadState: String, Codable, Sendable {
+    case queued
     case downloading
+    case paused
     case completed
     case failed
     case cancelled
@@ -18,6 +26,8 @@ struct DownloadItem: Identifiable, Equatable, Sendable {
     var state: DownloadState
     var errorMessage: String?
     var updatedAt: Date
+    var bytesWritten: Int64
+    var totalBytes: Int64
 
     init(
         id: UUID = UUID(),
@@ -25,9 +35,11 @@ struct DownloadItem: Identifiable, Equatable, Sendable {
         sourceURL: URL? = nil,
         destinationURL: URL? = nil,
         progress: Double = 0,
-        state: DownloadState = .downloading,
+        state: DownloadState = .queued,
         errorMessage: String? = nil,
-        updatedAt: Date = .now
+        updatedAt: Date = .now,
+        bytesWritten: Int64 = 0,
+        totalBytes: Int64 = 0
     ) {
         self.id = id
         self.fileName = fileName
@@ -37,56 +49,110 @@ struct DownloadItem: Identifiable, Equatable, Sendable {
         self.state = state
         self.errorMessage = errorMessage
         self.updatedAt = updatedAt
+        self.bytesWritten = bytesWritten
+        self.totalBytes = totalBytes
     }
 }
 
 @Observable
 @MainActor
-final class DownloadManager {
+final class DownloadManager: NSObject {
     private(set) var items: [DownloadItem] = []
-    private var activeDownloads: [UUID: URLSessionDownloadTask] = [:]
-    private let session: URLSession
+    private var activeTasks: [UUID: URLSessionDownloadTask] = [:]
+    private var resumeData: [UUID: Data] = [:]
+    private var cookieStores: [UUID: WKHTTPCookieStore] = [:]
+    private var session: URLSession!
 
-    init() {
+    private let destinationBookmarkKey = "oriel.downloadDestinationBookmark"
+    private let maxConcurrent = 3
+
+    /// Custom destination folder (security-scoped bookmark). Falls back to system Downloads/Documents.
+    private(set) var destinationFolderURL: URL?
+
+    override init() {
+        super.init()
         let config = URLSessionConfiguration.default
         config.httpCookieStorage = HTTPCookieStorage.shared
         config.httpShouldSetCookies = true
         config.httpCookieAcceptPolicy = .always
-        session = URLSession(configuration: config)
+        config.timeoutIntervalForResource = 60 * 60 * 6
+        session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
+        restoreDestinationBookmark()
     }
 
     var hasActiveDownloads: Bool {
-        items.contains { $0.state == .downloading }
+        items.contains { $0.state == .downloading || $0.state == .queued }
+    }
+
+    var destinationDisplayName: String {
+        destinationFolderURL?.lastPathComponent ?? defaultDestinationDirectory().lastPathComponent
     }
 
     func enqueue(url: URL, suggestedFileName: String?, cookieStore: WKHTTPCookieStore? = nil) {
         let name = suggestedFileName?.isEmpty == false
             ? suggestedFileName!
             : (url.lastPathComponent.isEmpty ? "download" : url.lastPathComponent)
-        let item = DownloadItem(fileName: name, sourceURL: url, progress: 0, state: .downloading)
+        let item = DownloadItem(fileName: name, sourceURL: url, progress: 0, state: .queued)
         items.insert(item, at: 0)
-        start(itemID: item.id, cookieStore: cookieStore)
+        if let cookieStore {
+            cookieStores[item.id] = cookieStore
+        }
+        pumpQueue()
+    }
+
+    func pause(_ id: UUID) {
+        guard let task = activeTasks[id] else { return }
+        task.cancel { [weak self] data in
+            Task { @MainActor in
+                guard let self else { return }
+                self.activeTasks[id] = nil
+                if let data {
+                    self.resumeData[id] = data
+                }
+                self.update(id) { item in
+                    item.state = .paused
+                    item.updatedAt = .now
+                }
+                self.pumpQueue()
+            }
+        }
+    }
+
+    func resume(_ id: UUID) {
+        guard let item = items.first(where: { $0.id == id }),
+              item.state == .paused || item.state == .failed || item.state == .cancelled else { return }
+        update(id) { item in
+            item.state = .queued
+            item.errorMessage = nil
+            item.updatedAt = .now
+        }
+        pumpQueue()
     }
 
     func cancel(_ id: UUID) {
-        activeDownloads[id]?.cancel()
-        activeDownloads[id] = nil
+        activeTasks[id]?.cancel()
+        activeTasks[id] = nil
+        resumeData[id] = nil
+        cookieStores[id] = nil
         update(id) { item in
             item.state = .cancelled
             item.errorMessage = "Cancelled"
             item.updatedAt = .now
         }
+        pumpQueue()
     }
 
     func retry(_ id: UUID) {
-        guard let item = items.first(where: { $0.id == id }), let url = item.sourceURL else { return }
+        resumeData[id] = nil
         update(id) { item in
-            item.state = .downloading
+            item.state = .queued
             item.progress = 0
+            item.bytesWritten = 0
+            item.totalBytes = 0
             item.errorMessage = nil
             item.updatedAt = .now
         }
-        start(itemID: id, url: url, cookieStore: nil)
+        pumpQueue()
     }
 
     func remove(_ id: UUID) {
@@ -94,79 +160,92 @@ final class DownloadManager {
         items.removeAll { $0.id == id }
     }
 
+    func clearCompleted() {
+        items.removeAll { $0.state == .completed || $0.state == .cancelled }
+    }
+
     func clearAll() {
-        for item in items where item.state == .downloading {
+        for item in items where item.state == .downloading || item.state == .queued || item.state == .paused {
             cancel(item.id)
         }
         items.removeAll()
     }
 
-    private func start(itemID: UUID, url: URL? = nil, cookieStore: WKHTTPCookieStore? = nil) {
-        guard let source = url ?? items.first(where: { $0.id == itemID })?.sourceURL else { return }
-        Task { @MainActor in
-            await Self.copyWebKitCookies(from: cookieStore, into: HTTPCookieStorage.shared)
-            guard items.contains(where: { $0.id == itemID && $0.state == .downloading }) else { return }
-
-            let task = session.downloadTask(with: source) { [weak self] tempURL, response, error in
-                Task { @MainActor in
-                    guard let self else { return }
-                    self.activeDownloads[itemID] = nil
-                    if let error {
-                        self.update(itemID) { item in
-                            item.state = .failed
-                            item.errorMessage = error.localizedDescription
-                            item.updatedAt = .now
-                        }
-                        return
-                    }
-                    guard let tempURL else {
-                        self.update(itemID) { item in
-                            item.state = .failed
-                            item.errorMessage = "Download produced no file."
-                            item.updatedAt = .now
-                        }
-                        return
-                    }
-                    do {
-                        let destination = try self.moveToDownloads(
-                            from: tempURL,
-                            preferredName: self.items.first(where: { $0.id == itemID })?.fileName
-                                ?? response?.suggestedFilename
-                                ?? source.lastPathComponent
-                        )
-                        self.update(itemID) { item in
-                            item.state = .completed
-                            item.progress = 1
-                            item.destinationURL = destination
-                            item.fileName = destination.lastPathComponent
-                            item.errorMessage = nil
-                            item.updatedAt = .now
-                        }
-                    } catch {
-                        self.update(itemID) { item in
-                            item.state = .failed
-                            item.errorMessage = error.localizedDescription
-                            item.updatedAt = .now
-                        }
-                    }
-                }
-            }
-            activeDownloads[itemID] = task
-            task.resume()
-            Task { @MainActor in
-                while let task = activeDownloads[itemID] {
-                    let progress = task.progress.fractionCompleted
-                    update(itemID) { item in
-                        item.progress = progress
-                        item.updatedAt = .now
-                    }
-                    try? await Task.sleep(nanoseconds: 250_000_000)
-                }
-            }
+    func setDestinationFolder(_ url: URL?) {
+        guard let url else {
+            destinationFolderURL = nil
+            UserDefaults.standard.removeObject(forKey: destinationBookmarkKey)
+            return
+        }
+        destinationFolderURL = url
+        do {
+            let data = try url.bookmarkData(
+                options: bookmarkCreationOptions,
+                includingResourceValuesForKeys: nil,
+                relativeTo: nil
+            )
+            UserDefaults.standard.set(data, forKey: destinationBookmarkKey)
+        } catch {
+            // Keep in-memory path even if bookmark persistence fails.
         }
     }
 
-    /// Bridge WKWebsiteDataStore cookies into URLSession so authenticated downloads work.
+    private var bookmarkCreationOptions: URL.BookmarkCreationOptions {
+        #if os(macOS)
+        return [.withSecurityScope]
+        #else
+        return []
+        #endif
+    }
+
+    private var bookmarkResolutionOptions: URL.BookmarkResolutionOptions {
+        #if os(macOS)
+        return [.withSecurityScope]
+        #else
+        return []
+        #endif
+    }
+
+    private func pumpQueue() {
+        let activeCount = items.filter { $0.state == .downloading }.count
+        let slots = max(0, maxConcurrent - activeCount)
+        guard slots > 0 else { return }
+        let queued = items.filter { $0.state == .queued }.prefix(slots)
+        for item in queued {
+            start(itemID: item.id)
+        }
+    }
+
+    private func start(itemID: UUID) {
+        guard let item = items.first(where: { $0.id == itemID }) else { return }
+        update(itemID) { item in
+            item.state = .downloading
+            item.updatedAt = .now
+        }
+
+        Task { @MainActor in
+            await Self.copyWebKitCookies(from: cookieStores[itemID], into: HTTPCookieStorage.shared)
+            guard items.contains(where: { $0.id == itemID && $0.state == .downloading }) else { return }
+
+            let task: URLSessionDownloadTask
+            if let data = resumeData[itemID] {
+                task = session.downloadTask(withResumeData: data)
+            } else if let source = item.sourceURL {
+                task = session.downloadTask(with: source)
+            } else {
+                update(itemID) { item in
+                    item.state = .failed
+                    item.errorMessage = "Missing download URL."
+                    item.updatedAt = .now
+                }
+                return
+            }
+            activeTasks[itemID] = task
+            task.taskDescription = itemID.uuidString
+            task.resume()
+        }
+    }
+
     private static func copyWebKitCookies(from cookieStore: WKHTTPCookieStore?, into storage: HTTPCookieStorage) async {
         let store = cookieStore ?? WKWebsiteDataStore.default().httpCookieStore
         let cookies: [HTTPCookie] = await withCheckedContinuation { continuation in
@@ -186,15 +265,26 @@ final class DownloadManager {
         items[index] = item
     }
 
-    private func moveToDownloads(from tempURL: URL, preferredName: String?) throws -> URL {
+    private func defaultDestinationDirectory() -> URL {
         #if os(iOS)
-        // App Documents is shareable/visible via Files; Downloads is not always accessible on iOS.
-        let downloads = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         #else
-        let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+        return FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         #endif
+    }
+
+    private func resolvedDestinationDirectory() -> URL {
+        if let destinationFolderURL {
+            _ = destinationFolderURL.startAccessingSecurityScopedResource()
+            return destinationFolderURL
+        }
+        return defaultDestinationDirectory()
+    }
+
+    private func moveToDestination(from tempURL: URL, preferredName: String?) throws -> URL {
+        let downloads = resolvedDestinationDirectory()
         let baseName = preferredName?.isEmpty == false ? preferredName! : tempURL.lastPathComponent
         var destination = downloads.appendingPathComponent(baseName)
         var counter = 1
@@ -207,5 +297,133 @@ final class DownloadManager {
         }
         try FileManager.default.moveItem(at: tempURL, to: destination)
         return destination
+    }
+
+    private func restoreDestinationBookmark() {
+        guard let data = UserDefaults.standard.data(forKey: destinationBookmarkKey) else { return }
+        var isStale = false
+        do {
+            let url = try URL(
+                resolvingBookmarkData: data,
+                options: bookmarkResolutionOptions,
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            )
+            _ = url.startAccessingSecurityScopedResource()
+            destinationFolderURL = url
+            if isStale {
+                setDestinationFolder(url)
+            }
+        } catch {
+            destinationFolderURL = nil
+        }
+    }
+
+    private func itemID(for task: URLSessionTask) -> UUID? {
+        guard let raw = task.taskDescription else { return nil }
+        return UUID(uuidString: raw)
+    }
+}
+
+extension DownloadManager: URLSessionDownloadDelegate {
+    nonisolated func urlSession(
+        _ session: URLSession,
+        downloadTask: URLSessionDownloadTask,
+        didWriteData bytesWritten: Int64,
+        totalBytesWritten: Int64,
+        totalBytesExpectedToWrite: Int64
+    ) {
+        Task { @MainActor in
+            guard let id = itemID(for: downloadTask) else { return }
+            let progress: Double
+            if totalBytesExpectedToWrite > 0 {
+                progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+            } else {
+                progress = items.first(where: { $0.id == id })?.progress ?? 0
+            }
+            update(id) { item in
+                item.progress = min(max(progress, 0), 0.99)
+                item.bytesWritten = totalBytesWritten
+                item.totalBytes = max(totalBytesExpectedToWrite, 0)
+                item.updatedAt = .now
+            }
+        }
+    }
+
+    nonisolated func urlSession(
+        _ session: URLSession,
+        downloadTask: URLSessionDownloadTask,
+        didFinishDownloadingTo location: URL
+    ) {
+        let tempCopy: URL
+        do {
+            let copy = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension(location.pathExtension)
+            try FileManager.default.copyItem(at: location, to: copy)
+            tempCopy = copy
+        } catch {
+            Task { @MainActor in
+                guard let id = itemID(for: downloadTask) else { return }
+                activeTasks[id] = nil
+                update(id) { item in
+                    item.state = .failed
+                    item.errorMessage = error.localizedDescription
+                    item.updatedAt = .now
+                }
+                pumpQueue()
+            }
+            return
+        }
+
+        Task { @MainActor in
+            guard let id = itemID(for: downloadTask) else { return }
+            activeTasks[id] = nil
+            resumeData[id] = nil
+            do {
+                let preferred = items.first(where: { $0.id == id })?.fileName
+                    ?? downloadTask.response?.suggestedFilename
+                    ?? items.first(where: { $0.id == id })?.sourceURL?.lastPathComponent
+                    ?? "download"
+                let destination = try moveToDestination(from: tempCopy, preferredName: preferred)
+                cookieStores[id] = nil
+                update(id) { item in
+                    item.state = .completed
+                    item.progress = 1
+                    item.destinationURL = destination
+                    item.fileName = destination.lastPathComponent
+                    item.errorMessage = nil
+                    item.updatedAt = .now
+                }
+            } catch {
+                update(id) { item in
+                    item.state = .failed
+                    item.errorMessage = error.localizedDescription
+                    item.updatedAt = .now
+                }
+            }
+            pumpQueue()
+        }
+    }
+
+    nonisolated func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        guard let error else { return }
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+            return
+        }
+        Task { @MainActor in
+            guard let id = itemID(for: task) else { return }
+            activeTasks[id] = nil
+            if let data = nsError.userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
+                resumeData[id] = data
+            }
+            update(id) { item in
+                item.state = .failed
+                item.errorMessage = error.localizedDescription
+                item.updatedAt = .now
+            }
+            pumpQueue()
+        }
     }
 }

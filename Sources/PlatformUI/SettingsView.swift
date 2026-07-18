@@ -212,6 +212,14 @@ struct SettingsView: View {
                             showProfilesSheet = true
                         }
                     }
+                    Button("Workspaces…") {
+                        if showsDoneButton {
+                            environment.showWorkspaces = true
+                            dismiss()
+                        } else {
+                            environment.showWorkspaces = true
+                        }
+                    }
                     #if os(macOS)
                     Toggle("Vertical Tabs", isOn: Binding(
                         get: { environment.useVerticalTabs },
@@ -221,7 +229,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Accounts & layout")
                 } footer: {
-                    Text("iCloud Sync mirrors bookmarks, Open Later, and a few appearance settings via iCloud Key-Value storage. Passwords use the system Keychain picker.")
+                    Text("iCloud Sync mirrors bookmarks, Open Later, history, open tabs, and appearance settings via iCloud Key-Value storage. Workspaces keep separate tab sets on this device. Passwords use the system Keychain picker.")
                         .fixedSize(horizontal: false, vertical: true)
                 }
 

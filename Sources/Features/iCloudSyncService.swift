@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Local settings mirror used for CloudKit/iCloud KVS sync of lightweight preferences + bookmarks.
+/// Lightweight cross-device sync via iCloud Key-Value Store (bookmarks, queue, settings, tabs, history).
 @Observable
 @MainActor
 final class iCloudSyncService {
@@ -9,8 +9,14 @@ final class iCloudSyncService {
     private let bookmarksKey = "oriel.sync.bookmarks.v1"
     private let settingsKey = "oriel.sync.settings.v2"
     private let queueKey = "oriel.sync.linkqueue.v1"
+    private let sessionKey = "oriel.sync.session.v1"
+    private let historyKey = "oriel.sync.history.v1"
     private let enabledKey = "oriel.icloudSyncEnabled"
     private let localSettingsStampKey = "oriel.sync.settings.localStamp"
+    private let localSessionStampKey = "oriel.sync.session.localStamp"
+
+    /// Caps history payload so KVS stays under its ~1 MB budget.
+    private let historySyncLimit = 200
 
     var isEnabled: Bool {
         didSet {
@@ -21,9 +27,15 @@ final class iCloudSyncService {
         }
     }
 
+    /// Tabs last seen from another device (for “Open from other devices”).
+    private(set) var remoteSession: SessionSnapshot?
+
     private weak var bookmarks: BookmarkStore?
     private weak var settings: BrowserSettings?
     private weak var linkQueue: LinkQueueStore?
+    private weak var history: HistoryStore?
+    private var sessionProvider: (() -> SessionSnapshot)?
+    private var onRemoteSessionNewer: ((SessionSnapshot) -> Void)?
 
     init() {
         if UserDefaults.standard.object(forKey: enabledKey) == nil {
@@ -43,23 +55,39 @@ final class iCloudSyncService {
         defaults.synchronize()
     }
 
-    func attach(bookmarks: BookmarkStore, settings: BrowserSettings, linkQueue: LinkQueueStore) {
+    func attach(
+        bookmarks: BookmarkStore,
+        settings: BrowserSettings,
+        linkQueue: LinkQueueStore,
+        history: HistoryStore,
+        sessionProvider: @escaping () -> SessionSnapshot,
+        onRemoteSessionNewer: @escaping (SessionSnapshot) -> Void
+    ) {
         self.bookmarks = bookmarks
         self.settings = settings
         self.linkQueue = linkQueue
+        self.history = history
+        self.sessionProvider = sessionProvider
+        self.onRemoteSessionNewer = onRemoteSessionNewer
         if isEnabled {
-            // Push local first so an empty/older remote does not wipe this device on launch.
             pushAll()
             pullAll()
             pushAll()
         }
     }
 
-    /// Call after local appearance / engine / queue / bookmark edits so remotes stay current.
+    /// Call after local appearance / engine / queue / bookmark / history / tab edits.
     func noteLocalChange() {
         guard isEnabled else { return }
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: localSettingsStampKey)
         pushAll()
+    }
+
+    func noteSessionChange() {
+        guard isEnabled else { return }
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: localSessionStampKey)
+        pushSession()
+        defaults.synchronize()
     }
 
     func pushAll() {
@@ -87,6 +115,13 @@ final class iCloudSyncService {
                 defaults.set(data, forKey: queueKey)
             }
         }
+        if let history {
+            let slice = Array(history.entries.prefix(historySyncLimit))
+            if let data = try? JSONEncoder().encode(slice) {
+                defaults.set(data, forKey: historyKey)
+            }
+        }
+        pushSession()
         defaults.synchronize()
     }
 
@@ -106,7 +141,6 @@ final class iCloudSyncService {
            let settings {
             let remoteStamp = Double(payload["updatedAt"] ?? "") ?? 0
             let localStamp = UserDefaults.standard.double(forKey: localSettingsStampKey)
-            // Only apply remote settings when they are strictly newer than local edits.
             if remoteStamp > localStamp {
                 if let raw = payload["searchEngine"], let engine = SearchEngine(rawValue: raw) {
                     settings.searchEngine = engine
@@ -127,6 +161,39 @@ final class iCloudSyncService {
            let remote = try? JSONDecoder().decode([QueuedLink].self, from: data),
            let linkQueue {
             linkQueue.mergeUnion(remote)
+        }
+        if let data = defaults.data(forKey: historyKey),
+           let remote = try? JSONDecoder().decode([HistoryEntry].self, from: data),
+           let history {
+            history.mergeRemote(remote)
+        }
+        pullSession()
+    }
+
+    private func pushSession() {
+        guard let sessionProvider else { return }
+        var snapshot = sessionProvider()
+        let stamp = UserDefaults.standard.double(forKey: localSessionStampKey)
+        if stamp > 0 {
+            snapshot.savedAt = Date(timeIntervalSince1970: stamp)
+        }
+        if let data = try? JSONEncoder().encode(snapshot) {
+            defaults.set(data, forKey: sessionKey)
+        }
+    }
+
+    private func pullSession() {
+        guard let data = defaults.data(forKey: sessionKey),
+              let remote = try? JSONDecoder().decode(SessionSnapshot.self, from: data) else {
+            return
+        }
+        remoteSession = remote
+        let localStamp = UserDefaults.standard.double(forKey: localSessionStampKey)
+        let remoteStamp = remote.savedAt.timeIntervalSince1970
+        // Only auto-apply when remote is clearly newer than this device's last edit.
+        if remoteStamp > localStamp + 1 {
+            UserDefaults.standard.set(remoteStamp, forKey: localSessionStampKey)
+            onRemoteSessionNewer?(remote)
         }
     }
 

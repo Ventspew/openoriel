@@ -110,6 +110,16 @@ struct BrowserShellView: View {
                 .orielSheetChrome()
                 .orielTheming(settings: environment.settings)
         }
+        .sheet(isPresented: $environment.showWorkspaces) {
+            WorkspacesView()
+                .orielSheetChrome()
+                .orielTheming(settings: environment.settings)
+        }
+        .sheet(isPresented: $environment.showPictureInPicturePicker) {
+            PictureInPicturePickerView()
+                .orielSheetChrome()
+                .orielTheming(settings: environment.settings)
+        }
         .sheet(item: $environment.authPopup) { popup in
             AuthPopupView(state: popup)
                 .orielSheetChrome(preferLargeOnCompact: true)
@@ -133,7 +143,7 @@ struct BrowserShellView: View {
         VStack(spacing: 0) {
             if tab.isPrivate { privateBanner }
             progressBar(for: tab)
-            content(for: tab, environment: environment)
+            mainContent(tab: tab, environment: environment)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     VStack(spacing: 0) {
                         if environment.showFindInPage {
@@ -237,7 +247,7 @@ struct BrowserShellView: View {
             .background(.bar)
 
             progressBar(for: tab)
-            content(for: tab, environment: environment)
+            mainContent(tab: tab, environment: environment)
             if environment.showFindInPage {
                 findBar(environment: environment)
             }
@@ -412,7 +422,7 @@ struct BrowserShellView: View {
                         macCompactChrome(tab: tab, environment: environment)
                     }
                     progressBar(for: tab)
-                    content(for: tab, environment: environment)
+                    mainContent(tab: tab, environment: environment)
                     if environment.showFindInPage {
                         FindInPageBar(
                             query: $environment.findQuery,
@@ -756,6 +766,7 @@ struct BrowserShellView: View {
                 Button("Shields") { environment.showPrivacyShield = true }
                 Button("Fire…", role: .destructive) { environment.showFireButton = true }
                 Button("Profiles…") { environment.showProfiles = true }
+                Button("Workspaces…") { environment.showWorkspaces = true }
                 Button("Settings") { openAppSettings() }
             } else {
                 Button("New Tab") {
@@ -789,6 +800,24 @@ struct BrowserShellView: View {
                         tab.toggleReaderMode()
                     }
                     .disabled(tab.isShowingStartPage)
+                    Button(environment.isSplitViewActive ? "Close Split View" : "Open Split View") {
+                        if environment.isSplitViewActive {
+                            environment.closeSplitView()
+                        } else {
+                            environment.openSplitView()
+                        }
+                    }
+                    Button("Picture in Picture…") {
+                        environment.showPictureInPicturePicker = true
+                    }
+                    .disabled(tab.isShowingStartPage)
+                    Button("Show Media Controls") {
+                        tab.enableMediaControls()
+                    }
+                    .disabled(tab.isShowingStartPage)
+                    Button("Workspaces…") {
+                        environment.showWorkspaces = true
+                    }
                     Button(tab.forceDarkEnabled ? "Disable Force Dark" : "Force Dark on Page") {
                         tab.toggleForceDark()
                     }
@@ -815,14 +844,6 @@ struct BrowserShellView: View {
                     .disabled(tab.isShowingStartPage)
                     Button("Translate Page…") {
                         environment.showTranslate = true
-                    }
-                    .disabled(tab.isShowingStartPage)
-                    Button("Picture in Picture") {
-                        tab.togglePictureInPicture()
-                    }
-                    .disabled(tab.isShowingStartPage)
-                    Button("Show Media Controls") {
-                        tab.enableMediaControls()
                     }
                     .disabled(tab.isShowingStartPage)
                     Button("Install as Web App") {
@@ -871,6 +892,7 @@ struct BrowserShellView: View {
                 Button("Shields") { environment.showPrivacyShield = true }
                 Button("Fire…", role: .destructive) { environment.showFireButton = true }
                 Button("Profiles…") { environment.showProfiles = true }
+                Button("Workspaces…") { environment.showWorkspaces = true }
                 Button("Settings") { openAppSettings() }
 
                 Divider()
@@ -890,6 +912,109 @@ struct BrowserShellView: View {
         ))
         .accessibilityLabel("More")
         .help("More")
+    }
+
+    @ViewBuilder
+    private func mainContent(tab: BrowserTab, environment: AppEnvironment) -> some View {
+        VStack(spacing: 0) {
+            if tab.isReaderMode {
+                readerChromeBar(tab: tab)
+            }
+            if let secondary = environment.splitTab {
+                GeometryReader { proxy in
+                    let useVerticalSplit = proxy.size.width < 720
+                    Group {
+                        if useVerticalSplit {
+                            VStack(spacing: 0) {
+                                splitPane(tab: tab, environment: environment, isSecondary: false)
+                                splitHandle(isVertical: true)
+                                splitPane(tab: secondary, environment: environment, isSecondary: true)
+                            }
+                        } else {
+                            HStack(spacing: 0) {
+                                splitPane(tab: tab, environment: environment, isSecondary: false)
+                                splitHandle(isVertical: false)
+                                splitPane(tab: secondary, environment: environment, isSecondary: true)
+                            }
+                        }
+                    }
+                }
+            } else {
+                content(for: tab, environment: environment)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func splitPane(tab: BrowserTab, environment: AppEnvironment, isSecondary: Bool) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Text(tab.displayTitle)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                if isSecondary {
+                    Button("Focus") {
+                        environment.tabs.selectTab(id: tab.id)
+                        environment.splitTabID = environment.tabs.tabs.first(where: { $0.id != tab.id })?.id
+                    }
+                    .font(.caption2)
+                    Button {
+                        environment.closeSplitView()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .font(.caption2)
+                    .accessibilityLabel("Close Split View")
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.bar)
+            content(for: tab, environment: environment)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func splitHandle(isVertical: Bool) -> some View {
+        Group {
+            if isVertical {
+                Rectangle()
+                    .fill(Color.primary.opacity(0.12))
+                    .frame(height: 1)
+            } else {
+                Rectangle()
+                    .fill(Color.primary.opacity(0.12))
+                    .frame(width: 1)
+            }
+        }
+    }
+
+    private func readerChromeBar(tab: BrowserTab) -> some View {
+        HStack(spacing: 12) {
+            Text("Reader")
+                .font(.subheadline.weight(.semibold))
+            Spacer()
+            Button("A") {
+                tab.setReaderFontSize("sm")
+            }
+            .font(.caption.weight(.bold))
+            Button("A") {
+                tab.setReaderFontSize("md")
+            }
+            .font(.body.weight(.bold))
+            Button("A") {
+                tab.setReaderFontSize("lg")
+            }
+            .font(.title3.weight(.bold))
+            Button("Done") {
+                tab.toggleReaderMode()
+            }
+            .font(.subheadline.weight(.semibold))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial)
     }
 
     @ViewBuilder

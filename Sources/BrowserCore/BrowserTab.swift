@@ -156,11 +156,41 @@ final class BrowserTab: Identifiable {
     }
 
     func togglePictureInPicture() {
-        webView?.evaluateJavaScript(PictureInPictureScript.enable, in: nil, in: .page) { _ in }
+        webView?.evaluateJavaScript(PictureInPictureScript.enableBest, in: nil, in: .page) { _ in }
+    }
+
+    func togglePictureInPicture(at index: Int) {
+        webView?.evaluateJavaScript(PictureInPictureScript.toggle(at: index), in: nil, in: .page) { _ in }
+    }
+
+    func listPictureInPictureVideos(completion: @escaping ([[String: Any]]) -> Void) {
+        guard let webView else {
+            completion([])
+            return
+        }
+        webView.evaluateJavaScript(PictureInPictureScript.inventory, in: nil, in: .page) { result in
+            switch result {
+            case .success(let value):
+                guard let json = value as? String,
+                      let data = json.data(using: .utf8),
+                      let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let videos = obj["videos"] as? [[String: Any]] else {
+                    completion([])
+                    return
+                }
+                completion(videos)
+            case .failure:
+                completion([])
+            }
+        }
     }
 
     func enableMediaControls() {
         webView?.evaluateJavaScript(PictureInPictureScript.mediaControls, in: nil, in: .page) { _ in }
+    }
+
+    func setReaderFontSize(_ size: String) {
+        webView?.evaluateJavaScript(PageEnhancementScripts.readerFontSize(size), completionHandler: nil)
     }
 
     var isShowingPDF: Bool {
