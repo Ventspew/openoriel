@@ -78,7 +78,7 @@ final class ContentBlockerManager {
     var compiledList: WKContentRuleList? { compiledLists.first }
 
     private let store = WKContentRuleListStore.default()
-    private let compileIdentifierPrefix = "oriel.rules.v4"
+    private let compileIdentifierPrefix = "oriel.rules.v5"
 
     func prepare() async {
         compiledLists = []
@@ -162,7 +162,8 @@ final class ContentBlockerManager {
             ("oriel-ads", 1),
             ("oriel-privacy", 2),
             ("oriel-annoyances", 3),
-            ("oriel-youtube-ads", 4),
+            ("oriel-site-fixes", 4),
+            ("oriel-youtube-ads", 5),
             // Legacy names (if present)
             ("oriel-easylist", 10),
             ("oriel-easyprivacy", 11),

@@ -27,6 +27,7 @@
 		3932192408C35FE5FC9FEC9F /* SharedWebViewConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2DD7DD24BDE86B71C879ECF /* SharedWebViewConfiguration.swift */; };
 		4DBA4F9AF3E7A1D14A5BE719 /* TabOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E57EB5D6608140050A9EF32F /* TabOverviewView.swift */; };
 		50162F7C67210582B090D16E /* JSONFileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14528446EC763702DBF33729 /* JSONFileStore.swift */; };
+		5190871AD9CBF711DF52E115 /* oriel-site-fixes.json in Resources */ = {isa = PBXBuildFile; fileRef = 391D5296FD71B5C67F7B845F /* oriel-site-fixes.json */; };
 		51F92CF8E35B68BD2D6F142E /* HTTPSUpgrade.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91FADAFD7D5FF406A6D6E367 /* HTTPSUpgrade.swift */; };
 		5ABA265CC73AE1C8E0579C80 /* oriel-ads-3.json in Resources */ = {isa = PBXBuildFile; fileRef = 1944001F22998F20E1E78D55 /* oriel-ads-3.json */; };
 		5ED519D072255305339E095E /* WebsiteDataCleaner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C97E61F7FDECBF3B3242760C /* WebsiteDataCleaner.swift */; };
@@ -121,6 +122,7 @@
 		2217E60267513166ABDC37AF /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		2CAA503AA1BB5B6FE0606DF0 /* URLParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLParserTests.swift; sourceTree = "<group>"; };
 		3836F6EAEB7B99DF994A4A21 /* OrielTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrielTheme.swift; sourceTree = "<group>"; };
+		391D5296FD71B5C67F7B845F /* oriel-site-fixes.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "oriel-site-fixes.json"; sourceTree = "<group>"; };
 		39A58A41442546BAFBEF499F /* ContentBlockerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentBlockerManager.swift; sourceTree = "<group>"; };
 		3FE54710A619EF58CFCB2E6E /* FindInPageBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindInPageBar.swift; sourceTree = "<group>"; };
 		42A52F5546410287192EEE0A /* HistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStore.swift; sourceTree = "<group>"; };
@@ -230,6 +232,7 @@
 				1FD44E208EC0D437878BD22A /* oriel-privacy-2.json */,
 				14A36065787C74CB565BDC63 /* oriel-privacy-3.json */,
 				F6B791AA352BE979887D4528 /* oriel-privacy-4.json */,
+				391D5296FD71B5C67F7B845F /* oriel-site-fixes.json */,
 				B06D1B6676704EE54E899EA0 /* oriel-youtube-ads.json */,
 			);
 			path = ContentBlocker;
@@ -545,6 +548,7 @@
 				DDD96AA64FA9AA34C2F3AA0E /* oriel-privacy-2.json in Resources */,
 				ED8E7A0D6AD7F408093EA3F3 /* oriel-privacy-3.json in Resources */,
 				72D9552640F72E6ACFB43826 /* oriel-privacy-4.json in Resources */,
+				5190871AD9CBF711DF52E115 /* oriel-site-fixes.json in Resources */,
 				2C8EE9DBDF524FF12870288C /* oriel-youtube-ads.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

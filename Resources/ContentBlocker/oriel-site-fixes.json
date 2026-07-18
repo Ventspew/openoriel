@@ -1,0 +1,64 @@
+[
+  {
+    "trigger": { "url-filter": ".*cdn\\.viously\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*viously\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*getviously\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*sascdn\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*smartadserver\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*assets\\.poool\\.fr" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*assets\\.poool-subscribe\\.fr" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*frontend\\.poool\\.fr" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*teads\\.tv" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*taboola\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*googlesyndication\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*doubleclick\\.net" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*", "if-domain": ["*larousse.fr"] },
+    "action": {
+      "type": "css-display-none",
+      "selector": ".ads-core-placer, [data-ads-core], #poool-widget, #poool-widget-content, .poool-widget, .poool-overlay, .viously, .viously-player, .viously-ui-container, .viously-sticked, .viously-sticked-bottom-right, .viously-sticked-top-right, #taboola-below-article-thumbnails, .taboola-wrapper, .OUTBRAIN, iframe[src*=\"viously\"], iframe[src*=\"smartadserver\"], iframe[src*=\"sascdn\"], iframe[src*=\"doubleclick\"], iframe[src*=\"googlesyndication\"], iframe[id*=\"google_ads\"], #onetrust-banner-sdk, #onetrust-consent-sdk, .onetrust-pc-dark-filter, .ui-widget-overlay"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*",
+      "if-domain": ["*accounts.google.com", "*myaccount.google.com", "*accounts.youtube.com", "*oauth2.googleapis.com", "*appleid.apple.com", "*login.live.com", "*login.microsoftonline.com", "*github.com"]
+    },
+    "action": { "type": "ignore-previous-rules" }
+  }
+]

@@ -8,6 +8,7 @@ Built with [AdGuard SafariConverterLib](https://github.com/AdguardTeam/SafariCon
 | `oriel-ads-*.json` | EasyList + AdGuard Base |
 | `oriel-privacy-*.json` | EasyPrivacy + AdGuard Tracking |
 | `oriel-annoyances.json` | Fanboy Cookie + AdGuard Annoyances/Social |
+| `oriel-site-fixes.json` | Curated site overrides (e.g. Larousse / Prisma placers) |
 | `oriel-youtube-ads.json` | Curated YouTube ad endpoints |
 | `example-blocklist.json` | Fallback |
 
