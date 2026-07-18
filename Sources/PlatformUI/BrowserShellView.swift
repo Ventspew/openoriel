@@ -318,10 +318,42 @@ struct BrowserShellView: View {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 
+    private func chromeIconButton(
+        systemName: String,
+        label: String,
+        accent: Color,
+        size: CGFloat,
+        emphasized: Bool = false,
+        badge: String? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: systemName)
+                if let badge {
+                    Text(badge)
+                        .font(.caption2.weight(.bold))
+                        .monospacedDigit()
+                }
+            }
+        }
+        .buttonStyle(
+            OrielChromeButtonStyle(
+                isEnabled: true,
+                isEmphasized: emphasized,
+                accent: accent,
+                size: size,
+                expandsHorizontally: badge != nil
+            )
+        )
+        .accessibilityLabel(label)
+        .help(label)
+    }
+
     @ViewBuilder
     private func findBar(environment: AppEnvironment) -> some View {
         @Bindable var environment = environment
-        return FindInPageBar(
+        FindInPageBar(
             query: $environment.findQuery,
             onSubmit: { environment.performFind(forward: true) },
             onNext: { environment.performFind(forward: true) },
