@@ -5,7 +5,7 @@ enum NavigationPolicy {
     struct Context {
         var contentBlockingEnabled: Bool = true
         var matchesBlockedHint: (URL) -> Bool = { _ in false }
-        var onBlocked: () -> Void = {}
+        var onBlocked: (URL) -> Void = { _ in }
     }
 
     /// Decides whether a navigation request may proceed.
@@ -29,7 +29,7 @@ enum NavigationPolicy {
            navigationAction.targetFrame?.isMainFrame == false,
            !AuthHostAllowlist.shouldBypassContentBlocking(for: url),
            context.matchesBlockedHint(url) {
-            context.onBlocked()
+            context.onBlocked(url)
             return .cancel
         }
 

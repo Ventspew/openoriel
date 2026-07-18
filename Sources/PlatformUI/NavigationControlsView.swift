@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Back / forward / reload / home, plus the Oriel Shields app-icon control (Brave-style).
 struct NavigationControlsView: View {
+    @Environment(AppEnvironment.self) private var environment
     @Bindable var tab: BrowserTab
     /// Narrow chrome: back/forward + Oriel Shields only.
     var style: Style = .full
@@ -16,15 +17,19 @@ struct NavigationControlsView: View {
     }
 
     private var buttonSize: CGFloat {
-        style == .compact ? 30 : OrielLayout.navButtonSize
+        style == .compact ? 32 : OrielLayout.navButtonSize
     }
 
     private var markSize: CGFloat {
         style == .compact ? 18 : 22
     }
 
+    private var accent: Color {
+        environment.settings.brandColor
+    }
+
     var body: some View {
-        HStack(spacing: style == .compact ? 2 : 4) {
+        HStack(spacing: style == .compact ? 4 : 6) {
             navButton(
                 systemName: "chevron.backward",
                 label: "Back",
@@ -45,7 +50,8 @@ struct NavigationControlsView: View {
                 navButton(
                     systemName: tab.navigation.isLoading ? "xmark" : "arrow.clockwise",
                     label: tab.navigation.isLoading ? "Stop" : "Reload",
-                    enabled: !isStartPage || tab.navigation.isLoading
+                    enabled: !isStartPage || tab.navigation.isLoading,
+                    emphasized: tab.navigation.isLoading
                 ) {
                     if tab.navigation.isLoading {
                         tab.stopLoading()
@@ -72,17 +78,21 @@ struct NavigationControlsView: View {
         systemName: String,
         label: String,
         enabled: Bool,
+        emphasized: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.body.weight(.semibold))
-                .frame(width: buttonSize, height: buttonSize)
-                .contentShape(Rectangle())
         }
-        .buttonStyle(.borderless)
+        .buttonStyle(
+            OrielChromeButtonStyle(
+                isEnabled: enabled,
+                isEmphasized: emphasized,
+                accent: accent,
+                size: buttonSize
+            )
+        )
         .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.35)
         .accessibilityLabel(label)
         .accessibilityHint(enabled ? "" : "Unavailable")
         .help(label)

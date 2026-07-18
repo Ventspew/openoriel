@@ -9,6 +9,7 @@ struct OrielApp: App {
             BrowserShellView()
                 .environment(environment)
                 .preferredColorScheme(environment.settings.appearance.colorScheme)
+                .tint(environment.settings.brandColor)
         }
         #if os(macOS)
         .defaultSize(width: 1100, height: 760)
@@ -22,6 +23,7 @@ struct OrielApp: App {
             SettingsView(showsDoneButton: false)
                 .environment(environment)
                 .preferredColorScheme(environment.settings.appearance.colorScheme)
+                .tint(environment.settings.brandColor)
                 // Fit small displays / Stage Manager / split windows.
                 .frame(minWidth: 360, idealWidth: 520, minHeight: 360, idealHeight: 560)
         }

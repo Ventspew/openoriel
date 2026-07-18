@@ -14,7 +14,7 @@ struct BrowserWebView: PlatformViewRepresentable {
     var blockThirdPartyCookies: Bool = false
     var contentBlockingEnabled: Bool = true
     var matchesBlockedHint: (URL) -> Bool = { _ in false }
-    var onBlockedNavigation: () -> Void = {}
+    var onBlockedNavigation: (URL) -> Void = { _ in }
     var onDownload: ((URL, String?) -> Void)?
     var permissionManager: WebsitePermissionManager?
     var onPopupCreated: ((WKWebView) -> Void)?

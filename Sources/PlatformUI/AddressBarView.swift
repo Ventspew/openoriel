@@ -1,10 +1,14 @@
 import SwiftUI
 
 struct AddressBarView: View {
+    @Environment(AppEnvironment.self) private var environment
     @Bindable var tab: BrowserTab
     var searchEngine: SearchEngine = .duckDuckGo
     var onSubmit: () -> Void
 
+    private var accent: Color {
+        environment.settings.brandColor
+    }
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: securitySymbol)
@@ -70,10 +74,10 @@ struct AddressBarView: View {
 
     private var securityColor: Color {
         if URLParser.isStartPage(tab.navigation.url) {
-            return OrielTheme.brandPrimary
+            return accent
         }
         if tab.navigation.url?.scheme?.lowercased() == "https" {
-            return OrielTheme.brandPrimary.opacity(0.85)
+            return accent.opacity(0.85)
         }
         if tab.navigation.lastErrorMessage != nil {
             return .orange

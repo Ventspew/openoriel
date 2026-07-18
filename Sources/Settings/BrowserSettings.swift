@@ -55,6 +55,14 @@ final class BrowserSettings {
         didSet { defaults.set(appearance.rawValue, forKey: appearanceKey) }
     }
 
+    var accentTheme: BrowserAccentTheme {
+        didSet { defaults.set(accentTheme.rawValue, forKey: accentThemeKey) }
+    }
+
+    var backgroundTheme: BrowserBackgroundTheme {
+        didSet { defaults.set(backgroundTheme.rawValue, forKey: backgroundThemeKey) }
+    }
+
     var newTabBehavior: NewTabBehavior {
         didSet { defaults.set(newTabBehavior.rawValue, forKey: newTabBehaviorKey) }
     }
@@ -80,10 +88,16 @@ final class BrowserSettings {
         return BrowserConstants.productWebsiteURL
     }
 
+    var brandColor: Color {
+        OrielTheme.brandPrimary(accent: accentTheme)
+    }
+
     private let defaults: UserDefaults
     private let searchEngineKey = "oriel.searchEngine"
     private let restoreSessionKey = "oriel.restoreSession"
     private let appearanceKey = "oriel.appearance"
+    private let accentThemeKey = "oriel.accentTheme"
+    private let backgroundThemeKey = "oriel.backgroundTheme"
     private let newTabBehaviorKey = "oriel.newTabBehavior"
     private let homepageKey = "oriel.homepageURL"
     private let javaScriptKey = "oriel.javaScriptEnabled"
@@ -107,6 +121,18 @@ final class BrowserSettings {
             self.appearance = mode
         } else {
             self.appearance = .system
+        }
+        if let raw = defaults.string(forKey: accentThemeKey),
+           let theme = BrowserAccentTheme(rawValue: raw) {
+            self.accentTheme = theme
+        } else {
+            self.accentTheme = .teal
+        }
+        if let raw = defaults.string(forKey: backgroundThemeKey),
+           let theme = BrowserBackgroundTheme(rawValue: raw) {
+            self.backgroundTheme = theme
+        } else {
+            self.backgroundTheme = .soft
         }
         if let raw = defaults.string(forKey: newTabBehaviorKey),
            let behavior = NewTabBehavior(rawValue: raw) {

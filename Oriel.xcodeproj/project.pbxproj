@@ -57,6 +57,7 @@
 		AC30E92C2EF5916B7B7FD08B /* PrivacyStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = D27573BAEF1DEFB9720D8056 /* PrivacyStats.swift */; };
 		B3F82F73100905AEFFD03844 /* PrivacySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEAD19F44096849D14681327 /* PrivacySettings.swift */; };
 		B6A458C5A9AA3C43ED86CE1A /* FaviconResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 569DD3AFE40E29611E281BAB /* FaviconResolver.swift */; };
+		B7F16BCF50A5CC9DC8DDC973 /* ThemeAndPrivacyStatsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 195A21D08CFBBD324635C4BE /* ThemeAndPrivacyStatsTests.swift */; };
 		C0BD3793ED8CC1D2AA182A05 /* UserAgentPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 184E467146BEAAB9C3005FC9 /* UserAgentPolicy.swift */; };
 		C0D710DE823E78C7F52F7F02 /* OrielTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3836F6EAEB7B99DF994A4A21 /* OrielTheme.swift */; };
 		C4E8456A0BDC242B2C556C78 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83AC3BB6323513845985F125 /* HistoryView.swift */; };
@@ -117,6 +118,7 @@
 		184A1F63A6D4A135C3297AFE /* OrielUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OrielUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		184E467146BEAAB9C3005FC9 /* UserAgentPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAgentPolicy.swift; sourceTree = "<group>"; };
 		1944001F22998F20E1E78D55 /* oriel-ads-3.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "oriel-ads-3.json"; sourceTree = "<group>"; };
+		195A21D08CFBBD324635C4BE /* ThemeAndPrivacyStatsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeAndPrivacyStatsTests.swift; sourceTree = "<group>"; };
 		1A5E7802EEE2452CAFA9B91E /* AuthHostAllowlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthHostAllowlist.swift; sourceTree = "<group>"; };
 		1FD44E208EC0D437878BD22A /* oriel-privacy-2.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "oriel-privacy-2.json"; sourceTree = "<group>"; };
 		2217E60267513166ABDC37AF /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -285,6 +287,7 @@
 				D80B0019A1802BBCD08249E2 /* Phase4FeatureTests.swift */,
 				4B4D781F01B4230D02642A54 /* Phase6SearchSettingsTests.swift */,
 				57A55FB10CC23A4D76D1BD50 /* Phase7BrowserParityTests.swift */,
+				195A21D08CFBBD324635C4BE /* ThemeAndPrivacyStatsTests.swift */,
 				2CAA503AA1BB5B6FE0606DF0 /* URLParserTests.swift */,
 			);
 			path = OrielTests;
@@ -636,6 +639,7 @@
 				03A58F71719329648F6B3590 /* Phase4FeatureTests.swift in Sources */,
 				5F67D0BEEC58A8E2E158A7FE /* Phase6SearchSettingsTests.swift in Sources */,
 				F59E1028751BCD303F6F7DC7 /* Phase7BrowserParityTests.swift in Sources */,
+				B7F16BCF50A5CC9DC8DDC973 /* ThemeAndPrivacyStatsTests.swift in Sources */,
 				69B41FC7A2BD0CF80337C338 /* URLParserTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

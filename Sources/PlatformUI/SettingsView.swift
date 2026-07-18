@@ -57,7 +57,7 @@ struct SettingsView: View {
                     Toggle("Restore previous session", isOn: $settings.restorePreviousSession)
                 }
 
-                Section("Appearance") {
+                Section {
                     Picker("Appearance", selection: $settings.appearance) {
                         ForEach(AppAppearance.allCases) { mode in
                             Text(mode.displayName).tag(mode)
@@ -70,6 +70,94 @@ struct SettingsView: View {
                     .labelsHidden()
                     #endif
                     .accessibilityLabel("Appearance")
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Accent color")
+                            .font(.subheadline.weight(.semibold))
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 8)], spacing: 8) {
+                            ForEach(BrowserAccentTheme.allCases) { theme in
+                                Button {
+                                    settings.accentTheme = theme
+                                } label: {
+                                    VStack(spacing: 6) {
+                                        Circle()
+                                            .fill(theme.color)
+                                            .frame(width: 28, height: 28)
+                                            .overlay {
+                                                Circle()
+                                                    .strokeBorder(Color.primary.opacity(0.15), lineWidth: 1)
+                                            }
+                                            .overlay {
+                                                if settings.accentTheme == theme {
+                                                    Image(systemName: "checkmark")
+                                                        .font(.caption.weight(.bold))
+                                                        .foregroundStyle(.white)
+                                                }
+                                            }
+                                        Text(theme.displayName)
+                                            .font(.caption2.weight(.medium))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        settings.accentTheme == theme
+                                            ? theme.color.opacity(0.12)
+                                            : Color.primary.opacity(0.03),
+                                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    )
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .strokeBorder(
+                                                settings.accentTheme == theme
+                                                    ? theme.color.opacity(0.45)
+                                                    : Color.primary.opacity(0.08),
+                                                lineWidth: 1
+                                            )
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityAddTraits(settings.accentTheme == theme ? [.isSelected] : [])
+                                .accessibilityLabel("\(theme.displayName) accent")
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Background")
+                            .font(.subheadline.weight(.semibold))
+                        ForEach(BrowserBackgroundTheme.allCases) { theme in
+                            Button {
+                                settings.backgroundTheme = theme
+                            } label: {
+                                HStack(spacing: 12) {
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .fill(backgroundPreview(theme))
+                                        .frame(width: 44, height: 28)
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                                .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+                                        }
+                                    Text(theme.displayName)
+                                        .foregroundStyle(.primary)
+                                    Spacer(minLength: 0)
+                                    if settings.backgroundTheme == theme {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(settings.brandColor)
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(settings.backgroundTheme == theme ? [.isSelected] : [])
+                        }
+                    }
+                } header: {
+                    Text("Appearance")
+                } footer: {
+                    Text("Accent colors tint buttons and Shields. Background themes change the start page wash.")
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Section {
@@ -152,6 +240,17 @@ struct SettingsView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func backgroundPreview(_ theme: BrowserBackgroundTheme) -> some ShapeStyle {
+        switch theme {
+        case .soft: Color(red: 0.94, green: 0.93, blue: 0.91)
+        case .paper: Color(red: 0.98, green: 0.96, blue: 0.93)
+        case .mist: Color(red: 0.90, green: 0.93, blue: 0.96)
+        case .sand: Color(red: 0.94, green: 0.89, blue: 0.80)
+        case .aurora: Color(red: 0.82, green: 0.88, blue: 0.96)
+        case .midnight: Color(red: 0.12, green: 0.14, blue: 0.18)
         }
     }
 }

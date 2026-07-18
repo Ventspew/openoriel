@@ -14,12 +14,22 @@ struct StartPageView: View {
         environment.settings.searchEngine
     }
 
+    private var accent: Color {
+        environment.settings.brandColor
+    }
+
+    private var stats: PrivacyStats {
+        environment.privacyStats
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 36) {
                 hero
                     .frame(maxWidth: .infinity)
                     .padding(.top, 48)
+
+                privacySummary
 
                 if !environment.bookmarks.favorites.isEmpty {
                     section(title: "Favorites") {
@@ -58,13 +68,11 @@ struct StartPageView: View {
             .offset(y: appeared || reduceMotion ? 0 : 10)
         }
         .background {
-            Group {
-                if colorScheme == .dark {
-                    OrielTheme.startPageBackgroundDark
-                } else {
-                    OrielTheme.startPageBackground
-                }
-            }
+            OrielTheme.startPageBackground(
+                accent: environment.settings.accentTheme,
+                background: environment.settings.backgroundTheme,
+                scheme: colorScheme
+            )
         }
         .onAppear {
             if reduceMotion {
@@ -85,7 +93,7 @@ struct StartPageView: View {
         VStack(spacing: 20) {
             VStack(spacing: 10) {
                 OrielMark(size: 44)
-                    .shadow(color: OrielTheme.brandTeal.opacity(0.18), radius: 12, y: 4)
+                    .shadow(color: accent.opacity(0.18), radius: 12, y: 4)
 
                 Text(BrowserConstants.productName)
                     .font(.system(size: 46, weight: .semibold, design: .serif))
@@ -116,19 +124,118 @@ struct StartPageView: View {
                 } label: {
                     Text("Sign in to Google")
                         .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(accent.opacity(0.14), in: Capsule())
+                        .overlay {
+                            Capsule().strokeBorder(accent.opacity(0.35), lineWidth: 1)
+                        }
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(OrielTheme.brandPrimary)
+                .foregroundStyle(accent)
                 .accessibilityHint("Opens Google Account sign-in in this tab.")
             }
         }
+    }
+
+    private var privacySummary: some View {
+        Button {
+            environment.showPrivacyShield = true
+        } label: {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Label("Shields", systemImage: "hand.raised.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(accent)
+                        .textCase(.uppercase)
+                        .tracking(0.8)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+
+                HStack(spacing: 10) {
+                    privacyStat(
+                        title: "Trackers",
+                        session: stats.blockedRequestsSession,
+                        lifetime: stats.blockedRequestsLifetime,
+                        systemImage: "eye.slash"
+                    )
+                    privacyStat(
+                        title: "Cookies",
+                        session: stats.cookiesBlockedSession,
+                        lifetime: stats.cookiesBlockedLifetime,
+                        systemImage: "cookie"
+                    )
+                }
+
+                HStack(spacing: 8) {
+                    Image(systemName: environment.privacy.blockThirdPartyCookies ? "checkmark.shield.fill" : "shield")
+                        .foregroundStyle(environment.privacy.blockThirdPartyCookies ? accent : Color.secondary)
+                    Text(
+                        environment.privacy.blockThirdPartyCookies
+                            ? "Third-party cookies limited"
+                            : "Third-party cookies allowed (better for sign-in)"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
+                    Spacer(minLength: 0)
+                }
+            }
+            .padding(16)
+            .background(
+                OrielTheme.surfaceFill(for: colorScheme),
+                in: RoundedRectangle(cornerRadius: OrielTheme.sectionRadius, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: OrielTheme.sectionRadius, style: .continuous)
+                    .strokeBorder(accent.opacity(0.22), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Shields summary")
+        .accessibilityHint("Opens Shields for tracker and cookie details")
+        .accessibilityValue(
+            "\(stats.blockedRequestsSession) trackers this session, \(stats.cookiesBlockedSession) cookies this session"
+        )
+    }
+
+    private func privacyStat(
+        title: String,
+        session: Int,
+        lifetime: Int,
+        systemImage: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(title, systemImage: systemImage)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .labelStyle(.titleAndIcon)
+            Text("\(session)")
+                .font(.system(size: 28, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.primary)
+            Text("this session · \(lifetime) all time")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(
+            Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.04),
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+        )
     }
 
     private var searchField: some View {
         HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .font(.body.weight(.medium))
-                .foregroundStyle(searchFocused ? OrielTheme.brandPrimary : Color.secondary)
+                .foregroundStyle(searchFocused ? accent : Color.secondary)
 
             TextField("Search or enter address", text: $query)
                 .textFieldStyle(.plain)
@@ -159,18 +266,27 @@ struct StartPageView: View {
             Button(action: submitSearch) {
                 Text("Go")
                     .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
                     .background(
                         query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         ? Color.primary.opacity(0.06)
-                        : OrielTheme.brandPrimary.opacity(0.16),
+                        : accent.opacity(0.18),
                         in: Capsule()
                     )
+                    .overlay {
+                        Capsule()
+                            .strokeBorder(
+                                query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                ? Color.primary.opacity(0.08)
+                                : accent.opacity(0.4),
+                                lineWidth: 1
+                            )
+                    }
                     .foregroundStyle(
                         query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         ? Color.secondary
-                        : OrielTheme.brandPrimary
+                        : accent
                     )
             }
             .buttonStyle(.plain)
@@ -187,7 +303,7 @@ struct StartPageView: View {
             RoundedRectangle(cornerRadius: OrielTheme.searchFieldRadius, style: .continuous)
                 .strokeBorder(
                     searchFocused
-                        ? OrielTheme.brandPrimary.opacity(0.45)
+                        ? accent.opacity(0.45)
                         : OrielTheme.hairline(for: colorScheme),
                     lineWidth: searchFocused ? 1.5 : 1
                 )
@@ -200,7 +316,7 @@ struct StartPageView: View {
     }
 
     private var enginePicker: some View {
-        HStack(spacing: 18) {
+        HStack(spacing: 10) {
             ForEach(SearchEngine.allCases) { engine in
                 let selected = activeEngine == engine
                 Button {
@@ -208,13 +324,20 @@ struct StartPageView: View {
                     tab.searchEngine = engine
                 } label: {
                     Text(engine.displayName)
-                        .font(.caption.weight(selected ? .semibold : .regular))
-                        .foregroundStyle(selected ? Color.primary : Color.secondary)
-                        .padding(.bottom, 3)
-                        .overlay(alignment: .bottom) {
+                        .font(.caption.weight(selected ? .semibold : .medium))
+                        .foregroundStyle(selected ? accent : Color.secondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(
+                            selected ? accent.opacity(0.14) : Color.primary.opacity(0.04),
+                            in: Capsule()
+                        )
+                        .overlay {
                             Capsule()
-                                .fill(selected ? OrielTheme.brandPrimary : Color.clear)
-                                .frame(height: 2)
+                                .strokeBorder(
+                                    selected ? accent.opacity(0.35) : Color.primary.opacity(0.08),
+                                    lineWidth: 1
+                                )
                         }
                 }
                 .buttonStyle(.plain)
@@ -228,21 +351,33 @@ struct StartPageView: View {
     }
 
     private var footerLinks: some View {
-        HStack(spacing: 20) {
-            Button("Settings") {
+        HStack(spacing: 12) {
+            footerChip("Settings") {
                 environment.showSettings = true
             }
-            Button(BrowserConstants.productWebsiteHost) {
+            footerChip(BrowserConstants.productWebsiteHost) {
                 tab.openProductSite()
             }
-            Button(BrowserConstants.publisherName) {
+            footerChip(BrowserConstants.publisherName) {
                 tab.openPublisherSite()
             }
             Spacer(minLength: 0)
         }
-        .font(.footnote.weight(.medium))
-        .foregroundStyle(.secondary)
+    }
+
+    private func footerChip(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.footnote.weight(.semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Color.primary.opacity(0.05), in: Capsule())
+                .overlay {
+                    Capsule().strokeBorder(Color.primary.opacity(0.1), lineWidth: 1)
+                }
+        }
         .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
     }
 
     private func submitSearch() {

@@ -70,6 +70,11 @@ struct PrivacyShieldView: View {
                 systemImage: "hand.raised.fill"
             )
             statRow(
+                title: "Cookies this session",
+                value: "\(environment.privacyStats.cookiesBlockedSession)",
+                systemImage: "cookie"
+            )
+            statRow(
                 title: "HTTPS upgrades",
                 value: "\(environment.privacyStats.httpsUpgradesSession)",
                 systemImage: "lock.rotation"
@@ -78,6 +83,11 @@ struct PrivacyShieldView: View {
                 title: "Blocked all time",
                 value: "\(environment.privacyStats.blockedRequestsLifetime)",
                 systemImage: "chart.bar.fill"
+            )
+            statRow(
+                title: "Cookies all time",
+                value: "\(environment.privacyStats.cookiesBlockedLifetime)",
+                systemImage: "cookie"
             )
         } header: {
             Text("Dashboard")

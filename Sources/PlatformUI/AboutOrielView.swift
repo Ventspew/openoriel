@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AboutOrielView: View {
+    @Environment(AppEnvironment.self) private var environment
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
@@ -9,7 +10,7 @@ struct AboutOrielView: View {
             ScrollView {
                 VStack(spacing: 22) {
                     OrielMark(size: 78)
-                        .shadow(color: OrielTheme.brandTeal.opacity(0.22), radius: 18, y: 6)
+                        .shadow(color: environment.settings.brandColor.opacity(0.22), radius: 18, y: 6)
                         .padding(.top, 12)
 
                     VStack(spacing: 8) {
@@ -66,13 +67,11 @@ struct AboutOrielView: View {
                 .frame(maxWidth: .infinity)
             }
             .background {
-                Group {
-                    if colorScheme == .dark {
-                        OrielTheme.startPageBackgroundDark
-                    } else {
-                        OrielTheme.startPageBackground
-                    }
-                }
+                OrielTheme.startPageBackground(
+                    accent: environment.settings.accentTheme,
+                    background: environment.settings.backgroundTheme,
+                    scheme: colorScheme
+                )
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -94,7 +93,7 @@ struct AboutOrielView: View {
                 .tracking(0.6)
             Link(value, destination: url)
                 .font(.headline.weight(.semibold))
-                .foregroundStyle(OrielTheme.brandPrimary)
+                .foregroundStyle(environment.settings.brandColor)
         }
         .frame(maxWidth: .infinity)
     }

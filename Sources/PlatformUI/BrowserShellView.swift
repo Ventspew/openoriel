@@ -147,38 +147,80 @@ struct BrowserShellView: View {
 
     @ViewBuilder
     private func trailingChrome(environment: AppEnvironment, tab: BrowserTab, compact: Bool) -> some View {
-        HStack(spacing: compact ? 10 : 14) {
+        let accent = environment.settings.brandColor
+        let size: CGFloat = compact ? 34 : OrielLayout.navButtonSize
+        HStack(spacing: compact ? 6 : 8) {
             javaScriptButton(tab: tab)
-            shieldButton(environment: environment)
+            chromeIconButton(
+                systemName: environment.privacy.contentBlockingEnabled ? "shield.lefthalf.filled" : "shield.slash",
+                label: "Privacy Shields",
+                accent: accent,
+                size: size,
+                emphasized: environment.privacy.contentBlockingEnabled
+            ) {
+                environment.showPrivacyShield = true
+            }
             if !compact {
-                Button {
+                chromeIconButton(
+                    systemName: environment.downloads.hasActiveDownloads ? "arrow.down.circle.fill" : "arrow.down.circle",
+                    label: "Downloads",
+                    accent: accent,
+                    size: size
+                ) {
                     environment.showDownloads = true
-                } label: {
-                    Image(systemName: environment.downloads.hasActiveDownloads ? "arrow.down.circle.fill" : "arrow.down.circle")
                 }
-                .accessibilityLabel("Downloads")
             }
-            Button {
+            chromeIconButton(
+                systemName: "gearshape",
+                label: "Settings",
+                accent: accent,
+                size: size
+            ) {
                 openAppSettings()
-            } label: {
-                Image(systemName: "gearshape")
             }
-            .accessibilityLabel("Settings")
-            .accessibilityHint("Change search engine, appearance, and more")
             chromeMenu(environment: environment, tab: tab, compact: compact)
-            Button {
+            chromeIconButton(
+                systemName: "square.on.square",
+                label: "Tabs",
+                accent: accent,
+                size: size,
+                badge: compact ? nil : "\(environment.tabs.tabs.count)"
+            ) {
                 environment.showTabOverview = true
-            } label: {
-                if compact {
-                    Image(systemName: "square.on.square")
-                        .accessibilityLabel("Tabs, \(environment.tabs.tabs.count)")
-                } else {
-                    Label("\(environment.tabs.tabs.count)", systemImage: "square.on.square")
+            }
+        }
+    }
+
+    private func chromeIconButton(
+        systemName: String,
+        label: String,
+        accent: Color,
+        size: CGFloat,
+        emphasized: Bool = false,
+        badge: String? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: systemName)
+                if let badge {
+                    Text(badge)
+                        .font(.caption2.weight(.bold))
+                        .monospacedDigit()
                 }
             }
-            .accessibilityLabel("Tabs")
-            .accessibilityValue("\(environment.tabs.tabs.count)")
         }
+        .buttonStyle(
+            OrielChromeButtonStyle(
+                isEnabled: true,
+                isEmphasized: emphasized,
+                accent: accent,
+                size: size,
+                expandsHorizontally: badge != nil
+            )
+        )
+        .accessibilityLabel(label)
+        .help(label)
     }
 
     private func findBar(environment: AppEnvironment) -> some View {
@@ -347,13 +389,13 @@ struct BrowserShellView: View {
                         .padding(.horizontal, 11)
                         .padding(.vertical, 7)
                         .background(
-                            selected ? OrielTheme.brandPrimary.opacity(0.16) : Color.primary.opacity(0.04),
+                            selected ? environment.settings.brandColor.opacity(0.16) : Color.primary.opacity(0.04),
                             in: RoundedRectangle(cornerRadius: 9, style: .continuous)
                         )
                         .overlay {
                             RoundedRectangle(cornerRadius: 9, style: .continuous)
                                 .strokeBorder(
-                                    selected ? OrielTheme.brandPrimary.opacity(0.28) : Color.clear,
+                                    selected ? environment.settings.brandColor.opacity(0.28) : Color.clear,
                                     lineWidth: 1
                                 )
                         }
@@ -379,8 +421,8 @@ struct BrowserShellView: View {
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
-            .foregroundStyle(OrielTheme.brandPrimary)
-            .background(OrielTheme.brandPrimary.opacity(0.12))
+            .foregroundStyle(environment.settings.brandColor)
+            .background(environment.settings.brandColor.opacity(0.12))
             .accessibilityLabel("Private browsing tab")
     }
 
@@ -396,28 +438,31 @@ struct BrowserShellView: View {
     }
 
     private func javaScriptButton(tab: BrowserTab) -> some View {
-        Button {
+        let accent = environment.settings.brandColor
+        return Button {
             tab.toggleJavaScript()
         } label: {
             Text("JS")
                 .font(.caption.weight(.bold))
                 .monospaced()
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
                 .background(
                     tab.javaScriptEnabled
-                        ? Color.accentColor.opacity(0.18)
+                        ? accent.opacity(0.18)
                         : Color.orange.opacity(0.22),
-                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: OrielTheme.chromeButtonRadius, style: .continuous)
                 )
                 .foregroundStyle(tab.javaScriptEnabled ? Color.primary : Color.orange)
                 .overlay {
-                    if !tab.javaScriptEnabled {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(Color.orange.opacity(0.7), lineWidth: 1)
-                    }
+                    RoundedRectangle(cornerRadius: OrielTheme.chromeButtonRadius, style: .continuous)
+                        .strokeBorder(
+                            tab.javaScriptEnabled ? accent.opacity(0.35) : Color.orange.opacity(0.7),
+                            lineWidth: 1
+                        )
                 }
         }
+        .buttonStyle(.plain)
         .accessibilityLabel(tab.javaScriptEnabled ? "JavaScript on" : "JavaScript off")
         .accessibilityHint("Toggles JavaScript for this tab and reloads the page")
         .accessibilityValue(tab.javaScriptEnabled ? "Enabled" : "Disabled")
@@ -531,7 +576,18 @@ struct BrowserShellView: View {
             }
         } label: {
             Image(systemName: "ellipsis.circle")
+                .font(.body.weight(.semibold))
+                .frame(width: OrielLayout.navButtonSize, height: OrielLayout.navButtonSize)
+                .background(
+                    RoundedRectangle(cornerRadius: OrielTheme.chromeButtonRadius, style: .continuous)
+                        .fill(Color.primary.opacity(0.06))
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: OrielTheme.chromeButtonRadius, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                }
         }
+        .buttonStyle(.plain)
         .accessibilityLabel("More")
         .help("More")
     }
@@ -550,8 +606,8 @@ struct BrowserShellView: View {
                 matchesBlockedHint: { url in
                     environment.contentBlocker.matchesBlockedHostHint(url)
                 },
-                onBlockedNavigation: {
-                    environment.privacyStats.recordBlockedRequest()
+                onBlockedNavigation: { blockedURL in
+                    environment.privacyStats.recordBlockedRequest(url: blockedURL)
                 },
                 onDownload: { url, name in
                     environment.downloads.enqueue(url: url, suggestedFileName: name)

@@ -29,7 +29,7 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     var tab: BrowserTab
     var contentBlockingEnabled: Bool
     var matchesBlockedHint: (URL) -> Bool
-    var onBlockedNavigation: () -> Void
+    var onBlockedNavigation: (URL) -> Void
     var onDownload: ((URL, String?) -> Void)?
     var permissionManager: WebsitePermissionManager?
     var onPopupCreated: ((WKWebView) -> Void)?
@@ -51,7 +51,7 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         tab: BrowserTab,
         contentBlockingEnabled: Bool = true,
         matchesBlockedHint: @escaping (URL) -> Bool = { _ in false },
-        onBlockedNavigation: @escaping () -> Void = {},
+        onBlockedNavigation: @escaping (URL) -> Void = { _ in },
         onDownload: ((URL, String?) -> Void)? = nil,
         permissionManager: WebsitePermissionManager? = nil,
         onPopupCreated: ((WKWebView) -> Void)? = nil,

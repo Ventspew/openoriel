@@ -78,6 +78,10 @@ struct OrielShieldButton: View {
         environment.privacy.contentBlockingEnabled
     }
 
+    private var accent: Color {
+        environment.settings.brandColor
+    }
+
     var body: some View {
         Button {
             toggleShields()
@@ -91,10 +95,21 @@ struct OrielShieldButton: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .frame(width: size + 8, height: size + 8)
-            .contentShape(Rectangle())
+            .frame(width: size + 14, height: size + 14)
+            .background(
+                RoundedRectangle(cornerRadius: OrielTheme.chromeButtonRadius, style: .continuous)
+                    .fill(shieldsOn ? accent.opacity(0.16) : Color.primary.opacity(0.06))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: OrielTheme.chromeButtonRadius, style: .continuous)
+                    .strokeBorder(
+                        shieldsOn ? accent.opacity(0.4) : Color.primary.opacity(0.1),
+                        lineWidth: 1
+                    )
+            }
+            .contentShape(RoundedRectangle(cornerRadius: OrielTheme.chromeButtonRadius, style: .continuous))
         }
-        .buttonStyle(.borderless)
+        .buttonStyle(.plain)
         .help(shieldsOn ? "Oriel Shields on — click to turn off" : "Oriel Shields off — click to turn on")
         .accessibilityLabel("Oriel Shields")
         .accessibilityValue(shieldsOn ? "On" : "Off")
