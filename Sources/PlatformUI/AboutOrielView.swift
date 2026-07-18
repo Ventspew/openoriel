@@ -3,20 +3,29 @@ import SwiftUI
 struct AboutOrielView: View {
     @Environment(AppEnvironment.self) private var environment
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorScheme) private var systemColorScheme
+
+    private var pageScheme: ColorScheme {
+        environment.settings.backgroundTheme.resolvedColorScheme(system: systemColorScheme)
+    }
+
+    private var accent: Color {
+        environment.settings.accentTheme.readable(on: pageScheme)
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 22) {
                     OrielMark(size: 78)
-                        .shadow(color: environment.settings.brandColor.opacity(0.22), radius: 18, y: 6)
+                        .shadow(color: accent.opacity(0.22), radius: 18, y: 6)
                         .padding(.top, 12)
 
                     VStack(spacing: 8) {
                         Text(BrowserConstants.productName)
                             .font(.system(size: 36, weight: .semibold, design: .serif))
                             .tracking(-0.6)
+                            .foregroundStyle(.primary)
 
                         Text("A calm view of the web.")
                             .font(.title3)
@@ -42,12 +51,12 @@ struct AboutOrielView: View {
                     .padding(16)
                     .frame(maxWidth: .infinity)
                     .background(
-                        OrielTheme.surfaceFill(for: colorScheme),
+                        OrielTheme.surfaceFill(for: pageScheme),
                         in: RoundedRectangle(cornerRadius: OrielTheme.sectionRadius, style: .continuous)
                     )
                     .overlay {
                         RoundedRectangle(cornerRadius: OrielTheme.sectionRadius, style: .continuous)
-                            .strokeBorder(OrielTheme.hairline(for: colorScheme), lineWidth: 1)
+                            .strokeBorder(OrielTheme.hairline(for: pageScheme), lineWidth: 1)
                     }
                     .padding(.top, 8)
 
@@ -70,9 +79,10 @@ struct AboutOrielView: View {
                 OrielTheme.startPageBackground(
                     accent: environment.settings.accentTheme,
                     background: environment.settings.backgroundTheme,
-                    scheme: colorScheme
+                    scheme: systemColorScheme
                 )
             }
+            .environment(\.colorScheme, pageScheme)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
@@ -93,7 +103,7 @@ struct AboutOrielView: View {
                 .tracking(0.6)
             Link(value, destination: url)
                 .font(.headline.weight(.semibold))
-                .foregroundStyle(environment.settings.brandColor)
+                .foregroundStyle(accent)
         }
         .frame(maxWidth: .infinity)
     }

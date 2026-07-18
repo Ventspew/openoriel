@@ -2,6 +2,12 @@ import XCTest
 @testable import Oriel
 
 final class ThemeAndPrivacyStatsTests: XCTestCase {
+    func testBackgroundThemeLocksReadableColorScheme() {
+        XCTAssertEqual(BrowserBackgroundTheme.midnight.resolvedColorScheme(system: .light), .dark)
+        XCTAssertEqual(BrowserBackgroundTheme.paper.resolvedColorScheme(system: .dark), .light)
+        XCTAssertEqual(BrowserBackgroundTheme.soft.resolvedColorScheme(system: .dark), .dark)
+    }
+
     func testAccentAndBackgroundThemesPersist() async {
         await MainActor.run {
             let defaults = UserDefaults(suiteName: "oriel.tests.theme.\(UUID().uuidString)")!

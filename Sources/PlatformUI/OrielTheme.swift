@@ -43,6 +43,11 @@ enum BrowserAccentTheme: String, CaseIterable, Identifiable, Codable, Sendable {
         case .slate: Color(red: 0.70, green: 0.74, blue: 0.80)
         }
     }
+
+    /// Accent that stays readable on the current start-page scheme.
+    func readable(on scheme: ColorScheme) -> Color {
+        scheme == .dark ? softColor : color
+    }
 }
 
 /// Start-page / chrome background treatments.
@@ -67,13 +72,21 @@ enum BrowserBackgroundTheme: String, CaseIterable, Identifiable, Codable, Sendab
         }
     }
 
-    /// When set, forces light/dark for the start page wash (nil = follow appearance).
-    var preferredScheme: ColorScheme? {
+    /// Backgrounds that lock light/dark so text contrast stays correct.
+    var forcedColorScheme: ColorScheme? {
         switch self {
         case .midnight: .dark
         case .paper, .sand: .light
-        default: nil
+        case .soft, .mist, .aurora: nil
         }
+    }
+
+    func resolvedColorScheme(system: ColorScheme) -> ColorScheme {
+        forcedColorScheme ?? system
+    }
+
+    var isVisuallyDark: Bool {
+        forcedColorScheme == .dark
     }
 }
 
@@ -86,11 +99,9 @@ enum OrielTheme {
     static let hairlineOpacity: Double = 0.10
     static let chromeButtonRadius: CGFloat = 10
 
-    /// Deep teal used when AccentColor asset is unavailable (previews / fallbacks).
     static let brandTeal = BrowserAccentTheme.teal.color
     static let brandTealSoft = BrowserAccentTheme.teal.softColor
 
-    /// Resolves to the selected accent, falling back to the asset catalog color.
     static func brandPrimary(accent: BrowserAccentTheme = .teal) -> Color {
         accent == .teal ? Color("AccentColor") : accent.color
     }
@@ -101,12 +112,12 @@ enum OrielTheme {
         background: BrowserBackgroundTheme,
         scheme: ColorScheme
     ) -> some View {
-        let effectiveScheme = background.preferredScheme ?? scheme
+        let pageScheme = background.resolvedColorScheme(system: scheme)
         ZStack {
-            baseFill(for: background, scheme: effectiveScheme)
-            bloom(accent: accent, background: background, scheme: effectiveScheme)
+            baseFill(for: background, scheme: pageScheme)
+            bloom(accent: accent, background: background, scheme: pageScheme)
             LinearGradient(
-                colors: veilColors(scheme: effectiveScheme),
+                colors: veilColors(scheme: pageScheme),
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -114,7 +125,6 @@ enum OrielTheme {
         .ignoresSafeArea()
     }
 
-    /// Legacy helpers — default teal / soft so About and older call sites keep compiling.
     static var startPageBackground: some View {
         startPageBackground(accent: .teal, background: .soft, scheme: .light)
     }
@@ -124,11 +134,11 @@ enum OrielTheme {
     }
 
     static func surfaceFill(for scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.white.opacity(0.06) : Color.white.opacity(0.72)
+        scheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.78)
     }
 
     static func hairline(for scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(hairlineOpacity)
+        scheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(hairlineOpacity)
     }
 
     private static func baseFill(for background: BrowserBackgroundTheme, scheme: ColorScheme) -> Color {
@@ -204,7 +214,7 @@ enum OrielTheme {
     }
 }
 
-/// Filled chrome control so back/forward/settings read clearly on light and dark bars.
+/// Filled chrome control for trailing toolbar actions (not the left nav glyphs).
 struct OrielChromeButtonStyle: ButtonStyle {
     var isEnabled: Bool = true
     var isEmphasized: Bool = false

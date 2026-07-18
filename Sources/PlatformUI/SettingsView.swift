@@ -129,6 +129,9 @@ struct SettingsView: View {
                         ForEach(BrowserBackgroundTheme.allCases) { theme in
                             Button {
                                 settings.backgroundTheme = theme
+                                if let forced = theme.forcedColorScheme {
+                                    settings.appearance = forced == .dark ? .dark : .light
+                                }
                             } label: {
                                 HStack(spacing: 12) {
                                     RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -156,7 +159,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Appearance")
                 } footer: {
-                    Text("Accent colors tint buttons and Shields. Background themes change the start page wash.")
+                    Text("Accent colors tint buttons and Shields. Backgrounds like Midnight or Paper also set Light/Dark so text stays readable.")
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
