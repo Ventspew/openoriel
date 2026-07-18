@@ -160,6 +160,10 @@ enum ChromeWebStoreBridge {
       }
       if (!isStoreHost()) return;
 
+      var scheduled = null;
+      var busy = false;
+      var lastPath = '';
+
       function validId(id) {
         return typeof id === 'string' && /^[a-p]{32}$/.test(id);
       }
@@ -182,76 +186,74 @@ enum ChromeWebStoreBridge {
         } catch (e) {}
       }
 
-      function hideUnavailableBanners() {
-        if (!document.body) return;
-        var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
-        var node;
-        while ((node = walker.nextNode())) {
-          var value = node.nodeValue || '';
-          if (!/Item currently unavailable/i.test(value)) continue;
-          var el = node.parentElement;
-          for (var depth = 0; el && depth < 8; depth++) {
-            var rect = el.getBoundingClientRect();
-            var text = (el.innerText || '').trim();
-            if (
-              rect.height >= 24 &&
-              rect.height <= 140 &&
-              rect.width >= 240 &&
-              text.length < 280 &&
-              /Item currently unavailable/i.test(text)
-            ) {
-              el.style.setProperty('display', 'none', 'important');
-              el.setAttribute('data-oriel-hidden-unavailable', '1');
-              break;
-            }
-            el = el.parentElement;
-          }
-        }
-      }
-
-      function rewriteInstallLabels(root) {
-        var walker = document.createTreeWalker(root || document.body, NodeFilter.SHOW_TEXT, null);
-        var node;
-        while ((node = walker.nextNode())) {
-          if (node.nodeValue && /Add to (Chrome|Brave)/i.test(node.nodeValue)) {
-            node.nodeValue = node.nodeValue.replace(/Add to (Chrome|Brave)/gi, 'Add to Oriel');
-          }
-        }
+      function controlLabel(el) {
+        if (!el) return '';
+        // Prefer textContent — innerText forces layout and can freeze on large store pages.
+        return (el.textContent || '').replace(/\s+/g, ' ').trim();
       }
 
       function isInstallControl(el) {
         if (!el || el.id === 'oriel-add-to-oriel') return false;
-        var text = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
-        return /Add to (Chrome|Brave|Oriel)/i.test(text);
+        return /^(Add to (Chrome|Brave|Oriel))$/i.test(controlLabel(el));
       }
 
-      function unlockInstallControls() {
+      function hideUnavailableBanners() {
+        if (!document.body) return;
+        var candidates = document.querySelectorAll('div, section, span, p');
+        for (var i = 0; i < candidates.length; i++) {
+          var el = candidates[i];
+          if (el.getAttribute('data-oriel-hidden-unavailable') === '1') continue;
+          if (el.childElementCount > 8) continue;
+          var text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+          if (text.length < 20 || text.length > 220) continue;
+          if (!/Item currently unavailable/i.test(text)) continue;
+          el.style.setProperty('display', 'none', 'important');
+          el.setAttribute('data-oriel-hidden-unavailable', '1');
+        }
+      }
+
+      function rewriteInstallLabels() {
         var nodes = document.querySelectorAll('button, a, div[role="button"], span[role="button"]');
         for (var i = 0; i < nodes.length; i++) {
           var el = nodes[i];
-          if (!isInstallControl(el)) continue;
+          var label = controlLabel(el);
+          if (!/^Add to (Chrome|Brave)$/i.test(label)) continue;
+          // Replace only leaf text to avoid walking the whole document.
+          if (el.childElementCount === 0) {
+            el.textContent = 'Add to Oriel';
+            continue;
+          }
+          var spans = el.querySelectorAll('span');
+          var rewritten = false;
+          for (var s = 0; s < spans.length; s++) {
+            var span = spans[s];
+            if (span.childElementCount === 0 && /^Add to (Chrome|Brave)$/i.test((span.textContent || '').trim())) {
+              span.textContent = 'Add to Oriel';
+              rewritten = true;
+            }
+          }
+          if (!rewritten) {
+            el.setAttribute('aria-label', 'Add to Oriel');
+          }
+        }
+      }
 
-          el.removeAttribute('disabled');
-          el.removeAttribute('aria-disabled');
-          el.disabled = false;
-          el.setAttribute('aria-disabled', 'false');
-          el.style.setProperty('pointer-events', 'auto', 'important');
-          el.style.setProperty('opacity', '1', 'important');
-          el.style.setProperty('cursor', 'pointer', 'important');
-          el.style.removeProperty('filter');
+      function unlockInstallControls() {
+        var nodes = document.querySelectorAll('button[disabled], [aria-disabled="true"], button, div[role="button"]');
+        for (var i = 0; i < nodes.length; i++) {
+          var el = nodes[i];
+          if (!isInstallControl(el) && !/^Add to Oriel$/i.test(controlLabel(el))) continue;
 
-          if (!el.dataset.orielInstallWired) {
-            el.dataset.orielInstallWired = '1';
-            el.addEventListener('click', function (event) {
-              var id = idFromPath();
-              if (!id) return;
-              event.preventDefault();
-              event.stopPropagation();
-              if (typeof event.stopImmediatePropagation === 'function') {
-                event.stopImmediatePropagation();
-              }
-              postInstall(id);
-            }, true);
+          if (el.hasAttribute('disabled') || el.disabled || el.getAttribute('aria-disabled') === 'true') {
+            el.removeAttribute('disabled');
+            el.disabled = false;
+            el.setAttribute('aria-disabled', 'false');
+          }
+          if (el.dataset.orielUnlocked !== '1') {
+            el.dataset.orielUnlocked = '1';
+            el.style.pointerEvents = 'auto';
+            el.style.opacity = '1';
+            el.style.cursor = 'pointer';
           }
         }
       }
@@ -263,41 +265,41 @@ enum ChromeWebStoreBridge {
           if (btn) btn.remove();
           return;
         }
-        if (!btn) {
-          btn = document.createElement('button');
-          btn.id = 'oriel-add-to-oriel';
-          btn.type = 'button';
-          btn.textContent = 'Add to Oriel';
-          btn.setAttribute('aria-label', 'Add to Oriel');
-          Object.assign(btn.style, {
-            position: 'fixed',
-            right: '20px',
-            bottom: '20px',
-            zIndex: '2147483646',
-            padding: '12px 18px',
-            border: '0',
-            borderRadius: '10px',
-            background: '#1a73e8',
-            color: '#ffffff',
-            font: '600 14px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
-            cursor: 'pointer',
-            boxShadow: '0 6px 20px rgba(0,0,0,0.22)'
-          });
-          btn.addEventListener('click', function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            var current = idFromPath();
-            if (!current) return;
-            btn.disabled = true;
-            btn.textContent = 'Installing…';
-            postInstall(current);
-            setTimeout(function () {
-              btn.disabled = false;
-              btn.textContent = 'Add to Oriel';
-            }, 5000);
-          }, true);
-          (document.body || document.documentElement).appendChild(btn);
-        }
+        if (btn) return;
+
+        btn = document.createElement('button');
+        btn.id = 'oriel-add-to-oriel';
+        btn.type = 'button';
+        btn.textContent = 'Add to Oriel';
+        btn.setAttribute('aria-label', 'Add to Oriel');
+        Object.assign(btn.style, {
+          position: 'fixed',
+          right: '20px',
+          bottom: '20px',
+          zIndex: '2147483646',
+          padding: '12px 18px',
+          border: '0',
+          borderRadius: '10px',
+          background: '#1a73e8',
+          color: '#ffffff',
+          font: '600 14px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+          cursor: 'pointer',
+          boxShadow: '0 6px 20px rgba(0,0,0,0.22)'
+        });
+        btn.addEventListener('click', function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          var current = idFromPath();
+          if (!current) return;
+          btn.disabled = true;
+          btn.textContent = 'Installing…';
+          postInstall(current);
+          setTimeout(function () {
+            btn.disabled = false;
+            btn.textContent = 'Add to Oriel';
+          }, 5000);
+        }, true);
+        (document.body || document.documentElement).appendChild(btn);
       }
 
       function installClickCapture(event) {
@@ -305,7 +307,7 @@ enum ChromeWebStoreBridge {
         if (!target || !target.closest) return;
         var el = target.closest('button, a, div[role="button"], span[role="button"]');
         if (!el || el.id === 'oriel-add-to-oriel') return;
-        if (!isInstallControl(el)) return;
+        if (!isInstallControl(el) && !/^Add to Oriel$/i.test(controlLabel(el))) return;
         var id = idFromPath();
         if (!id) return;
         event.preventDefault();
@@ -315,26 +317,59 @@ enum ChromeWebStoreBridge {
       }
 
       function refresh() {
-        if (!document.body) return;
-        hideUnavailableBanners();
-        rewriteInstallLabels(document.body);
-        unlockInstallControls();
-        ensureFloatingButton();
+        if (busy || !document.body) return;
+        busy = true;
+        try {
+          // Listing pages are huge — only do light label rewrites there.
+          var detailId = idFromPath();
+          if (location.pathname !== lastPath) {
+            lastPath = location.pathname;
+          }
+          rewriteInstallLabels();
+          if (detailId) {
+            hideUnavailableBanners();
+            unlockInstallControls();
+            ensureFloatingButton();
+          } else {
+            var btn = document.getElementById('oriel-add-to-oriel');
+            if (btn) btn.remove();
+          }
+        } finally {
+          busy = false;
+        }
+      }
+
+      function scheduleRefresh() {
+        if (scheduled != null) return;
+        scheduled = setTimeout(function () {
+          scheduled = null;
+          refresh();
+        }, 250);
       }
 
       document.addEventListener('click', installClickCapture, true);
-      document.addEventListener('pointerdown', installClickCapture, true);
       refresh();
-      var obs = new MutationObserver(function () { refresh(); });
+
+      // Only watch structural changes. Do NOT observe attributes we mutate,
+      // or refresh() fights the store forever and freezes the tab.
+      var obs = new MutationObserver(function () {
+        if (busy) return;
+        scheduleRefresh();
+      });
       obs.observe(document.documentElement, {
         childList: true,
-        subtree: true,
-        characterData: true,
-        attributes: true,
-        attributeFilter: ['disabled', 'aria-disabled', 'class', 'style']
+        subtree: true
       });
-      window.addEventListener('popstate', refresh);
-      setInterval(refresh, 800);
+
+      window.addEventListener('popstate', scheduleRefresh);
+      // Soft navigations on the store often don't fire popstate.
+      var pathProbe = location.pathname;
+      setInterval(function () {
+        if (location.pathname !== pathProbe) {
+          pathProbe = location.pathname;
+          scheduleRefresh();
+        }
+      }, 1000);
     })();
     """#
 }
