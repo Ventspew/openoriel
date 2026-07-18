@@ -59,6 +59,7 @@
 		C7C8D536888C9D8934F32329 /* HistoryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ABA8781AB579187B7E33D8C /* HistoryEntry.swift */; };
 		C7CE512183F858E2CFED4869 /* FindInPageBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FE54710A619EF58CFCB2E6E /* FindInPageBar.swift */; };
 		CA539354A2824DDEFA4B6001 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F64E5EADB8EC24B65AAD5FC /* SessionStore.swift */; };
+		CC525986B895AB6FC374C2FE /* oriel-base.json in Resources */ = {isa = PBXBuildFile; fileRef = E383ACD4A541394CCEFF790C /* oriel-base.json */; };
 		D10FAE26B1285126843EF12D /* oriel-easyprivacy-2.json in Resources */ = {isa = PBXBuildFile; fileRef = D181806ECD91E5B703979BCA /* oriel-easyprivacy-2.json */; };
 		D474FA419C43BB337A404141 /* Phase3PrivacyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45097DEF5699530F969BE06 /* Phase3PrivacyTests.swift */; };
 		D7E704953945FC2B3CE55422 /* NavigationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1808B252AD7CA5B9316D569 /* NavigationState.swift */; };
@@ -163,6 +164,7 @@
 		DAB969C9258A7150A1F20633 /* OrielApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrielApp.swift; sourceTree = "<group>"; };
 		DEE85969692DAE7045805E57 /* example-blocklist.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "example-blocklist.json"; sourceTree = "<group>"; };
 		E22D99CFADC7A4D062B595BC /* DownloadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsView.swift; sourceTree = "<group>"; };
+		E383ACD4A541394CCEFF790C /* oriel-base.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "oriel-base.json"; sourceTree = "<group>"; };
 		E57EB5D6608140050A9EF32F /* TabOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabOverviewView.swift; sourceTree = "<group>"; };
 		E93AAEDA2723236E7CE98DF6 /* PageEnhancementScripts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageEnhancementScripts.swift; sourceTree = "<group>"; };
 		ECD387DE816D2B801EC559E8 /* TabManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManager.swift; sourceTree = "<group>"; };
@@ -211,6 +213,7 @@
 			isa = PBXGroup;
 			children = (
 				DEE85969692DAE7045805E57 /* example-blocklist.json */,
+				E383ACD4A541394CCEFF790C /* oriel-base.json */,
 				B1D508240641032C8E4824AA /* oriel-cosmetic.json */,
 				762FD30A720BF69FF3596E9F /* oriel-easylist-1.json */,
 				3990845312E54DC942C6006E /* oriel-easylist-2.json */,
@@ -521,6 +524,7 @@
 			files = (
 				8E8A6FDFAD6F1304987AAEC0 /* Assets.xcassets in Resources */,
 				8478FAD9E834F047E2DFA09E /* example-blocklist.json in Resources */,
+				CC525986B895AB6FC374C2FE /* oriel-base.json in Resources */,
 				35DB9E70C360ED8F915BF3B0 /* oriel-cosmetic.json in Resources */,
 				FA1D4F663E1DEC41CA1273AA /* oriel-easylist-1.json in Resources */,
 				F6B5799E71FE5665EB610514 /* oriel-easylist-2.json in Resources */,

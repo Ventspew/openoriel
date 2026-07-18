@@ -4,11 +4,14 @@ Bundled under `Resources/ContentBlocker/`:
 
 | File | Source |
 |------|--------|
+| `oriel-base.json` | High-signal ad/tracker networks |
 | `oriel-easylist-*.json` | [EasyList](https://easylist.to/) network rules |
 | `oriel-easyprivacy-*.json` | [EasyPrivacy](https://easylist.to/) network rules |
-| `oriel-cosmetic.json` | EasyList/EasyPrivacy element-hiding (`##`) → `css-display-none` |
+| `oriel-cosmetic.json` | Element-hiding (`##`) → `css-display-none` |
 | `oriel-youtube-ads.json` | Curated YouTube ad endpoints + CSS hide |
 | `example-blocklist.json` | Tiny fallback |
+
+Protected first-party hosts (YouTube, `googleapis`, `gstatic`, …) are never blocked as a bare domain — that previously blanked the YouTube homepage.
 
 Each compiled list ends with an OAuth/login allowlist (`ignore-previous-rules` only applies inside that list).
 

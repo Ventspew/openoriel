@@ -52,6 +52,22 @@ ALLOWLIST_DOMAINS = [
     "*github.com",
 ]
 
+# Never emit a bare host block for these — path was dropped → blank homepage / broken APIs.
+PROTECTED_HOST_SUFFIXES = (
+    "youtube.com",
+    "youtube-nocookie.com",
+    "youtu.be",
+    "googlevideo.com",
+    "ytimg.com",
+    "ggpht.com",
+    "googleapis.com",
+    "gstatic.com",
+    "google.com",
+    "googleusercontent.com",
+    "gvt1.com",
+    "gvt2.com",
+)
+
 
 def allowlist_rule() -> dict:
     return {
@@ -63,6 +79,85 @@ def allowlist_rule() -> dict:
 def escape_regex(s: str) -> str:
     return re.escape(s).replace(r"\*", ".*")
 
+
+def host_is_protected(domain: str) -> bool:
+    d = domain.strip().lower().lstrip("*.").rstrip(".")
+    if not d:
+        return False
+    for suffix in PROTECTED_HOST_SUFFIXES:
+        if d == suffix or d.endswith("." + suffix):
+            return True
+    return False
+
+
+def safe_path_fragment(path: str) -> bool:
+    if not path.startswith("/") or len(path) < 2 or len(path) > 100:
+        return False
+    return all(c.isalnum() or c in "/._-%" for c in path)
+
+
+def extend_filter_with_rest(filt: str, rest: str) -> str | None:
+    """Attach EasyList path/query after ||domain. None = cannot convert safely."""
+    rest = (rest or "").strip()
+    if not rest:
+        return filt
+    while rest.startswith("^"):
+        rest = rest[1:]
+    if rest.startswith("*"):
+        rest = rest[1:]
+    if not rest:
+        return filt
+
+    if rest.startswith("/"):
+        path = rest.split("$")[0]
+        if "?" in path:
+            path, query = path.split("?", 1)
+            if safe_path_fragment(path):
+                return filt + escape_regex(path)
+            key = query.split("&")[0].split("=")[0]
+            if key and re.match(r"^[A-Za-z0-9_-]{3,40}$", key):
+                return filt + ".*" + escape_regex(key)
+            return None
+        if "*" in path:
+            path = path.split("*", 1)[0]
+        if not safe_path_fragment(path):
+            return None
+        return filt + escape_regex(path[:100])
+
+    # e.g. rest left as `*/gen_204?` already stripped leading *
+    if "/" in rest or rest[0].isalnum():
+        token = rest.split("?")[0].split("*")[0].split("$")[0]
+        token = "/" + token.lstrip("/")
+        if safe_path_fragment(token) and len(token) >= 4:
+            return filt + ".*" + escape_regex(token)
+    return None
+
+
+def is_bare_host_filter(filt: str, domain: str) -> bool:
+    base = domain_to_filter(domain)
+    return base is not None and filt == base
+
+
+def block_is_safe(rule: dict | None, domain: str, path_intended: bool) -> bool:
+    """Drop rules that would block all of YouTube / Google APIs."""
+    if rule is None:
+        return False
+    trigger = rule["trigger"]
+    filt = trigger["url-filter"]
+    bare = is_bare_host_filter(filt, domain)
+    if not bare:
+        return True
+    if not host_is_protected(domain):
+        return True
+    # Protected bare host: only allow narrowly scoped cases (e.g. YT embed on one site).
+    if trigger.get("if-domain"):
+        return True
+    if trigger.get("load-type") == ["third-party"] and domain.lower().endswith("youtube.com"):
+        return True
+    # Path was in the EasyList line but we failed to encode it — never fall back to bare.
+    if path_intended:
+        return False
+    return False
 
 def parse_options(opts: str) -> dict:
     result = {
@@ -205,17 +300,20 @@ def convert_network_line(line: str) -> list[dict]:
         filt = domain_to_filter(domain)
         if not filt:
             return []
-        if rest.startswith("/") and len(rest) > 1 and not rest.startswith("/*"):
-            path = rest.split("$")[0]
-            if all(c.isalnum() or c in "/._-%" for c in path[:80]):
-                filt = filt + escape_regex(path[:80])
+        path_intended = bool(rest.strip().lstrip("^"))
+        extended = extend_filter_with_rest(filt, rest)
+        if extended is None:
+            # Had a path/query we cannot encode — skip (do NOT fall back to bare host).
+            return []
+        filt = extended
         rule = make_block(filt, options)
+        if not block_is_safe(rule, domain, path_intended):
+            return []
         return [rule] if rule else []
 
     # Anchored URL prefix |http://… or |https://…
     if body.startswith("|http://") or body.startswith("|https://"):
         raw = body[1:]
-        # Strip trailing anchors
         raw = raw.rstrip("|").rstrip("^")
         if len(raw) < 12 or len(raw) > 180:
             return []
@@ -225,15 +323,11 @@ def convert_network_line(line: str) -> list[dict]:
         rule = make_block(filt, options)
         return [rule] if rule else []
 
-    # Path / keyword rules that look like ads (reduces false positives)
+    # Path / keyword rules that look like ads (third-party only)
     if body.startswith("/") and body.count("/") >= 2:
-        m = PATH_CONTAINS.match(body.split("$")[0] + ("$" + opts if opts else ""))
-        # Accept /ads, /ad/, /banner, /track, /pixel style paths
         core = body.split("$")[0].strip("/")
         low = core.lower()
         keywords = (
-            "ad",
-            "ads",
             "advert",
             "banner",
             "sponsor",
@@ -244,15 +338,18 @@ def convert_network_line(line: str) -> list[dict]:
             "doubleclick",
             "pagead",
             "popunder",
-            "popup",
             "prebid",
             "taboola",
             "outbrain",
+            "/ads/",
+            "/ad/",
+            "ads.js",
+            "ad.js",
         )
-        if any(k in low for k in keywords) and 3 <= len(core) <= 60:
-            if all(c.isalnum() or c in "/._-%" for c in core):
+        # Avoid ultra-generic "ad" substring matches that break sites
+        if any(k.strip("/") in low or k in f"/{low}/" or low.startswith(k.strip("/")) for k in keywords):
+            if 3 <= len(core) <= 60 and all(c.isalnum() or c in "/._-%" for c in core):
                 filt = f".*{escape_regex('/' + core)}"
-                # Prefer third-party for generic path hits
                 if options.get("third_party") is None:
                     options = dict(options)
                     options["third_party"] = True
@@ -273,6 +370,23 @@ def sanitize_selector(sel: str) -> str | None:
         return None
     if any(c in sel for c in ("{", "}", '"', "\\")):
         return None
+    # Avoid nuking video players / YouTube chrome
+    if any(
+        x in low
+        for x in (
+            "ytd-",
+            "ytp-",
+            "html5-video",
+            "video-player",
+            "videoplayer",
+            "rich-grid",
+            "rich-item",
+            "thumbnail",
+        )
+    ):
+        # Allow only explicit ad renderers
+        if "ad" not in low and "sponsor" not in low and "promo" not in low:
+            return None
     return sel
 
 
@@ -338,39 +452,30 @@ YOUTUBE_RULES = [
     {"trigger": {"url-filter": ".*youtube\\.com\\/pagead\\/"}, "action": {"type": "block"}},
     {"trigger": {"url-filter": ".*youtube\\.com\\/ptracking"}, "action": {"type": "block"}},
     {"trigger": {"url-filter": ".*youtube\\.com\\/api\\/stats\\/ads"}, "action": {"type": "block"}},
-    {"trigger": {"url-filter": ".*youtube\\.com\\/api\\/stats\\/atr"}, "action": {"type": "block"}},
     {"trigger": {"url-filter": ".*youtube\\.com\\/get_midroll_"}, "action": {"type": "block"}},
-    {"trigger": {"url-filter": ".*youtube\\.com\\/youtubei\\/v1\\/log_event"}, "action": {"type": "block"}},
-    {"trigger": {"url-filter": ".*youtube\\.com\\/youtubei\\/v1\\/att\\/get"}, "action": {"type": "block"}},
     {"trigger": {"url-filter": ".*youtube\\.com\\/youtubei\\/v1\\/player\\/ad_break"}, "action": {"type": "block"}},
-    {"trigger": {"url-filter": ".*s\\.youtube\\.com\\/api\\/stats\\/"}, "action": {"type": "block"}},
-    {"trigger": {"url-filter": ".*youtube\\.com\\/pcs\\/"}, "action": {"type": "block"}},
-    {"trigger": {"url-filter": ".*youtube\\.com\\/pagead\\/"}, "action": {"type": "block"}},
-    {"trigger": {"url-filter": ".*youtube\\.com\\/ad_"}, "action": {"type": "block"}},
-    {"trigger": {"url-filter": ".*googlevideo\\.com\\/.*&oad="}, "action": {"type": "block"}},
+    {"trigger": {"url-filter": ".*youtube\\.com\\/pcs\\/activeview"}, "action": {"type": "block"}},
+    {"trigger": {"url-filter": ".*ad\\.youtube\\.com"}, "action": {"type": "block"}},
+    {"trigger": {"url-filter": ".*googlevideo\\.com\\/.*[&?]oad="}, "action": {"type": "block"}},
     {"trigger": {"url-filter": ".*googlevideo\\.com\\/.*ctier=L"}, "action": {"type": "block"}},
-    {"trigger": {"url-filter": ".*googlevideo\\.com\\/.*&alr=yes"}, "action": {"type": "block"}},
     {"trigger": {"url-filter": ".*doubleclick\\.net"}, "action": {"type": "block"}},
     {"trigger": {"url-filter": ".*googleads\\.g\\.doubleclick\\.net"}, "action": {"type": "block"}},
     {"trigger": {"url-filter": ".*pagead2\\.googlesyndication\\.com"}, "action": {"type": "block"}},
     {"trigger": {"url-filter": ".*googlesyndication\\.com"}, "action": {"type": "block"}},
     {"trigger": {"url-filter": ".*googleadservices\\.com"}, "action": {"type": "block"}},
-    {"trigger": {"url-filter": ".*ad\\.youtube\\.com"}, "action": {"type": "block"}},
     {"trigger": {"url-filter": ".*adservice\\.google\\."}, "action": {"type": "block"}},
-    {"trigger": {"url-filter": ".*youtube\\.com\\/ptracking"}, "action": {"type": "block"}},
-    {"trigger": {"url-filter": ".*youtube\\.com\\/api\\/stats\\/qoe"}, "action": {"type": "block"}},
     {
         "trigger": {"url-filter": ".*youtube\\.com"},
         "action": {
             "type": "css-display-none",
             "selector": (
-                ".ytp-ad-module, .ytp-ad-player-overlay, .ytp-ad-overlay-container, "
-                ".ytp-ad-action-interstitial, .ytp-ad-preview-container, .video-ads, "
                 "ytd-ad-slot-renderer, ytd-promoted-sparkles-web-renderer, "
-                "ytd-player-legacy-desktop-watch-ads-renderer, ytd-in-feed-ad-layout-renderer, "
-                "ytd-action-companion-ad-renderer, ytd-display-ad-renderer, "
-                "ytd-banner-promo-renderer, ytd-statement-banner-renderer, "
-                "ytd-promoted-video-renderer, #player-ads, #masthead-ad, #offer-module"
+                "ytd-in-feed-ad-layout-renderer, ytd-action-companion-ad-renderer, "
+                "ytd-display-ad-renderer, ytd-banner-promo-renderer, "
+                "ytd-player-legacy-desktop-watch-ads-renderer, "
+                "#player-ads, #masthead-ad, "
+                ".ytp-ad-module, .ytp-ad-player-overlay, .ytp-ad-overlay-container, "
+                ".ytp-ad-action-interstitial, .ytp-ad-image-overlay, .video-ads"
             ),
         },
     },
@@ -385,6 +490,62 @@ YOUTUBE_RULES = [
         },
     },
 ]
+
+BASE_AD_NETWORKS = [
+    "doubleclick.net",
+    "googlesyndication.com",
+    "googleadservices.com",
+    "adservice.google.com",
+    "pagead2.googlesyndication.com",
+    "amazon-adsystem.com",
+    "adnxs.com",
+    "adsrvr.org",
+    "adform.net",
+    "advertising.com",
+    "adsafeprotected.com",
+    "ads-twitter.com",
+    "outbrain.com",
+    "taboola.com",
+    "criteo.com",
+    "criteo.net",
+    "pubmatic.com",
+    "rubiconproject.com",
+    "openx.net",
+    "casalemedia.com",
+    "bidswitch.net",
+    "scorecardresearch.com",
+    "quantserve.com",
+    "hotjar.com",
+    "fullstory.com",
+    "clarity.ms",
+    "moatads.com",
+    "3lift.com",
+    "teads.tv",
+    "smartadserver.com",
+    "media.net",
+    "mgid.com",
+    "revcontent.com",
+    "carbonads.com",
+    "carbonads.net",
+    "buysellads.com",
+    "propellerads.com",
+    "popads.net",
+    "exoclick.com",
+    "juicyads.com",
+    "googletagservices.com",
+]
+
+
+def base_ad_rules() -> list[dict]:
+    rules: list[dict] = []
+    seen: set[str] = set()
+    for host in BASE_AD_NETWORKS:
+        filt = ".*" + re.escape(host)
+        if filt in seen:
+            continue
+        seen.add(filt)
+        rules.append({"trigger": {"url-filter": filt}, "action": {"type": "block"}})
+    return rules
 
 
 def convert_network_file(path: Path) -> list[dict]:
@@ -405,7 +566,6 @@ def convert_cosmetics(paths: list[Path], max_rules: int = 40_000) -> list[dict]:
     for path in paths:
         for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
             items.extend(convert_cosmetic_line(line))
-    # Prefer generic (empty domain) first — highest coverage per rule after batching
     items.sort(key=lambda x: (0 if not x[0] else 1, x[0], x[1]))
     rules = batch_cosmetics(items)
     return rules[:max_rules]
@@ -413,7 +573,6 @@ def convert_cosmetics(paths: list[Path], max_rules: int = 40_000) -> list[dict]:
 
 def write_chunked(prefix: str, rules: list[dict]) -> list[Path]:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    # Clear old numbered files for this prefix
     for old in OUT_DIR.glob(f"{prefix}*.json"):
         old.unlink()
 
@@ -421,7 +580,6 @@ def write_chunked(prefix: str, rules: list[dict]) -> list[Path]:
     if not rules:
         return paths
 
-    # Reserve one slot for allowlist at end of each chunk
     room = MAX_RULES_PER_FILE - 1
     total_chunks = (len(rules) + room - 1) // room
     for i in range(0, len(rules), room):
@@ -442,21 +600,24 @@ def main() -> None:
     if not easylist.exists() or not easyprivacy.exists():
         raise SystemExit("Download EasyList + EasyPrivacy to /tmp first (see README).")
 
-    # Remove previous generated lists (keep example-blocklist.json)
     for pattern in (
         "oriel-easylist*.json",
         "oriel-easyprivacy*.json",
         "oriel-cosmetic*.json",
         "oriel-youtube-ads*.json",
+        "oriel-base*.json",
     ):
         for old in OUT_DIR.glob(pattern):
             old.unlink()
+
+    base = base_ad_rules()
+    print(f"Base ad networks: {len(base)}")
+    write_chunked("oriel-base", base)
 
     el = convert_network_file(easylist)
     ep = convert_network_file(easyprivacy)
     print(f"EasyList network: {len(el)}")
     print(f"EasyPrivacy network: {len(ep)}")
-
     write_chunked("oriel-easylist", el)
     write_chunked("oriel-easyprivacy", ep)
 

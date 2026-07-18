@@ -1,6 +1,6 @@
 import Foundation
 
-/// Injected when Oriel Shields are on — skips/hides YouTube player ads.
+/// Injected when Oriel Shields are on — skips/hides YouTube *ads* without breaking the homepage feed.
 enum YouTubeAdBlockScript {
     static let source = #"""
     (function () {
@@ -15,25 +15,29 @@ enum YouTubeAdBlockScript {
       if (window.__orielYouTubeAdBlockInstalled) return;
       window.__orielYouTubeAdBlockInstalled = true;
 
+      function isWatchContext() {
+        var p = location.pathname || '';
+        return p.indexOf('/watch') === 0 || p.indexOf('/shorts/') === 0 || p.indexOf('/embed/') === 0;
+      }
+
       function clickSkip() {
         var selectors = [
           '.ytp-ad-skip-button',
           '.ytp-ad-skip-button-modern',
           '.ytp-skip-ad-button',
           '.ytp-ad-skip-button-container button',
-          'button.ytp-ad-skip-button-modern',
-          '.ytp-ad-skip-button-container .ytp-button',
-          '.ytp-ad-skip-button-slot button'
+          'button.ytp-ad-skip-button-modern'
         ];
         for (var i = 0; i < selectors.length; i++) {
-          var nodes = document.querySelectorAll(selectors[i]);
-          for (var j = 0; j < nodes.length; j++) {
-            try { nodes[j].click(); } catch (e) {}
-          }
+          var btn = document.querySelector(selectors[i]);
+          if (!btn) continue;
+          var style = window.getComputedStyle(btn);
+          if (style && (style.display === 'none' || style.visibility === 'hidden')) continue;
+          try { btn.click(); } catch (e) {}
         }
       }
 
-      function nukeAdDom() {
+      function nukeAdSlots() {
         var kill = document.querySelectorAll([
           'ytd-ad-slot-renderer',
           'ytd-promoted-sparkles-web-renderer',
@@ -42,12 +46,8 @@ enum YouTubeAdBlockScript {
           'ytd-action-companion-ad-renderer',
           'ytd-display-ad-renderer',
           'ytd-banner-promo-renderer',
-          'ytd-statement-banner-renderer',
-          'ytd-promoted-video-renderer',
           '#player-ads',
           '#masthead-ad',
-          '#offer-module',
-          '.video-ads',
           '.ytp-ad-module',
           '.ytp-ad-overlay-container',
           '.ytp-ad-player-overlay',
@@ -60,13 +60,13 @@ enum YouTubeAdBlockScript {
       }
 
       function skipPlayerAd() {
+        if (!isWatchContext()) return;
         var player = document.querySelector('.html5-video-player');
-        var video = document.querySelector('video.html5-main-video') || document.querySelector('video');
+        var video = document.querySelector('video.html5-main-video');
         if (!player || !video) return;
         var adShowing = player.classList.contains('ad-showing')
           || player.classList.contains('ad-interrupting')
-          || player.classList.contains('ad-created')
-          || !!document.querySelector('.ytp-ad-player-overlay, .ytp-ad-preview-container, .ytp-ad-text');
+          || !!document.querySelector('.ytp-ad-player-overlay, .ytp-ad-preview-container');
         if (!adShowing) {
           try { if (video.playbackRate > 2) video.playbackRate = 1; } catch (e) {}
           return;
@@ -74,8 +74,8 @@ enum YouTubeAdBlockScript {
         clickSkip();
         try {
           video.muted = true;
-          video.playbackRate = 16;
-          if (video.duration && isFinite(video.duration) && video.duration > 0) {
+          if (video.duration && isFinite(video.duration) && video.duration > 0 && video.duration < 120) {
+            video.playbackRate = 16;
             video.currentTime = Math.max(video.currentTime, video.duration - 0.05);
           }
         } catch (e) {}
@@ -85,25 +85,13 @@ enum YouTubeAdBlockScript {
       function tick() {
         if (window.__orielYouTubeAdBlockKill) return;
         if (!hostOK()) return;
-        nukeAdDom();
+        nukeAdSlots();
         skipPlayerAd();
       }
 
-      var scheduled = false;
-      function schedule() {
-        if (scheduled || window.__orielYouTubeAdBlockKill) return;
-        scheduled = true;
-        setTimeout(function () { scheduled = false; tick(); }, 200);
-      }
-
       tick();
-      setInterval(tick, 400);
+      setInterval(tick, isWatchContext() ? 500 : 1200);
       document.addEventListener('yt-navigate-finish', tick, true);
-      document.addEventListener('yt-page-data-updated', tick, true);
-      try {
-        var obs = new MutationObserver(schedule);
-        obs.observe(document.documentElement, { childList: true, subtree: true });
-      } catch (e) {}
     })();
     """#
 
