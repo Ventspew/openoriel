@@ -6,7 +6,7 @@ struct AboutOrielView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
-                OrielMark(size: 72, showsWordmark: false)
+                OrielMark(size: 72)
 
                 Text(BrowserConstants.productName)
                     .font(.largeTitle.weight(.bold))

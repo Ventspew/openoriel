@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Back / forward / reload / home controls with clear disabled states and hit targets.
+/// Back / forward / reload / home, plus the Oriel Shields app-icon control (Brave-style).
 struct NavigationControlsView: View {
     @Bindable var tab: BrowserTab
-    /// Narrow chrome: only back/forward so the address bar stays centered.
+    /// Narrow chrome: back/forward + Oriel Shields only.
     var style: Style = .full
 
     enum Style {
@@ -15,8 +15,16 @@ struct NavigationControlsView: View {
         URLParser.isStartPage(tab.navigation.url)
     }
 
+    private var buttonSize: CGFloat {
+        style == .compact ? 30 : OrielLayout.navButtonSize
+    }
+
+    private var markSize: CGFloat {
+        style == .compact ? 18 : 22
+    }
+
     var body: some View {
-        HStack(spacing: style == .compact ? 0 : 4) {
+        HStack(spacing: style == .compact ? 2 : 4) {
             navButton(
                 systemName: "chevron.backward",
                 label: "Back",
@@ -54,11 +62,10 @@ struct NavigationControlsView: View {
                     tab.goHome()
                 }
             }
-        }
-    }
 
-    private var buttonSize: CGFloat {
-        style == .compact ? 30 : OrielLayout.navButtonSize
+            // App-icon Shields toggle — sits with nav, next to Home (like Brave’s lion).
+            OrielShieldButton(size: markSize)
+        }
     }
 
     private func navButton(

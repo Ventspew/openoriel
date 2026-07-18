@@ -72,8 +72,7 @@ struct StartPageView: View {
 
     private var hero: some View {
         VStack(spacing: 22) {
-            VStack(spacing: 10) {
-                OrielMark(size: 40)
+            VStack(spacing: 6) {
                 Text(BrowserConstants.productName)
                     .font(.system(size: 44, weight: .semibold, design: .serif))
                     .tracking(-0.8)
