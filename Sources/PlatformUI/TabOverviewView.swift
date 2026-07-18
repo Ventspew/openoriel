@@ -64,7 +64,7 @@ struct TabOverviewView: View {
                     }
                     .accessibilityLabel("New Tab")
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .automatic) {
                     Menu {
                         Button("New Private Tab") {
                             environment.tabs.createPrivateTab(select: true)

@@ -7,6 +7,7 @@ struct BrowserShellView: View {
     @Environment(AppEnvironment.self) private var environment
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         @Bindable var environment = environment
@@ -31,32 +32,49 @@ struct BrowserShellView: View {
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
         }
+        #if os(iOS)
+        .background {
+            OrielTheme.chromeWash(
+                accent: environment.settings.accentTheme,
+                background: environment.settings.backgroundTheme,
+                scheme: colorScheme
+            )
+            .ignoresSafeArea()
+        }
+        #endif
         .sheet(isPresented: $environment.showAbout) {
             AboutOrielView()
                 .orielSheetChrome()
+                .orielTheming(settings: environment.settings)
         }
         .sheet(isPresented: $environment.showTabOverview) {
             TabOverviewView()
                 .orielSheetChrome(preferLargeOnCompact: true)
+                .orielTheming(settings: environment.settings)
         }
         .sheet(isPresented: $environment.showBookmarks) {
             BookmarksView()
                 .orielSheetChrome()
+                .orielTheming(settings: environment.settings)
         }
         .sheet(isPresented: $environment.showHistory) {
             HistoryView()
                 .orielSheetChrome()
+                .orielTheming(settings: environment.settings)
         }
         .sheet(isPresented: $environment.showPrivacyShield) {
             PrivacyShieldView()
                 .orielSheetChrome(preferLargeOnCompact: true)
+                .orielTheming(settings: environment.settings)
         }
         .sheet(isPresented: $environment.showDownloads) {
             DownloadsView()
                 .orielSheetChrome()
+                .orielTheming(settings: environment.settings)
         }
         .sheet(isPresented: $environment.showExtensions) {
             ExtensionsView()
+                .orielTheming(settings: environment.settings)
                 #if os(iOS)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
@@ -67,6 +85,7 @@ struct BrowserShellView: View {
         .sheet(isPresented: $environment.showSettings) {
             SettingsView(showsDoneButton: true)
                 .orielSheetChrome(preferLargeOnCompact: true)
+                .orielTheming(settings: environment.settings)
                 #if os(macOS)
                 .frame(minWidth: 360, idealWidth: 480, minHeight: 400, idealHeight: 560)
                 #endif
@@ -74,22 +93,27 @@ struct BrowserShellView: View {
         .sheet(isPresented: $environment.showLinkQueue) {
             LinkQueueView()
                 .orielSheetChrome()
+                .orielTheming(settings: environment.settings)
         }
         .sheet(isPresented: $environment.showFireButton) {
             FireButtonView()
                 .orielSheetChrome()
+                .orielTheming(settings: environment.settings)
         }
         .sheet(isPresented: $environment.showTranslate) {
             TranslatePageView()
                 .orielSheetChrome()
+                .orielTheming(settings: environment.settings)
         }
         .sheet(isPresented: $environment.showProfiles) {
             ProfilesView()
                 .orielSheetChrome()
+                .orielTheming(settings: environment.settings)
         }
         .sheet(item: $environment.authPopup) { popup in
             AuthPopupView(state: popup)
                 .orielSheetChrome(preferLargeOnCompact: true)
+                .orielTheming(settings: environment.settings)
         }
         .onChange(of: environment.settings.restorePreviousSession) { _, newValue in
             environment.sessionStore.restorePreviousSession = newValue
@@ -950,7 +974,7 @@ struct BrowserShellView: View {
         if tab.navigation.isLoading && !tab.isShowingStartPage {
             ProgressView(value: tab.navigation.estimatedProgress)
                 .progressViewStyle(.linear)
-                .tint(Color.accentColor)
+                .tint(environment.settings.brandColor)
                 .frame(height: 2)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: tab.navigation.estimatedProgress)
                 .accessibilityLabel("Loading")

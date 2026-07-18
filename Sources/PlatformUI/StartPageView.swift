@@ -43,15 +43,36 @@ struct StartPageView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                topBand
-                    .padding(.top, isWide ? 36 : 28)
+        ZStack {
+            OrielTheme.startPageBackground(
+                accent: environment.settings.accentTheme,
+                background: environment.settings.backgroundTheme,
+                scheme: systemColorScheme
+            )
 
-                searchBlock
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    topBand
+                        .padding(.top, isWide ? 36 : 28)
 
-                if isWide {
-                    HStack(alignment: .top, spacing: 16) {
+                    searchBlock
+
+                    if isWide {
+                        HStack(alignment: .top, spacing: 16) {
+                            if !environment.bookmarks.favorites.isEmpty {
+                                tileSection(
+                                    title: "Favorites",
+                                    items: environment.bookmarks.favorites.prefix(8).compactMap { bookmark -> (String, String)? in
+                                        guard let url = bookmark.urlString else { return nil }
+                                        return (bookmark.title, url)
+                                    }
+                                )
+                            }
+                            privacyCard
+                                .frame(maxWidth: 320)
+                        }
+                    } else {
+                        privacyCard
                         if !environment.bookmarks.favorites.isEmpty {
                             tileSection(
                                 title: "Favorites",
@@ -61,24 +82,21 @@ struct StartPageView: View {
                                 }
                             )
                         }
-                        privacyCard
-                            .frame(maxWidth: 320)
                     }
-                } else {
-                    privacyCard
-                    if !environment.bookmarks.favorites.isEmpty {
-                        tileSection(
-                            title: "Favorites",
-                            items: environment.bookmarks.favorites.prefix(8).compactMap { bookmark -> (String, String)? in
-                                guard let url = bookmark.urlString else { return nil }
-                                return (bookmark.title, url)
-                            }
-                        )
-                    }
-                }
 
-                if isWide {
-                    HStack(alignment: .top, spacing: 16) {
+                    if isWide {
+                        HStack(alignment: .top, spacing: 16) {
+                            if !environment.history.recentSites.isEmpty {
+                                tileSection(
+                                    title: "Recent",
+                                    items: environment.history.recentSites.prefix(6).map {
+                                        ($0.title, $0.urlString)
+                                    }
+                                )
+                            }
+                            tileSection(title: "Suggested", items: suggestedItems)
+                        }
+                    } else {
                         if !environment.history.recentSites.isEmpty {
                             tileSection(
                                 title: "Recent",
@@ -89,42 +107,25 @@ struct StartPageView: View {
                         }
                         tileSection(title: "Suggested", items: suggestedItems)
                     }
-                } else {
-                    if !environment.history.recentSites.isEmpty {
+
+                    if !environment.installedWebApps.apps.isEmpty {
                         tileSection(
-                            title: "Recent",
-                            items: environment.history.recentSites.prefix(6).map {
-                                ($0.title, $0.urlString)
+                            title: "Web Apps",
+                            items: environment.installedWebApps.apps.prefix(8).map {
+                                ($0.name, $0.startURL.absoluteString)
                             }
                         )
                     }
-                    tileSection(title: "Suggested", items: suggestedItems)
-                }
 
-                if !environment.installedWebApps.apps.isEmpty {
-                    tileSection(
-                        title: "Web Apps",
-                        items: environment.installedWebApps.apps.prefix(8).map {
-                            ($0.name, $0.startURL.absoluteString)
-                        }
-                    )
+                    footerLinks
+                    Spacer(minLength: 40)
                 }
-
-                footerLinks
-                Spacer(minLength: 40)
+                .padding(.horizontal, isWide ? 36 : 22)
+                .frame(maxWidth: isWide ? 920 : 560)
+                .frame(maxWidth: .infinity)
+                .opacity(appeared || reduceMotion ? 1 : 0)
+                .offset(y: appeared || reduceMotion ? 0 : 10)
             }
-            .padding(.horizontal, isWide ? 36 : 22)
-            .frame(maxWidth: isWide ? 920 : 560)
-            .frame(maxWidth: .infinity)
-            .opacity(appeared || reduceMotion ? 1 : 0)
-            .offset(y: appeared || reduceMotion ? 0 : 10)
-        }
-        .background {
-            OrielTheme.startPageBackground(
-                accent: environment.settings.accentTheme,
-                background: environment.settings.backgroundTheme,
-                scheme: systemColorScheme
-            )
         }
         // Lock semantic colors to the page wash so Midnight/Paper never fight system text.
         .environment(\.colorScheme, pageScheme)

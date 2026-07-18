@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 /// User-selectable accent colors for chrome, start page, and tint.
 enum BrowserAccentTheme: String, CaseIterable, Identifiable, Codable, Sendable {
@@ -103,7 +106,24 @@ enum OrielTheme {
     static let brandTealSoft = BrowserAccentTheme.teal.softColor
 
     static func brandPrimary(accent: BrowserAccentTheme = .teal) -> Color {
-        accent == .teal ? Color("AccentColor") : accent.color
+        // Always use the theme RGB (not the asset) so Settings accent picks update tint live.
+        accent.color
+    }
+
+    /// Soft chrome wash so iOS/iPad toolbars pick up background themes, not only the start page.
+    static func chromeWash(
+        accent: BrowserAccentTheme,
+        background: BrowserBackgroundTheme,
+        scheme: ColorScheme
+    ) -> some View {
+        let pageScheme = background.resolvedColorScheme(system: scheme)
+        return ZStack {
+            baseFill(for: background, scheme: pageScheme).opacity(0.92)
+            Group {
+                bloom(accent: accent, background: background, scheme: pageScheme)
+            }
+            .opacity(0.55)
+        }
     }
 
     @ViewBuilder
@@ -263,5 +283,55 @@ struct OrielChromeButtonStyle: ButtonStyle {
             return accent.opacity(pressed ? 0.28 : 0.16)
         }
         return Color.primary.opacity(pressed ? 0.12 : 0.06)
+    }
+}
+
+// MARK: - Root theming
+
+extension View {
+    /// Applies appearance + accent tint and keeps UIKit windows in sync on iOS/iPadOS.
+    func orielTheming(settings: BrowserSettings) -> some View {
+        modifier(OrielThemingModifier(settings: settings))
+    }
+}
+
+private struct OrielThemingModifier: ViewModifier {
+    @Bindable var settings: BrowserSettings
+
+    func body(content: Content) -> some View {
+        content
+            .preferredColorScheme(resolvedPreferredScheme)
+            .tint(settings.brandColor)
+            .onAppear { syncPlatformChrome() }
+            .onChange(of: settings.appearance) { _, _ in syncPlatformChrome() }
+            .onChange(of: settings.accentTheme) { _, _ in syncPlatformChrome() }
+            .onChange(of: settings.backgroundTheme) { _, _ in syncPlatformChrome() }
+    }
+
+    /// Prefer explicit appearance; otherwise let background themes that lock contrast win.
+    private var resolvedPreferredScheme: ColorScheme? {
+        if let explicit = settings.appearance.colorScheme {
+            return explicit
+        }
+        return settings.backgroundTheme.forcedColorScheme
+    }
+
+    private func syncPlatformChrome() {
+        #if os(iOS)
+        let style: UIUserInterfaceStyle
+        if let scheme = resolvedPreferredScheme {
+            style = scheme == .dark ? .dark : .light
+        } else {
+            style = .unspecified
+        }
+        let tint = UIColor(settings.brandColor)
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                window.overrideUserInterfaceStyle = style
+                window.tintColor = tint
+            }
+        }
+        #endif
     }
 }

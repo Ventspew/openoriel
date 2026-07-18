@@ -20,7 +20,7 @@ struct SettingsView: View {
                             HStack(spacing: 12) {
                                 Image(systemName: engine.systemImage)
                                     .frame(width: 28)
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(settings.brandColor)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(engine.displayName)
                                         .foregroundStyle(.primary)
@@ -37,7 +37,7 @@ struct SettingsView: View {
                                 Spacer()
                                 if settings.searchEngine == engine {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(Color.accentColor)
+                                        .foregroundStyle(settings.brandColor)
                                         .accessibilityLabel("Selected")
                                 }
                             }

@@ -6,10 +6,8 @@ struct OrielApp: App {
 
     var body: some Scene {
         WindowGroup {
-            BrowserShellView()
-                .environment(environment)
-                .preferredColorScheme(environment.settings.appearance.colorScheme)
-                .tint(environment.settings.brandColor)
+            // Theming must live in a View body — Scene.body does not track @Observable settings.
+            OrielRootView(environment: environment)
         }
         #if os(macOS)
         .defaultSize(width: 1100, height: 760)
@@ -20,12 +18,7 @@ struct OrielApp: App {
 
         #if os(macOS)
         Settings {
-            SettingsView(showsDoneButton: false)
-                .environment(environment)
-                .preferredColorScheme(environment.settings.appearance.colorScheme)
-                .tint(environment.settings.brandColor)
-                // Fit small displays / Stage Manager / split windows.
-                .frame(minWidth: 360, idealWidth: 520, minHeight: 360, idealHeight: 560)
+            OrielSettingsRootView(environment: environment)
         }
         #endif
     }
@@ -167,3 +160,28 @@ struct OrielApp: App {
     }
     #endif
 }
+
+/// Root content view so appearance/accent observe `BrowserSettings` correctly.
+private struct OrielRootView: View {
+    @Bindable var environment: AppEnvironment
+
+    var body: some View {
+        BrowserShellView()
+            .environment(environment)
+            .orielTheming(settings: environment.settings)
+    }
+}
+
+#if os(macOS)
+private struct OrielSettingsRootView: View {
+    @Bindable var environment: AppEnvironment
+
+    var body: some View {
+        SettingsView(showsDoneButton: false)
+            .environment(environment)
+            .orielTheming(settings: environment.settings)
+            // Fit small displays / Stage Manager / split windows.
+            .frame(minWidth: 360, idealWidth: 520, minHeight: 360, idealHeight: 560)
+    }
+}
+#endif
