@@ -159,6 +159,7 @@ struct BrowserWebView: PlatformViewRepresentable {
             context.coordinator.appliedContentBlockerGeneration = contentBlockerGeneration
             if contentBlockingEnabled {
                 context.coordinator.injectYouTubeAdBlockIfNeeded(into: webView)
+                webView.evaluateJavaScript(AdvancedPageCleanupScript.documentStartSource, in: nil, in: .page) { _ in }
                 webView.evaluateJavaScript(AdvancedPageCleanupScript.source, in: nil, in: .page) { _ in }
             } else {
                 webView.evaluateJavaScript(YouTubeAdBlockScript.disableSource, in: nil, in: .page) { _ in }

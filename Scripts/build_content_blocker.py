@@ -203,6 +203,17 @@ def should_drop(rule: dict) -> bool:
     return False
 
 
+def should_drop_any(rule: dict) -> bool:
+    """Drop bad exceptions that re-enable known ad CDNs."""
+    act = rule.get("action", {}).get("type")
+    filt = (rule.get("trigger", {}) or {}).get("url-filter", "").lower()
+    if act == "ignore-previous-rules":
+        # AdGuard ships @@ for TheMoneytizer gen.js — that lets Larousse ads through.
+        if "themoneytizer" in filt:
+            return True
+    return should_drop(rule) if act == "block" else False
+
+
 def sanitize(rules: list[dict]) -> list[dict]:
     return [r for r in rules if not should_drop(r)]
 
@@ -254,7 +265,7 @@ def main() -> None:
 
     for group, files in GROUPS.items():
         path = convert_group(group, files, converter)
-        rules = sanitize(json.loads(path.read_text(encoding="utf-8")))
+        rules = [r for r in json.loads(path.read_text(encoding="utf-8")) if not should_drop_any(r)]
         print(f"{group}: {len(rules)} rules after sanitize")
         write_chunked(f"oriel-{group}", rules)
 

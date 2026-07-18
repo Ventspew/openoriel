@@ -31,12 +31,19 @@ enum SharedWebViewConfiguration {
             for list in contentRuleLists {
                 ucc.add(list)
             }
-            // Early YouTube skip/hide — host check is inside the script.
             ucc.addUserScript(
                 WKUserScript(
                     source: YouTubeAdBlockScript.source,
                     injectionTime: .atDocumentStart,
                     forMainFrameOnly: false,
+                    in: .page
+                )
+            )
+            ucc.addUserScript(
+                WKUserScript(
+                    source: AdvancedPageCleanupScript.documentStartSource,
+                    injectionTime: .atDocumentStart,
+                    forMainFrameOnly: true,
                     in: .page
                 )
             )

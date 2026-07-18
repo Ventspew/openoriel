@@ -1,5 +1,33 @@
 [
   {
+    "trigger": { "url-filter": ".*googletagmanager\\.com", "if-domain": ["*larousse.fr"] },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*googletagservices\\.com", "if-domain": ["*larousse.fr"] },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*securepubads\\.g\\.doubleclick\\.net", "if-domain": ["*larousse.fr"] },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*ads\\.themoneytizer\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*themoneytizer\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*hubvisor\\.io" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*cdn\\.hubvisor\\.io" },
+    "action": { "type": "block" }
+  },
+  {
     "trigger": { "url-filter": ".*cdn\\.viously\\.com" },
     "action": { "type": "block" }
   },
@@ -17,6 +45,18 @@
   },
   {
     "trigger": { "url-filter": ".*smartadserver\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*seedtag\\.com" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*ayads\\.co" },
+    "action": { "type": "block" }
+  },
+  {
+    "trigger": { "url-filter": ".*sprkly\\.me" },
     "action": { "type": "block" }
   },
   {
@@ -48,10 +88,14 @@
     "action": { "type": "block" }
   },
   {
+    "trigger": { "url-filter": ".*cdn\\.cookielaw\\.org", "if-domain": ["*larousse.fr"] },
+    "action": { "type": "block" }
+  },
+  {
     "trigger": { "url-filter": ".*", "if-domain": ["*larousse.fr"] },
     "action": {
       "type": "css-display-none",
-      "selector": ".ads-core-placer, [data-ads-core], #poool-widget, #poool-widget-content, .poool-widget, .poool-overlay, .viously, .viously-player, .viously-ui-container, .viously-sticked, .viously-sticked-bottom-right, .viously-sticked-top-right, #taboola-below-article-thumbnails, .taboola-wrapper, .OUTBRAIN, iframe[src*=\"viously\"], iframe[src*=\"smartadserver\"], iframe[src*=\"sascdn\"], iframe[src*=\"doubleclick\"], iframe[src*=\"googlesyndication\"], iframe[id*=\"google_ads\"], #onetrust-banner-sdk, #onetrust-consent-sdk, .onetrust-pc-dark-filter, .ui-widget-overlay"
+      "selector": ".ads-core-placer, [data-ads-core], #top-pave_prisma, #poool-widget, #poool-widget-content, .poool-widget, .poool-overlay, .viously, .viously-player, .viously-ui-container, .viously-sticked, .viously-sticked-bottom-right, .viously-sticked-top-right, #taboola-below-article-thumbnails, .taboola-wrapper, .OUTBRAIN, img[src*=\"encart_pub\"], a[href*=\"encart_pub\"], iframe[src*=\"viously\"], iframe[src*=\"smartadserver\"], iframe[src*=\"sascdn\"], iframe[src*=\"themoneytizer\"], iframe[src*=\"hubvisor\"], iframe[src*=\"doubleclick\"], iframe[src*=\"googlesyndication\"], iframe[id*=\"google_ads\"], #onetrust-banner-sdk, #onetrust-consent-sdk, .onetrust-pc-dark-filter, .ui-widget-overlay, div[id^=\"div-gpt-ad\"], ins.adsbygoogle"
     }
   },
   {
