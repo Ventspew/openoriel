@@ -74,6 +74,7 @@ final class ContentBlockerManager {
     private(set) var listNames: [String] = []
     /// Bumps when lists are (re)compiled so web views can re-attach.
     private(set) var generation: Int = 0
+    private var cachedProbeHosts: [String] = TrackerHitProbe.seedHosts
 
     var compiledList: WKContentRuleList? { compiledLists.first }
 
@@ -108,6 +109,7 @@ final class ContentBlockerManager {
         }
 
         blockedHostHints = Array(Set(hints)).sorted()
+        cachedProbeHosts = makeTrackerProbeHosts(limit: 500)
         isReady = !compiledLists.isEmpty
         lastError = isReady ? nil : (errors.last ?? ContentRuleValidationError.empty.errorDescription)
         if isReady, !loadedPrimary {
@@ -117,8 +119,45 @@ final class ContentBlockerManager {
     }
 
     func matchesBlockedHostHint(_ url: URL) -> Bool {
+        let host = (url.host ?? "").lowercased()
+        if !host.isEmpty {
+            for domain in cachedProbeHosts where host == domain || host.hasSuffix("." + domain) {
+                return true
+            }
+        }
         let haystack = url.absoluteString.lowercased()
         return blockedHostHints.contains { haystack.contains($0) }
+    }
+
+    /// Compact hostname list for the in-page tracker probe (seed + rule hints).
+    func trackerProbeHosts(limit: Int = 500) -> [String] {
+        if cachedProbeHosts.count <= limit { return cachedProbeHosts }
+        return Array(cachedProbeHosts.prefix(limit))
+    }
+
+    private func makeTrackerProbeHosts(limit: Int) -> [String] {
+        var set = Set(TrackerHitProbe.seedHosts)
+        for hint in blockedHostHints {
+            if let domain = Self.normalizedDomainHint(hint) {
+                set.insert(domain)
+            }
+        }
+        return Array(set).sorted().prefix(limit).map { String($0) }
+    }
+
+    private static func normalizedDomainHint(_ raw: String) -> String? {
+        var hint = raw.lowercased()
+            .replacingOccurrences(of: #"^[^:]+://\+?\(?\^?[^:]+\.\)\?"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"\[/:\]$"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"\[/:].*$"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"^\(\?:?\.\*\)\??"#, with: "", options: .regularExpression)
+        hint = hint.trimmingCharacters(in: CharacterSet(charactersIn: "./"))
+        // Prefer simple domain-like tokens: ads.example.com
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyz0123456789.-")
+        guard hint.unicodeScalars.allSatisfy({ allowed.contains($0) }) else { return nil }
+        guard hint.contains("."), hint.count >= 4, hint.count <= 64 else { return nil }
+        if hint.hasPrefix(".") || hint.hasSuffix(".") || hint.contains("..") { return nil }
+        return hint
     }
 
     func validateImport(_ data: Data) throws -> Int {

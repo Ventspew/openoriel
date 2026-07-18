@@ -9,6 +9,8 @@ struct TabOverviewView: View {
     @State private var showNewGroupAlert = false
     @State private var renameGroupID: UUID?
     @State private var renameGroupName = ""
+    @State private var showCloseAllConfirm = false
+    @State private var showCloseAllIncludingPrivateConfirm = false
 
     private let columns = [GridItem(.adaptive(minimum: 160), spacing: 12)]
 
@@ -25,6 +27,14 @@ struct TabOverviewView: View {
 
     private var ungroupedTabs: [BrowserTab] {
         filteredTabs.filter { $0.groupID == nil }
+    }
+
+    private var hasMultipleTabs: Bool {
+        environment.tabs.tabs.count > 1
+    }
+
+    private var hasPrivateTabs: Bool {
+        environment.tabs.tabs.contains(where: \.isPrivate)
     }
 
     var body: some View {
@@ -75,6 +85,17 @@ struct TabOverviewView: View {
                             newGroupName = ""
                             showNewGroupAlert = true
                         }
+                        if hasMultipleTabs {
+                            Divider()
+                            Button("Close All Tabs", role: .destructive) {
+                                showCloseAllConfirm = true
+                            }
+                            if hasPrivateTabs {
+                                Button("Close All Tabs Including Private", role: .destructive) {
+                                    showCloseAllIncludingPrivateConfirm = true
+                                }
+                            }
+                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
@@ -100,6 +121,34 @@ struct TabOverviewView: View {
                     }
                     renameGroupID = nil
                 }
+            }
+            .confirmationDialog(
+                "Close all tabs?",
+                isPresented: $showCloseAllConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Close All Tabs", role: .destructive) {
+                    environment.tabs.closeAllTabs(includingPrivate: false)
+                    environment.wireTabPrivacyHooks()
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Private tabs stay open. A new empty tab will be created.")
+            }
+            .confirmationDialog(
+                "Close every tab?",
+                isPresented: $showCloseAllIncludingPrivateConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Close All Including Private", role: .destructive) {
+                    environment.tabs.closeAllTabs(includingPrivate: true)
+                    environment.wireTabPrivacyHooks()
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This closes private tabs too. A new empty tab will be created.")
             }
         }
     }

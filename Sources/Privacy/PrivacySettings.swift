@@ -11,7 +11,7 @@ struct PrivacySettingsSnapshot: Codable, Equatable, Sendable {
     var contentBlockingEnabled: Bool = true
     var httpsUpgradeEnabled: Bool = true
     var blockThirdPartyCookies: Bool = false
-    var fingerprintingProtection: Bool = true
+    var fingerprintingProtection: Bool = false
     var httpsOnlyMode: Bool = false
     var siteSettings: [String: SiteShieldSettings] = [:]
 
@@ -24,7 +24,7 @@ struct PrivacySettingsSnapshot: Codable, Equatable, Sendable {
         contentBlockingEnabled: Bool = true,
         httpsUpgradeEnabled: Bool = true,
         blockThirdPartyCookies: Bool = false,
-        fingerprintingProtection: Bool = true,
+        fingerprintingProtection: Bool = false,
         httpsOnlyMode: Bool = false,
         siteSettings: [String: SiteShieldSettings] = [:]
     ) {
@@ -41,7 +41,8 @@ struct PrivacySettingsSnapshot: Codable, Equatable, Sendable {
         contentBlockingEnabled = try c.decodeIfPresent(Bool.self, forKey: .contentBlockingEnabled) ?? true
         httpsUpgradeEnabled = try c.decodeIfPresent(Bool.self, forKey: .httpsUpgradeEnabled) ?? true
         blockThirdPartyCookies = try c.decodeIfPresent(Bool.self, forKey: .blockThirdPartyCookies) ?? false
-        fingerprintingProtection = try c.decodeIfPresent(Bool.self, forKey: .fingerprintingProtection) ?? true
+        // Off by default: canvas noise often increases bot checks on Google / Cloudflare.
+        fingerprintingProtection = try c.decodeIfPresent(Bool.self, forKey: .fingerprintingProtection) ?? false
         httpsOnlyMode = try c.decodeIfPresent(Bool.self, forKey: .httpsOnlyMode) ?? false
         siteSettings = try c.decodeIfPresent([String: SiteShieldSettings].self, forKey: .siteSettings) ?? [:]
     }
@@ -89,9 +90,17 @@ final class PrivacySettings {
             httpsUpgradeEnabled = true
             // Off by default so Google Account and similar OAuth popups can keep session cookies.
             blockThirdPartyCookies = false
-            fingerprintingProtection = true
+            fingerprintingProtection = false
             httpsOnlyMode = false
             siteSettings = [:]
+        }
+
+        // One-time: drop fingerprint noise that often triggers “are you a robot?” challenges.
+        let captchaCompatKey = "oriel.captchaCompatMigrated.v1"
+        if !UserDefaults.standard.bool(forKey: captchaCompatKey) {
+            fingerprintingProtection = false
+            UserDefaults.standard.set(true, forKey: captchaCompatKey)
+            persist()
         }
     }
 

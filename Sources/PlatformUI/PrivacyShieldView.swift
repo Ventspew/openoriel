@@ -75,6 +75,11 @@ struct PrivacyShieldView: View {
                 systemImage: "cookie"
             )
             statRow(
+                title: "Time saved this session",
+                value: formatMinutes(environment.privacyStats.minutesSavedSession),
+                systemImage: "clock.arrow.circlepath"
+            )
+            statRow(
                 title: "HTTPS upgrades",
                 value: "\(environment.privacyStats.httpsUpgradesSession)",
                 systemImage: "lock.rotation"
@@ -89,12 +94,29 @@ struct PrivacyShieldView: View {
                 value: "\(environment.privacyStats.cookiesBlockedLifetime)",
                 systemImage: "cookie"
             )
+            statRow(
+                title: "Time saved all time",
+                value: formatMinutes(environment.privacyStats.minutesSavedLifetime),
+                systemImage: "clock.fill"
+            )
         } header: {
             Text("Dashboard")
         } footer: {
-            Text("Counts are best-effort. WebKit does not expose a full blocker hit log.")
+            Text("Trackers are counted when Oriel detects known ad/analytics requests (and cancels matching frames). Time saved is ~50 ms per block.")
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private func formatMinutes(_ minutes: Double) -> String {
+        if minutes < 0.05 { return "0 min" }
+        if minutes < 10 {
+            let rounded = (minutes * 10).rounded() / 10
+            if rounded == rounded.rounded(.towardZero) {
+                return "\(Int(rounded)) min"
+            }
+            return String(format: "%.1f min", rounded)
+        }
+        return "\(Int(minutes.rounded())) min"
     }
 
     private var globalShieldsSection: some View {
@@ -118,7 +140,7 @@ struct PrivacyShieldView: View {
             Toggle(isOn: $privacy.fingerprintingProtection) {
                 labeledToggle(
                     "Fingerprinting protection",
-                    subtitle: "Noise canvas/audio and standardize WebGL / hardware signals"
+                    subtitle: "Noise canvas/audio signals (can increase “are you a robot?” checks — leave off for fewer challenges)"
                 )
             }
             Toggle(isOn: $privacy.httpsOnlyMode) {
@@ -130,7 +152,7 @@ struct PrivacyShieldView: View {
         } header: {
             Text("Global shields")
         } footer: {
-            Text("Shields use Apple’s content blocker engine (like Safari). Most web ads and many YouTube ads are blocked; some first-party or consent-gated stacks can still slip through.")
+            Text("Shields use Apple’s content blocker engine (like Safari). Oriel uses Safari’s real User-Agent so sites are less likely to show bot checks. Most web ads and many YouTube ads are blocked; some first-party stacks can still slip through.")
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

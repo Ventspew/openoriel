@@ -12,8 +12,9 @@ struct BrowserWebView: PlatformViewRepresentable {
     let tab: BrowserTab
     var contentRuleLists: [WKContentRuleList] = []
     var blockThirdPartyCookies: Bool = false
-    var fingerprintingProtection: Bool = true
+    var fingerprintingProtection: Bool = false
     var contentBlockingEnabled: Bool = true
+    var trackerProbeHosts: [String] = TrackerHitProbe.seedHosts
     var matchesBlockedHint: (URL) -> Bool = { _ in false }
     var onBlockedNavigation: (URL) -> Void = { _ in }
     var onDownload: ((URL, String?) -> Void)?
@@ -83,6 +84,7 @@ struct BrowserWebView: PlatformViewRepresentable {
             contentBlockingEnabled: contentBlockingEnabled,
             blockAutoplay: blockAutoplay,
             fingerprintingProtection: fingerprintingProtection,
+            trackerProbeHosts: trackerProbeHosts,
             webExtensionController: webExtensionController,
             websiteDataStore: websiteDataStore ?? (tab.isPrivate ? .nonPersistent() : .default())
         )
@@ -126,16 +128,24 @@ struct BrowserWebView: PlatformViewRepresentable {
         webView.underPageBackgroundColor = .clear
         #endif
 
-        if tab.requestsDesktopSite || UserAgentPolicy.isGoogleHost(tab.navigation.url?.host) {
+        if tab.requestsDesktopSite {
             webView.customUserAgent = UserAgentPolicy.customUserAgent(
                 for: tab.navigation.url,
-                requestsDesktopSite: tab.requestsDesktopSite
+                requestsDesktopSite: true
             )
         }
 
         let hideHandler = context.coordinator.hideElementScriptMessageHandler()
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "orielHideElement")
         webView.configuration.userContentController.add(hideHandler, contentWorld: .page, name: "orielHideElement")
+
+        let trackerHandler = context.coordinator.trackerHitScriptMessageHandler()
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: TrackerHitProbe.handlerName)
+        webView.configuration.userContentController.add(
+            trackerHandler,
+            contentWorld: .page,
+            name: TrackerHitProbe.handlerName
+        )
 
         context.coordinator.observe(webView)
         context.coordinator.onPopupTitleChanged = onPopupTitleChanged

@@ -38,7 +38,7 @@ enum SearchEngine: String, CaseIterable, Identifiable, Codable, Sendable {
             components.queryItems = [URLQueryItem(name: "q", value: query)]
         case .google:
             // Plain search URL — do not pass client=safari (that forces Google’s Safari skin).
-            // Chrome-like UA for google.* is applied in UserAgentPolicy / BrowserTab.
+            // Uses WebKit’s native Safari UA (spoofing Chrome triggers bot checks).
             components = URLComponents(string: "https://www.google.com/search")!
             components.queryItems = [URLQueryItem(name: "q", value: query)]
         case .bing:

@@ -10,7 +10,8 @@ enum SharedWebViewConfiguration {
         contentRuleLists: [WKContentRuleList],
         contentBlockingEnabled: Bool,
         blockAutoplay: Bool = true,
-        fingerprintingProtection: Bool = true,
+        fingerprintingProtection: Bool = false,
+        trackerProbeHosts: [String] = TrackerHitProbe.seedHosts,
         webExtensionController: AnyObject? = nil,
         websiteDataStore: WKWebsiteDataStore? = nil
     ) -> WKWebViewConfiguration {
@@ -46,6 +47,15 @@ enum SharedWebViewConfiguration {
             )
         }
         if contentBlockingEnabled {
+            let hosts = trackerProbeHosts.isEmpty ? TrackerHitProbe.seedHosts : trackerProbeHosts
+            ucc.addUserScript(
+                WKUserScript(
+                    source: TrackerHitProbe.userScriptSource(hosts: hosts),
+                    injectionTime: .atDocumentStart,
+                    forMainFrameOnly: false,
+                    in: .page
+                )
+            )
             for list in contentRuleLists {
                 ucc.add(list)
             }

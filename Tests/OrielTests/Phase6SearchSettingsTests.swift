@@ -19,15 +19,16 @@ final class Phase6SearchSettingsTests: XCTestCase {
         XCTAssertEqual(ddg.host, "duckduckgo.com")
     }
 
-    func testGoogleHostsUseChromeLikeUserAgent() {
+    func testGoogleHostsUseSafariUserAgent() {
         let google = URL(string: "https://www.google.com/search?q=test")!
-        let ua = UserAgentPolicy.customUserAgent(for: google, requestsDesktopSite: false)
-        XCTAssertNotNil(ua)
-        XCTAssertTrue(ua?.contains("Chrome/") == true)
-        XCTAssertFalse(ua?.contains("Version/18") == true)
+        // Spoofing Chrome on WebKit triggers bot checks — stay on Safari UA.
+        XCTAssertNil(UserAgentPolicy.customUserAgent(for: google, requestsDesktopSite: false))
 
         let example = URL(string: "https://example.com")!
         XCTAssertNil(UserAgentPolicy.customUserAgent(for: example, requestsDesktopSite: false))
+
+        let desktop = UserAgentPolicy.customUserAgent(for: example, requestsDesktopSite: true)
+        XCTAssertEqual(desktop, UserAgentPolicy.safariDesktop)
     }
 
     func testSettingsPersistSearchEngine() async {

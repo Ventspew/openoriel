@@ -39,7 +39,12 @@ private final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
         let name = message.name
         let body = message.body
         Task { @MainActor [weak target] in
-            target?.handleChromeWebStoreMessage(name: name, body: body)
+            guard let target else { return }
+            if name == TrackerHitProbe.handlerName {
+                target.handleTrackerHitMessage(body)
+            } else {
+                target.handleChromeWebStoreMessage(name: name, body: body)
+            }
         }
     }
 }
@@ -68,8 +73,11 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     private var observations: [NSKeyValueObservation] = []
     private var popupTitleObservation: NSKeyValueObservation?
     private var chromeStoreMessageHandler: WeakScriptMessageHandler?
+    private var trackerHitMessageHandler: WeakScriptMessageHandler?
     private var lastStoreInstallRequestAt: Date?
     private var lastStoreInstallID: String?
+    /// Dedupes probe hits across rapid duplicate posts (same URL within a short window).
+    private var recentTrackerHitKeys: [String: Date] = [:]
 
     init(
         tab: BrowserTab,
@@ -113,6 +121,41 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let handler = WeakScriptMessageHandler(target: self)
         chromeStoreMessageHandler = handler
         return handler
+    }
+
+    func trackerHitScriptMessageHandler() -> WKScriptMessageHandler {
+        if let trackerHitMessageHandler {
+            return trackerHitMessageHandler
+        }
+        let handler = WeakScriptMessageHandler(target: self)
+        trackerHitMessageHandler = handler
+        return handler
+    }
+
+    func handleTrackerHitMessage(_ body: Any) {
+        guard contentBlockingEnabled else { return }
+        let urlString: String?
+        if let dict = body as? [String: Any] {
+            urlString = dict["u"] as? String
+        } else if let raw = body as? String {
+            urlString = raw
+        } else {
+            urlString = nil
+        }
+        guard let urlString, let url = URL(string: urlString) else { return }
+
+        let key = (url.host ?? "") + "|" + url.path
+        let now = Date()
+        if let last = recentTrackerHitKeys[key], now.timeIntervalSince(last) < 1.5 {
+            return
+        }
+        recentTrackerHitKeys[key] = now
+        if recentTrackerHitKeys.count > 400 {
+            let cutoff = now.addingTimeInterval(-30)
+            recentTrackerHitKeys = recentTrackerHitKeys.filter { $0.value > cutoff }
+        }
+
+        onBlockedNavigation(url)
     }
 
     func handleChromeWebStoreMessage(name: String, body: Any) {

@@ -1029,11 +1029,14 @@ struct BrowserShellView: View {
                 blockThirdPartyCookies: environment.privacy.blockThirdPartyCookies,
                 fingerprintingProtection: environment.privacy.fingerprintingProtection,
                 contentBlockingEnabled: environment.contentBlockingEnabled(for: tab),
+                trackerProbeHosts: environment.contentBlocker.trackerProbeHosts(),
                 matchesBlockedHint: { url in
                     environment.contentBlocker.matchesBlockedHostHint(url)
                 },
                 onBlockedNavigation: { blockedURL in
-                    environment.privacyStats.recordBlockedRequest(url: blockedURL)
+                    let cookieRelated = PrivacyStats.looksCookieRelated(blockedURL)
+                        || environment.privacy.blockThirdPartyCookies
+                    environment.privacyStats.recordBlockedRequest(url: blockedURL, cookieRelated: cookieRelated)
                 },
                 onDownload: { url, name in
                     environment.downloads.enqueue(
@@ -1084,7 +1087,7 @@ struct BrowserShellView: View {
                 contentBlockerGeneration: environment.contentBlocker.generation,
                 websiteDataStore: environment.profiles.dataStore(isPrivateTab: tab.isPrivate)
             )
-            .id("\(tab.id.uuidString)-fp\(environment.privacy.fingerprintingProtection)-ap\(environment.settings.blockAutoplay)-p\(environment.profiles.activeProfileID.uuidString)")
+            .id("\(tab.id.uuidString)-fp\(environment.privacy.fingerprintingProtection)-ap\(environment.settings.blockAutoplay)-p\(environment.profiles.activeProfileID.uuidString)-cb\(environment.contentBlocker.generation)")
             .opacity(showStart || showError ? 0 : 1)
             .allowsHitTesting(!(showStart || showError))
             .accessibilityHidden(showStart || showError)

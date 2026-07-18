@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-/// Session and lifetime privacy counters. Blocked-request totals are best-effort
-/// (WebKit does not expose a full content-blocker hit stream for in-app rule lists).
+/// Session and lifetime privacy counters.
+/// Tracker hits come from NavigationPolicy + an in-page probe (WebKit has no blocker hit stream).
 @Observable
 @MainActor
 final class PrivacyStats {
@@ -12,6 +12,12 @@ final class PrivacyStats {
     private(set) var blockedRequestsLifetime: Int = 0
     private(set) var httpsUpgradesLifetime: Int = 0
     private(set) var cookiesBlockedLifetime: Int = 0
+    /// Estimated browsing time saved (milliseconds).
+    private(set) var timeSavedMillisecondsSession: Int = 0
+    private(set) var timeSavedMillisecondsLifetime: Int = 0
+
+    /// ~50ms per blocked tracker/ad request (same ballpark as Brave’s estimate).
+    static let millisecondsSavedPerBlock = 50
 
     private let fileName = "privacy-stats.json"
 
@@ -20,17 +26,39 @@ final class PrivacyStats {
             blockedRequestsLifetime = loaded.blockedRequestsLifetime
             httpsUpgradesLifetime = loaded.httpsUpgradesLifetime
             cookiesBlockedLifetime = loaded.cookiesBlockedLifetime
+            timeSavedMillisecondsLifetime = loaded.timeSavedMillisecondsLifetime
+                ?? (loaded.blockedRequestsLifetime * Self.millisecondsSavedPerBlock)
         }
     }
 
-    func recordBlockedRequest(count: Int = 1, url: URL? = nil) {
+    var minutesSavedSession: Double {
+        Double(timeSavedMillisecondsSession) / 60_000.0
+    }
+
+    var minutesSavedLifetime: Double {
+        Double(timeSavedMillisecondsLifetime) / 60_000.0
+    }
+
+    func recordBlockedRequest(count: Int = 1, url: URL? = nil, cookieRelated: Bool? = nil) {
         guard count > 0 else { return }
         blockedRequestsSession += count
         blockedRequestsLifetime += count
-        if let url, Self.looksCookieRelated(url) {
+        let saved = count * Self.millisecondsSavedPerBlock
+        timeSavedMillisecondsSession += saved
+        timeSavedMillisecondsLifetime += saved
+
+        let isCookie = cookieRelated ?? (url.map(Self.looksCookieRelated) ?? false)
+        if isCookie {
             cookiesBlockedSession += count
             cookiesBlockedLifetime += count
         }
+        persist()
+    }
+
+    func recordCookiesBlocked(_ count: Int = 1) {
+        guard count > 0 else { return }
+        cookiesBlockedSession += count
+        cookiesBlockedLifetime += count
         persist()
     }
 
@@ -44,6 +72,7 @@ final class PrivacyStats {
         blockedRequestsSession = 0
         httpsUpgradesSession = 0
         cookiesBlockedSession = 0
+        timeSavedMillisecondsSession = 0
     }
 
     /// Hosts / paths commonly used for cookie sync, consent pixels, and identity trackers.
@@ -60,7 +89,7 @@ final class PrivacyStats {
             "segment.io", "segment.com", "mixpanel", "amplitude",
             "criteo", "taboola", "outbrain",
             "cookiebot", "cookielaw", "onetrust", "trustarc",
-            "consent", "privacymanager"
+            "consent", "privacymanager", "demdex", "bluekai", "krxd"
         ]
         if hostHints.contains(where: { host.contains($0) }) {
             return true
@@ -68,7 +97,7 @@ final class PrivacyStats {
 
         let pathHints = [
             "/cookie", "cookiebot", "onetrust", "consent",
-            "/track", "/pixel", "/beacon", "collect?"
+            "/track", "/pixel", "/beacon", "collect"
         ]
         return pathHints.contains(where: { haystack.contains($0) })
     }
@@ -77,21 +106,25 @@ final class PrivacyStats {
         var blockedRequestsLifetime: Int
         var httpsUpgradesLifetime: Int
         var cookiesBlockedLifetime: Int
+        var timeSavedMillisecondsLifetime: Int?
 
         enum CodingKeys: String, CodingKey {
             case blockedRequestsLifetime
             case httpsUpgradesLifetime
             case cookiesBlockedLifetime
+            case timeSavedMillisecondsLifetime
         }
 
         init(
             blockedRequestsLifetime: Int,
             httpsUpgradesLifetime: Int,
-            cookiesBlockedLifetime: Int
+            cookiesBlockedLifetime: Int,
+            timeSavedMillisecondsLifetime: Int
         ) {
             self.blockedRequestsLifetime = blockedRequestsLifetime
             self.httpsUpgradesLifetime = httpsUpgradesLifetime
             self.cookiesBlockedLifetime = cookiesBlockedLifetime
+            self.timeSavedMillisecondsLifetime = timeSavedMillisecondsLifetime
         }
 
         init(from decoder: Decoder) throws {
@@ -99,6 +132,7 @@ final class PrivacyStats {
             blockedRequestsLifetime = try container.decode(Int.self, forKey: .blockedRequestsLifetime)
             httpsUpgradesLifetime = try container.decode(Int.self, forKey: .httpsUpgradesLifetime)
             cookiesBlockedLifetime = try container.decodeIfPresent(Int.self, forKey: .cookiesBlockedLifetime) ?? 0
+            timeSavedMillisecondsLifetime = try container.decodeIfPresent(Int.self, forKey: .timeSavedMillisecondsLifetime)
         }
     }
 
@@ -106,7 +140,8 @@ final class PrivacyStats {
         let data = Persisted(
             blockedRequestsLifetime: blockedRequestsLifetime,
             httpsUpgradesLifetime: httpsUpgradesLifetime,
-            cookiesBlockedLifetime: cookiesBlockedLifetime
+            cookiesBlockedLifetime: cookiesBlockedLifetime,
+            timeSavedMillisecondsLifetime: timeSavedMillisecondsLifetime
         )
         try? JSONFileStore.save(data, to: fileName)
     }

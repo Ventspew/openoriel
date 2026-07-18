@@ -429,7 +429,7 @@ final class BrowserTab: Identifiable {
         }
     }
 
-    /// Keeps Google on a Chrome-like UA (and clears it when leaving Google) during in-page navigations.
+    /// Keeps desktop UA in sync during in-page navigations when Request Desktop Website is on.
     func syncUserAgentForNavigation(to url: URL?) {
         applyUserAgent(for: url)
     }

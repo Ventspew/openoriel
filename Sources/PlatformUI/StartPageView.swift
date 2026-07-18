@@ -380,27 +380,35 @@ struct StartPageView: View {
                 HStack(spacing: 0) {
                     privacyStat(
                         title: "Trackers",
-                        session: stats.blockedRequestsSession,
-                        lifetime: stats.blockedRequestsLifetime
+                        value: "\(stats.blockedRequestsSession)",
+                        subtitle: "\(stats.blockedRequestsLifetime) total"
                     )
                     Divider()
-                        .frame(height: 36)
-                        .padding(.horizontal, 12)
+                        .frame(height: 40)
+                        .padding(.horizontal, 10)
                     privacyStat(
                         title: "Cookies",
-                        session: stats.cookiesBlockedSession,
-                        lifetime: stats.cookiesBlockedLifetime
+                        value: "\(stats.cookiesBlockedSession)",
+                        subtitle: "\(stats.cookiesBlockedLifetime) total"
+                    )
+                    Divider()
+                        .frame(height: 40)
+                        .padding(.horizontal, 10)
+                    privacyStat(
+                        title: "Time saved",
+                        value: Self.formatMinutes(stats.minutesSavedSession),
+                        subtitle: "\(Self.formatMinutes(stats.minutesSavedLifetime)) total"
                     )
                 }
 
                 HStack(spacing: 6) {
-                    Image(systemName: environment.privacy.blockThirdPartyCookies ? "checkmark.circle.fill" : "circle")
+                    Image(systemName: environment.privacy.contentBlockingEnabled ? "checkmark.circle.fill" : "circle")
                         .font(.caption)
-                        .foregroundStyle(environment.privacy.blockThirdPartyCookies ? accent : Color.secondary)
+                        .foregroundStyle(environment.privacy.contentBlockingEnabled ? accent : Color.secondary)
                     Text(
-                        environment.privacy.blockThirdPartyCookies
-                            ? "Third-party cookies limited"
-                            : "Third-party cookies allowed"
+                        environment.privacy.contentBlockingEnabled
+                            ? "Shields on — counts update as you browse"
+                            : "Shields off — enable to block trackers"
                     )
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
@@ -422,24 +430,42 @@ struct StartPageView: View {
         .accessibilityLabel("Shields summary")
         .accessibilityHint("Opens Shields for tracker and cookie details")
         .accessibilityValue(
-            "\(stats.blockedRequestsSession) trackers this session, \(stats.cookiesBlockedSession) cookies this session"
+            "\(stats.blockedRequestsSession) trackers, \(stats.cookiesBlockedSession) cookies, \(Self.formatMinutes(stats.minutesSavedSession)) saved this session"
         )
     }
 
-    private func privacyStat(title: String, session: Int, lifetime: Int) -> some View {
+    private func privacyStat(title: String, value: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(.tertiary)
-            Text("\(session)")
-                .font(.system(size: 24, weight: .semibold, design: .rounded))
+            Text(value)
+                .font(.system(size: 22, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.primary)
-            Text("\(lifetime) total")
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(subtitle)
                 .font(.caption2)
                 .foregroundStyle(.quaternary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private static func formatMinutes(_ minutes: Double) -> String {
+        if minutes < 0.05 {
+            return "0 min"
+        }
+        if minutes < 10 {
+            let rounded = (minutes * 10).rounded() / 10
+            if rounded == rounded.rounded(.towardZero) {
+                return "\(Int(rounded)) min"
+            }
+            return String(format: "%.1f min", rounded)
+        }
+        return "\(Int(minutes.rounded())) min"
     }
 
     // MARK: - Tiles & footer

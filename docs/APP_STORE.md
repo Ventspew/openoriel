@@ -2,7 +2,7 @@
 
 Bundle ID `net.inveil.oriel` · Team `2PP6UH4PWA` · https://openoriel.com · inveil.net
 
-Version **1.0.0 (2)** — bump `CURRENT_PROJECT_VERSION` in `project.yml` for each TestFlight upload, then run `xcodegen generate`.
+Version **1.0.0 (12)** — bump `CURRENT_PROJECT_VERSION` in `project.yml` for each TestFlight upload, then run `xcodegen generate`.
 
 ## Privacy
 
@@ -41,13 +41,22 @@ Version **1.0.0 (2)** — bump `CURRENT_PROJECT_VERSION` in `project.yml` for ea
 - [ ] Age rating / content rights
 - [ ] Review notes: mention Focus Mode, Open Later, tracking-parameter stripping
 
-## TestFlight upload (Xcode)
+## TestFlight upload (CLI)
 
-1. Select scheme **Oriel**, destination **Any iOS Device (arm64)**.
-2. Product → Archive.
-3. Distribute App → App Store Connect → Upload.
-4. In App Store Connect → TestFlight, add internal/external testers after processing finishes.
-5. Ensure the App Store Connect app record exists for `net.inveil.oriel` before the first upload.
+```bash
+# Preferred when ASC_ISSUER_ID is set (App Store Connect → Users and Access → Integrations):
+export ASC_ISSUER_ID="<uuid>"
+bash Scripts/upload-testflight.sh
+
+# Or upload an already-exported IPA:
+xcrun altool --upload-app \
+  -f build/testflight-upload/Oriel.ipa \
+  -t ios \
+  --apiKey TXY8G26YBJ \
+  --apiIssuer "$ASC_ISSUER_ID"
+```
+
+Manual fallback: open `build/Oriel.xcarchive` in Xcode Organizer → Distribute App → App Store Connect → Upload.
 
 ## In-app Support links
 
