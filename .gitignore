@@ -17,6 +17,10 @@ xcuserdata/
 .build/
 .swiftpm/
 
+# Python
+**/__pycache__/
+*.py[cod]
+
 # Secrets / signing
 *.p12
 *.mobileprovision
