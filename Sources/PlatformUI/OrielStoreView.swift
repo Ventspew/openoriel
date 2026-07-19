@@ -247,21 +247,28 @@ struct OrielStoreView: View {
             isLoading = true
         }
         errorMessage = nil
+        let requestedSource = source
+        let requestedKind = kind
+        let requestedQuery = query
         do {
             let result = try await ExtensionStoreCatalog.search(
-                query: query,
-                source: source,
-                kind: kind,
+                query: requestedQuery,
+                source: requestedSource,
+                kind: requestedKind,
                 limit: 40
             )
+            guard !Task.isCancelled else { return }
+            // Drop stale responses if the user switched tabs mid-flight.
+            guard requestedSource == source, requestedKind == kind, requestedQuery == query else { return }
             items = result
             isLoading = false
         } catch is CancellationError {
-            // ignore
+            // Keep previous items; a newer task owns loading state.
         } catch {
-            if items.isEmpty {
-                errorMessage = error.localizedDescription
-            }
+            guard !Task.isCancelled else { return }
+            guard requestedSource == source, requestedKind == kind, requestedQuery == query else { return }
+            items = []
+            errorMessage = "Couldn’t load the catalog. Check your connection and try again."
             isLoading = false
         }
     }

@@ -27,6 +27,25 @@ final class ExtensionStoreCatalogTests: XCTestCase {
         XCTAssertEqual(items[0].rating, 4.5)
     }
 
+    func testParseAMOSearchAcceptsNSNumberRatings() throws {
+        let json: [String: Any] = [
+            "results": [
+                [
+                    "slug": "dark-theme",
+                    "name": ["en-US": "Dark"],
+                    "summary": ["en-US": "A dark theme"],
+                    "type": "statictheme",
+                    "ratings": ["average": NSNumber(value: 4.2)]
+                ]
+            ]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: json)
+        let items = ExtensionStoreCatalog.parseAMOSearch(data: data, kind: .theme)
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items[0].rating, 4.2)
+        XCTAssertEqual(items[0].kind, .theme)
+    }
+
     func testParseChromeStoreHTMLCards() {
         let html = """
         <div class="Cb7Kte" data-item-id="cjpalhdlnbpafiamejdnhcphjbkeiagm">
@@ -49,8 +68,28 @@ final class ExtensionStoreCatalogTests: XCTestCase {
         XCTAssertEqual(items[1].name, "uBlock Origin Lite")
     }
 
+    func testParseChromeStoreHTMLFallsBackToDetailLinks() {
+        let html = """
+        <a href="/detail/dark-reader/eimadpbcbfnmbkopoojfekhnkhdbieeh">Dark Reader</a>
+        <a href="/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm">uBlock</a>
+        """
+        let items = ExtensionStoreCatalog.parseChromeStoreHTML(html, kind: .extension)
+        XCTAssertEqual(items.count, 2)
+        XCTAssertEqual(items[0].storeIdentifier, "eimadpbcbfnmbkopoojfekhnkhdbieeh")
+        XCTAssertEqual(items[0].name, "Dark Reader")
+        XCTAssertEqual(items[1].storeIdentifier, "cjpalhdlnbpafiamejdnhcphjbkeiagm")
+    }
+
     func testInvalidChromeIDsIgnored() {
         let html = #"<div data-item-id="not-a-valid-id-here-at-all!!!!">Nope</div>"#
         XCTAssertTrue(ExtensionStoreCatalog.parseChromeStoreHTML(html, kind: .extension).isEmpty)
+    }
+
+    func testRawStringQuoteBugRegression() {
+        // Ensures we match real HTML quotes, not the Swift raw-string \" pitfall.
+        let html = "<div data-item-id=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\">Title Here</div>"
+        let items = ExtensionStoreCatalog.parseChromeStoreHTML(html, kind: .extension)
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items[0].storeIdentifier, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
     }
 }

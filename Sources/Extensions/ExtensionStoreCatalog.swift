@@ -26,14 +26,14 @@ struct ExtensionStoreItem: Identifiable, Hashable, Sendable {
     let storeURL: URL?
 }
 
-/// Fetches searchable catalogs for the native Oriel Store (phone-readable; no desktop CWS layout).
+/// Fetches searchable catalogs for the native Oriel Store.
 enum ExtensionStoreCatalog {
     private static let session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
-        config.timeoutIntervalForRequest = 25
+        config.timeoutIntervalForRequest = 30
+        config.waitsForConnectivity = true
         config.httpAdditionalHeaders = [
-            "Accept": "text/html,application/json,*/*",
-            "Accept-Language": Locale.current.identifier.replacingOccurrences(of: "_", with: "-")
+            "Accept-Language": "en-US,en;q=0.9"
         ]
         return URLSession(configuration: config)
     }()
@@ -66,11 +66,13 @@ enum ExtensionStoreCatalog {
         var items: [URLQueryItem] = [
             URLQueryItem(name: "app", value: "firefox"),
             URLQueryItem(name: "page_size", value: String(min(max(limit, 1), 50))),
-            URLQueryItem(name: "type", value: kind == .theme ? "statictheme" : "extension"),
-            URLQueryItem(name: "sort", value: query.isEmpty ? "users" : "relevance")
+            URLQueryItem(name: "type", value: kind == .theme ? "statictheme" : "extension")
         ]
-        if !query.isEmpty {
+        if query.isEmpty {
+            items.append(URLQueryItem(name: "sort", value: "users"))
+        } else {
             items.append(URLQueryItem(name: "q", value: query))
+            items.append(URLQueryItem(name: "sort", value: "relevance"))
         }
         components.queryItems = items
         guard let url = components.url else {
@@ -79,11 +81,19 @@ enum ExtensionStoreCatalog {
 
         var request = URLRequest(url: url)
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(
+            "Oriel/\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0") (extension store)",
+            forHTTPHeaderField: "User-Agent"
+        )
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw URLError(.badServerResponse)
         }
-        return parseAMOSearch(data: data, kind: kind)
+        let parsed = parseAMOSearch(data: data, kind: kind)
+        if parsed.isEmpty {
+            throw URLError(.cannotParseResponse)
+        }
+        return parsed
     }
 
     static func parseAMOSearch(data: Data, kind: ExtensionStoreItem.Kind) -> [ExtensionStoreItem] {
@@ -99,7 +109,12 @@ enum ExtensionStoreCatalog {
                 if let s = row["icon_url"] as? String { return URL(string: s) }
                 return nil
             }()
-            let rating = (row["ratings"] as? [String: Any])?["average"] as? Double
+            let rating: Double? = {
+                guard let ratings = row["ratings"] as? [String: Any] else { return nil }
+                if let d = ratings["average"] as? Double { return d }
+                if let n = ratings["average"] as? NSNumber { return n.doubleValue }
+                return nil
+            }()
             let storeURL = URL(string: "https://addons.mozilla.org/firefox/addon/\(slug)/")
             let resolvedKind: ExtensionStoreItem.Kind = {
                 if let type = row["type"] as? String, type == "statictheme" { return .theme }
@@ -123,6 +138,8 @@ enum ExtensionStoreCatalog {
         guard let map = value as? [String: Any] else { return nil }
         let preferred = Locale.current.identifier.replacingOccurrences(of: "_", with: "-")
         if let s = map[preferred] as? String, !s.isEmpty { return s }
+        let lang = Locale.current.language.languageCode?.identifier
+        if let lang, let s = map[lang] as? String, !s.isEmpty { return s }
         if let s = map["en-US"] as? String, !s.isEmpty { return s }
         return map.values.compactMap { $0 as? String }.first { !$0.isEmpty }
     }
@@ -142,7 +159,7 @@ enum ExtensionStoreCatalog {
             let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? query
             var components = URLComponents(string: "https://chromewebstore.google.com/search/\(encoded)")!
             if kind == .theme {
-                components.queryItems = [URLQueryItem(name: "item_type", value: "2")]
+                components.queryItems = [URLQueryItem(name: "itemTypes", value: "2")]
             }
             guard let built = components.url else { throw URLError(.badURL) }
             url = built
@@ -150,86 +167,139 @@ enum ExtensionStoreCatalog {
 
         var request = URLRequest(url: url)
         request.setValue(UserAgentPolicy.chromeDesktop, forHTTPHeaderField: "User-Agent")
-        request.setValue("text/html,application/xhtml+xml", forHTTPHeaderField: "Accept")
+        request.setValue(
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            forHTTPHeaderField: "Accept"
+        )
+        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode),
               let html = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) else {
             throw URLError(.badServerResponse)
         }
         let items = parseChromeStoreHTML(html, kind: kind)
+        if items.isEmpty {
+            throw URLError(.cannotParseResponse)
+        }
         return Array(items.prefix(limit))
     }
 
-    /// Parses CWS search/category HTML cards (`data-item-id` + nearby title text).
+    /// Parses CWS search/category HTML cards.
     static func parseChromeStoreHTML(_ html: String, kind: ExtensionStoreItem.Kind) -> [ExtensionStoreItem] {
         var results: [ExtensionStoreItem] = []
         var seen = Set<String>()
-        let pattern = #"data-item-id=\"([a-p]{32})\""#
-        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
-        let ns = html as NSString
-        let matches = regex.matches(in: html, range: NSRange(location: 0, length: ns.length))
-        for match in matches {
-            guard match.numberOfRanges >= 2,
-                  let idRange = Range(match.range(at: 1), in: html) else { continue }
-            let storeID = String(html[idRange])
-            guard ChromeWebStoreAPI.isValidExtensionID(storeID), !seen.contains(storeID) else { continue }
-            seen.insert(storeID)
 
-            let start = match.range.location
-            let end = min(ns.length, start + 2200)
-            let chunk = ns.substring(with: NSRange(location: start, length: end - start))
-            let texts = chunk
-                .replacingOccurrences(of: #"<[^>]+>"#, with: "\n", options: .regularExpression)
-                .components(separatedBy: .newlines)
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
+        // Prefer data-item-id cards (richer title text nearby).
+        // NOTE: do not use #"…\"…"# — in Swift raw strings that matches a literal backslash.
+        let idPattern = "data-item-id=\"([a-p]{32})\""
+        if let regex = try? NSRegularExpression(pattern: idPattern) {
+            let ns = html as NSString
+            let matches = regex.matches(in: html, range: NSRange(location: 0, length: ns.length))
+            for match in matches {
+                guard match.numberOfRanges >= 2,
+                      let idRange = Range(match.range(at: 1), in: html) else { continue }
+                let storeID = String(html[idRange])
+                guard ChromeWebStoreAPI.isValidExtensionID(storeID), !seen.contains(storeID) else { continue }
+                seen.insert(storeID)
 
-            let skip: Set<String> = [
-                "Featured", "Remove", "Add to Chrome", "Toevoegen aan Chrome",
-                "Verwijderen", "OK", "Sponsored"
-            ]
-            let title = texts.first(where: { text in
-                guard text.count >= 2, text.count <= 80 else { return false }
-                if skip.contains(text) { return false }
-                if Double(text) != nil { return false }
-                if text.hasSuffix(".org") || text.hasSuffix(".com") || text.hasPrefix("www.") { return false }
-                if text.allSatisfy({ $0.isNumber || $0 == "." || $0 == "," || $0 == "+" }) { return false }
-                return true
-            }) ?? humanizeChromeSlug(from: chunk, fallbackID: storeID)
-
-            let summary = texts.dropFirst().first(where: { text in
-                text.count >= 12 && text.count <= 160
-                    && !skip.contains(text)
-                    && Double(text) == nil
-                    && text != title
-            }) ?? ""
-
-            let slug = chromeSlug(from: chunk, storeID: storeID)
-            let storeURL: URL? = {
-                if let slug, !slug.isEmpty {
-                    return URL(string: "https://chromewebstore.google.com/detail/\(slug)/\(storeID)")
-                }
-                return URL(string: "https://chromewebstore.google.com/detail/\(storeID)")
-            }()
-
-            results.append(
-                ExtensionStoreItem(
-                    source: .chrome,
-                    kind: kind,
-                    storeIdentifier: storeID,
-                    name: title,
-                    summary: summary,
-                    iconURL: nil,
-                    rating: nil,
-                    storeURL: storeURL
-                )
-            )
+                let start = match.range.location
+                let end = min(ns.length, start + 2200)
+                let chunk = ns.substring(with: NSRange(location: start, length: end - start))
+                results.append(chromeItem(fromCardChunk: chunk, storeID: storeID, kind: kind))
+            }
         }
+
+        // Fallback: /detail/<slug>/<id> links (works even if card markup changes).
+        if results.isEmpty {
+            let detailPattern = "/detail/([A-Za-z0-9\\-]+)/([a-p]{32})"
+            if let regex = try? NSRegularExpression(pattern: detailPattern) {
+                let ns = html as NSString
+                let matches = regex.matches(in: html, range: NSRange(location: 0, length: ns.length))
+                for match in matches {
+                    guard match.numberOfRanges >= 3,
+                          let slugRange = Range(match.range(at: 1), in: html),
+                          let idRange = Range(match.range(at: 2), in: html) else { continue }
+                    let slug = String(html[slugRange])
+                    let storeID = String(html[idRange])
+                    guard ChromeWebStoreAPI.isValidExtensionID(storeID), !seen.contains(storeID) else { continue }
+                    seen.insert(storeID)
+                    let name = slug
+                        .replacingOccurrences(of: "-", with: " ")
+                        .split(separator: " ")
+                        .map(\.capitalized)
+                        .joined(separator: " ")
+                    results.append(
+                        ExtensionStoreItem(
+                            source: .chrome,
+                            kind: kind,
+                            storeIdentifier: storeID,
+                            name: name,
+                            summary: "",
+                            iconURL: nil,
+                            rating: nil,
+                            storeURL: URL(string: "https://chromewebstore.google.com/detail/\(slug)/\(storeID)")
+                        )
+                    )
+                }
+            }
+        }
+
         return results
     }
 
+    private static func chromeItem(
+        fromCardChunk chunk: String,
+        storeID: String,
+        kind: ExtensionStoreItem.Kind
+    ) -> ExtensionStoreItem {
+        let texts = chunk
+            .replacingOccurrences(of: "<[^>]+>", with: "\n", options: .regularExpression)
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        let skip: Set<String> = [
+            "Featured", "Remove", "Add to Chrome", "Toevoegen aan Chrome",
+            "Verwijderen", "OK", "Sponsored", "Add to Oriel"
+        ]
+            let title = texts.first(where: { text in
+            guard text.count >= 2, text.count <= 80 else { return false }
+            if skip.contains(text) { return false }
+            if Double(text) != nil { return false }
+            if text.hasSuffix(".org") || text.hasSuffix(".com") || text.hasPrefix("www.") { return false }
+            if text.allSatisfy({ $0.isNumber || $0 == "." || $0 == "," || $0 == "+" }) { return false }
+            return true
+        }) ?? humanizeChromeSlug(from: chunk, storeID: storeID, kind: kind)
+
+        let summary = texts.dropFirst().first(where: { text in
+            text.count >= 12 && text.count <= 160
+                && !skip.contains(text)
+                && Double(text) == nil
+                && text != title
+        }) ?? ""
+
+        let slug = chromeSlug(from: chunk, storeID: storeID)
+        let storeURL: URL? = {
+            if let slug, !slug.isEmpty {
+                return URL(string: "https://chromewebstore.google.com/detail/\(slug)/\(storeID)")
+            }
+            return URL(string: "https://chromewebstore.google.com/detail/\(storeID)")
+        }()
+
+        return ExtensionStoreItem(
+            source: .chrome,
+            kind: kind,
+            storeIdentifier: storeID,
+            name: title,
+            summary: summary,
+            iconURL: nil,
+            rating: nil,
+            storeURL: storeURL
+        )
+    }
+
     private static func chromeSlug(from chunk: String, storeID: String) -> String? {
-        let pattern = #"/detail/([a-z0-9\-]+)/\#(storeID)"#
+        let pattern = "/detail/([A-Za-z0-9\\-]+)/\(NSRegularExpression.escapedPattern(for: storeID))"
         guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
               let match = regex.firstMatch(in: chunk, range: NSRange(location: 0, length: (chunk as NSString).length)),
               match.numberOfRanges >= 2,
@@ -239,14 +309,18 @@ enum ExtensionStoreCatalog {
         return String(chunk[range])
     }
 
-    private static func humanizeChromeSlug(from chunk: String, fallbackID: String) -> String {
-        if let slug = chromeSlug(from: chunk, storeID: fallbackID) {
+    private static func humanizeChromeSlug(
+        from chunk: String,
+        storeID: String,
+        kind: ExtensionStoreItem.Kind
+    ) -> String {
+        if let slug = chromeSlug(from: chunk, storeID: storeID) {
             return slug
                 .replacingOccurrences(of: "-", with: " ")
                 .split(separator: " ")
-                .map { $0.capitalized }
+                .map(\.capitalized)
                 .joined(separator: " ")
         }
-        return "Chrome extension"
+        return kind == .theme ? "Chrome theme" : "Chrome extension"
     }
 }
