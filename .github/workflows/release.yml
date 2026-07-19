@@ -50,17 +50,33 @@ jobs:
       - name: Resolve version
         id: version
         run: |
-          MARKETING="$(grep -E '^\s*MARKETING_VERSION:' project.yml | head -1 | sed 's/.*"\(.*\)".*/\1/')"
-          BUILD="$(grep -E '^\s*CURRENT_PROJECT_VERSION:' project.yml | head -1 | sed 's/.*"\(.*\)".*/\1/')"
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          YML_MARKETING="$(grep -E '^\s*MARKETING_VERSION:' project.yml | head -1 | sed 's/.*"\(.*\)".*/\1/')"
+          YML_BUILD="$(grep -E '^\s*CURRENT_PROJECT_VERSION:' project.yml | head -1 | sed 's/.*"\(.*\)".*/\1/')"
+          MARKETING="$YML_MARKETING"
+          BUILD="$YML_BUILD"
+          # Prefer versions encoded in the tag (v1.0.0-31) so a tag created from the
+          # wrong commit / stale main cannot rename the release to an old build.
+          if [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)$ ]]; then
+            MARKETING="${BASH_REMATCH[1]}"
+            BUILD="${BASH_REMATCH[2]}"
+          elif [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            MARKETING="${BASH_REMATCH[1]}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "marketing=$MARKETING" >> "$GITHUB_OUTPUT"
           echo "build=$BUILD" >> "$GITHUB_OUTPUT"
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          fi
+          echo "Resolved release $TAG → Oriel $MARKETING ($BUILD) (project.yml was $YML_MARKETING/$YML_BUILD)"
 
       - name: Build DMG
+        env:
+          ORIEL_MARKETING_VERSION: ${{ steps.version.outputs.marketing }}
+          ORIEL_BUILD_NUMBER: ${{ steps.version.outputs.build }}
         run: bash Scripts/make-macos-dmg.sh
 
       - name: Upload DMG artifact

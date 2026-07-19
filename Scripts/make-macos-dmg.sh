@@ -5,10 +5,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-MARKETING="$(grep -E '^\s*MARKETING_VERSION:' project.yml | head -1 | sed 's/.*"\(.*\)".*/\1/')"
-BUILD="$(grep -E '^\s*CURRENT_PROJECT_VERSION:' project.yml | head -1 | sed 's/.*"\(.*\)".*/\1/')"
-MARKETING="${MARKETING:-1.0.0}"
-BUILD="${BUILD:-1}"
+YML_MARKETING="$(grep -E '^\s*MARKETING_VERSION:' project.yml | head -1 | sed 's/.*"\(.*\)".*/\1/')"
+YML_BUILD="$(grep -E '^\s*CURRENT_PROJECT_VERSION:' project.yml | head -1 | sed 's/.*"\(.*\)".*/\1/')"
+# Allow CI to override from the git tag (e.g. v1.0.0-31) so DMG names match the release.
+MARKETING="${ORIEL_MARKETING_VERSION:-${YML_MARKETING:-1.0.0}}"
+BUILD="${ORIEL_BUILD_NUMBER:-${YML_BUILD:-1}}"
 
 OUT_DIR="${ORIEL_DMG_OUT:-$ROOT/build/dmg}"
 DERIVED="${ORIEL_DERIVED_DATA:-$ROOT/build/DerivedData-dmg}"
