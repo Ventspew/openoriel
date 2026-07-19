@@ -51,7 +51,14 @@ final class ChromeWebStoreAPITests: XCTestCase {
         XCTAssertTrue(StoreBridgeI18n.catalogSource.contains("only (works|available|installable) on"))
         XCTAssertTrue(StoreBridgeI18n.catalogSource.contains("gebruik je desktopbrowser"))
         XCTAssertTrue(StoreBridgeI18n.catalogSource.contains("use (your |a )?desktop browser"))
+        XCTAssertTrue(StoreBridgeI18n.catalogSource.contains("desktops?"))
+        XCTAssertTrue(StoreBridgeI18n.catalogSource.contains("chrome web store"))
+        XCTAssertTrue(StoreBridgeI18n.catalogSource.contains("alleen beschikbaar"))
         XCTAssertTrue(ChromeWebStoreBridge.userScriptSource.contains("bannerRootFor"))
+        XCTAssertTrue(ChromeWebStoreBridge.userScriptSource.contains("unlockPageAfterModal"))
+        // Homepage must dismiss the desktop gate even without an extension ID in the path.
+        XCTAssertTrue(ChromeWebStoreBridge.userScriptSource.contains("hideUnavailable();"))
+        XCTAssertFalse(ChromeWebStoreBridge.userScriptSource.contains("if (idFromPath()) hideUnavailable()"))
         XCTAssertTrue(ChromeWebStoreBridge.userScriptSource.contains("isRemoveChromeLabel"))
         XCTAssertTrue(ChromeWebStoreBridge.userScriptSource.contains("L('remove')"))
     }

@@ -818,10 +818,17 @@ enum StoreBridgeI18n {
             && /(phone|mobile|telefoon|telefon|téléphone|móvil|telefono|スマートフォン|手机|手機|모바일|iphone|ipad|ios)/i.test(text)) {
           return true;
         }
-        // “Only on desktop / computer” — common when CWS sees a phone-width layout.
-        if (/only (works|available|installable) on (a )?(desktop|computer|pc)|alleen (beschikbaar|werkzaam|te installeren) op (een )?(desktop|computer|pc)|nur (auf|für) (dem )?(desktop|computer)|uniquement (sur|disponible).*(ordinateur|desktop)|solo (en|disponible).*(escritorio|ordenador|computadora)|solo su (desktop|computer)|apenas (no|em).*(computador|desktop)|только на|فقط على|デスクトップのみ|仅限电脑|僅限電腦|데스크톱에서만/i.test(text)) return true;
-        if (/install( this)? (on|from) (a )?(desktop|computer)|installeer.*(desktop|computer)|auf (einem )?(desktop|computer) installieren/i.test(text)) return true;
-        if (/available (for|on) chrome (on )?(desktop|mac|windows|computer)|beschikbaar (voor|op) chrome.*(desktop|computer|mac|windows)/i.test(text)) return true;
+        // “Only on desktop(s) / computer” — homepage modal + detail banners.
+        if (/only (works|available|installable) on (a )?(desktops?|computers?|pcs?)|alleen (beschikbaar|werkzaam|te installeren) op (een )?(desktops?|computers?|pcs?)|nur (auf|für) (dem )?(desktops?|computers?)|uniquement (sur|disponible).*(ordinateurs?|desktops?)|solo (en|disponible).*(escritorio|ordenadores?|computadoras?)|solo su (desktops?|computers?)|apenas (no|em).*(computadores?|desktops?)|только на|فقط على|デスクトップのみ|仅限电脑|僅限電腦|데스크톱에서만/i.test(text)) return true;
+        // Homepage blocking dialog: “De Chrome Web Store is alleen beschikbaar op desktops.”
+        if (/(chrome web store|web store).*(alleen beschikbaar|only available|nur verfügbar|uniquement disponible|solo disponible).*(desktops?|computers?|pcs?|ordinateurs?)/i.test(text)) return true;
+        if (/(alleen beschikbaar|only available|nur verfügbar).*(desktops?|computers?)/i.test(text)
+            && /(chrome web store|web store|extens|theme|thema)/i.test(text)) {
+          return true;
+        }
+        if (/open (this|deze) (page|pagina) in (your |je )?(desktop ?browser|desktopbrowser)|open je deze pagina in je desktopbrowser|open this page in your desktop browser/i.test(text)) return true;
+        if (/install( this)? (on|from) (a )?(desktops?|computers?)|installeer.*(desktops?|computers?)|auf (einem )?(desktops?|computers?) installieren/i.test(text)) return true;
+        if (/available (for|on) chrome (on )?(desktops?|mac|windows|computers?)|beschikbaar (voor|op) chrome.*(desktops?|computers?|mac|windows)/i.test(text)) return true;
         // Mini info banner: “Gebruik je desktopbrowser om dit thema toe te voegen.”
         if (/gebruik je desktopbrowser|use (your |a )?desktop browser|use (your |a )?computer( browser)? to (add|install)|desktopbrowser om dit|utiliser (votre )?navigateur|benutzen sie.*(desktop|computer)|usa (tu )?navegador de escritorio|usa (il )?browser desktop|use o navegador/i.test(text)) return true;
         if (/(desktop ?browser|desktopbrowser|computerbrowser).*(toe te voegen|toevoegen|to add|to install|hinzuzufügen|ajouter|añadir|aggiungere)/i.test(text)) return true;

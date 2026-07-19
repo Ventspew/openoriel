@@ -337,25 +337,38 @@ enum ChromeWebStoreBridge {
       function isPhoneIncompatText(text) {
         var api = i18n();
         if (api) return api.isPhoneIncompatText(text);
-        return /not compatible with|Item currently unavailable|only (works|available|installable) on (a )?(desktop|computer)|alleen (beschikbaar|te installeren) op|gebruik je desktopbrowser|use (your |a )?desktop browser|desktopbrowser om dit/i.test(text || '');
+        return /not compatible with|Item currently unavailable|only (works|available|installable) on (a )?(desktops?|computers?)|alleen (beschikbaar|te installeren) op (een )?(desktops?|computers?)|chrome web store.*(alleen beschikbaar|only available).*desktops?|gebruik je desktopbrowser|use (your |a )?desktop browser|desktopbrowser om dit|open (this|deze) (page|pagina) in.*(desktop)/i.test(text || '');
       }
 
       function hideNode(el) {
         if (!el || el.getAttribute('data-oriel-hidden-unavailable') === '1') return;
         el.style.setProperty('display', 'none', 'important');
+        el.style.setProperty('visibility', 'hidden', 'important');
+        el.style.setProperty('pointer-events', 'none', 'important');
         el.setAttribute('data-oriel-hidden-unavailable', '1');
+        el.setAttribute('aria-hidden', 'true');
       }
 
       function bannerRootFor(el) {
+        // Prefer the dialog / modal shell when present (homepage desktop-only gate).
+        var dialog = el.closest
+          ? (el.closest('[role="dialog"]')
+            || el.closest('[aria-modal="true"]')
+            || el.closest('[role="alertdialog"]'))
+          : null;
+        if (dialog && dialog !== document.body) {
+          var dText = normalizeLabel(dialog.textContent);
+          if (dText.length <= 800 && isPhoneIncompatText(dText)) return dialog;
+        }
         var best = el;
         var cur = el;
-        for (var depth = 0; depth < 6 && cur && cur !== document.body; depth++) {
+        for (var depth = 0; depth < 8 && cur && cur !== document.body; depth++) {
           var parent = cur.parentElement;
           if (!parent || parent === document.body || parent === document.documentElement) break;
           var pText = normalizeLabel(parent.textContent);
-          // Climb while the wrapper is still a compact banner (text + OK), not the page shell.
-          if (pText.length > 420) break;
-          if (parent.childElementCount > 8) break;
+          // Climb while the wrapper is still a compact banner/modal, not the page shell.
+          if (pText.length > 800) break;
+          if (parent.childElementCount > 12) break;
           if (!isPhoneIncompatText(pText) && pText.indexOf(normalizeLabel(el.textContent)) === -1) break;
           best = parent;
           cur = parent;
@@ -363,22 +376,72 @@ enum ChromeWebStoreBridge {
         return best;
       }
 
+      function unlockPageAfterModal() {
+        try {
+          document.documentElement.style.removeProperty('overflow');
+          document.body.style.removeProperty('overflow');
+          document.documentElement.style.setProperty('overflow', 'auto', 'important');
+          document.body.style.setProperty('overflow', 'auto', 'important');
+          document.documentElement.style.removeProperty('pointer-events');
+          document.body.style.removeProperty('pointer-events');
+          // Un-dim / un-inert main content CWS may mark while the gate is open.
+          var inert = document.querySelectorAll('[aria-hidden="true"], [inert]');
+          for (var i = 0; i < inert.length; i++) {
+            var node = inert[i];
+            if (node.getAttribute('data-oriel-hidden-unavailable') === '1') continue;
+            if (node.id === 'oriel-install-bar') continue;
+            var t = normalizeLabel(node.textContent || '');
+            // Don't unhide the desktop-only dialog itself.
+            if (isPhoneIncompatText(t) && t.length < 800) continue;
+            if (node.hasAttribute('inert')) node.removeAttribute('inert');
+            if (node.getAttribute('aria-hidden') === 'true'
+                && node.getAttribute('data-oriel-unlocked') !== '1') {
+              // Only clear aria-hidden on large content roots, not tiny widgets.
+              if ((node.textContent || '').length > 200) {
+                node.removeAttribute('aria-hidden');
+                node.setAttribute('data-oriel-unlocked', '1');
+              }
+            }
+          }
+        } catch (e) {}
+      }
+
       function hideUnavailable() {
         if (!document.body) return;
         var candidates = document.querySelectorAll(
-          'div, section, span, p, h1, h2, h3, li, button, a, [role="alert"], [role="status"], [role="dialog"]'
+          'div, section, span, p, h1, h2, h3, li, button, a, [role="alert"], [role="status"], [role="dialog"], [role="alertdialog"], [aria-modal="true"]'
         );
+        var hidAny = false;
         for (var i = 0; i < candidates.length; i++) {
           var el = candidates[i];
           if (el.getAttribute('data-oriel-hidden-unavailable') === '1') continue;
           if (el.id === 'oriel-add-to-oriel' || el.id === 'oriel-install-bar' || el.id === 'oriel-cws-tip') continue;
           if (el.closest && el.closest('#oriel-install-bar')) continue;
-          if (el.childElementCount > 16) continue;
+          if (el.childElementCount > 20) continue;
           var text = normalizeLabel(el.textContent);
-          if (text.length < 10 || text.length > 320) continue;
+          if (text.length < 10 || text.length > 600) continue;
           if (!isPhoneIncompatText(text)) continue;
           hideNode(bannerRootFor(el));
+          hidAny = true;
         }
+        // Also hide fixed full-screen dimmers that only wrap the gate dialog.
+        var overlays = document.querySelectorAll('div');
+        for (var o = 0; o < overlays.length; o++) {
+          var ov = overlays[o];
+          if (ov.getAttribute('data-oriel-hidden-unavailable') === '1') continue;
+          if (ov.id === 'oriel-install-bar' || (ov.closest && ov.closest('#oriel-install-bar'))) continue;
+          var st = window.getComputedStyle ? getComputedStyle(ov) : null;
+          if (!st) continue;
+          if (st.position !== 'fixed' && st.position !== 'absolute') continue;
+          var z = parseInt(st.zIndex, 10);
+          if (!(z > 10)) continue;
+          var ot = normalizeLabel(ov.textContent);
+          if (ot.length < 20 || ot.length > 600) continue;
+          if (!isPhoneIncompatText(ot)) continue;
+          hideNode(ov);
+          hidAny = true;
+        }
+        if (hidAny) unlockPageAfterModal();
       }
 
       /** Sticky phone-width install bar — CWS often hides native install on mobile layouts. */
@@ -479,7 +542,8 @@ enum ChromeWebStoreBridge {
         busy = true;
         try {
           rewriteLabels();
-          if (idFromPath()) hideUnavailable();
+          // Homepage desktop-only modal + detail banners — must run without an extension ID.
+          hideUnavailable();
           ensureInstallBar();
         } finally { busy = false; }
       }
