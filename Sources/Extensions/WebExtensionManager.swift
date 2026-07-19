@@ -1,7 +1,6 @@
 import Foundation
 import Observation
 import WebKit
-import ZIPFoundation
 #if os(macOS)
 import AppKit
 #elseif os(iOS)

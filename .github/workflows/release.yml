@@ -28,9 +28,21 @@ jobs:
 
       - name: Select Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer || \
-          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          set -euo pipefail
+          # WKWebExtension needs a recent SDK (Xcode 16.4+ / macOS 15.4).
+          for app in \
+            /Applications/Xcode_16.4.app \
+            /Applications/Xcode_16.3.app \
+            /Applications/Xcode_16.2.app \
+            /Applications/Xcode.app
+          do
+            if [[ -d "$app" ]]; then
+              sudo xcode-select -s "$app/Contents/Developer"
+              break
+            fi
+          done
           xcodebuild -version
+          xcodebuild -showsdks || true
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -60,7 +72,7 @@ jobs:
             build/dmg/*.sha256
           if-no-files-found: error
 
-      - name: Create GitHub Release
+      - name: Attach DMG to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
