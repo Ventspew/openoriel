@@ -240,8 +240,11 @@ enum ChromeWebStoreBridge {
       }
       function isInstallChromeLabel(t) {
         var api = i18n();
-        if (api) return api.isChromeInstallLabel(t);
+        if (api && api.isChromeInstallLabel(t)) return true;
         t = normalizeLabel(t);
+        // Theme CTAs on CWS sometimes omit the Chrome brand (“Add theme” / “Thema toevoegen”).
+        if (/^(Add theme|Toevoegen thema|Thema toevoegen|Add to Chrome|Toevoegen aan Chrome)$/i.test(t)) return true;
+        if (api) return false;
         return /\bChrome\b|\bBrave\b/i.test(t) && /add to|toevoegen|hinzufügen|ajouter/i.test(t);
       }
       function isInstalledChromeLabel(t) {

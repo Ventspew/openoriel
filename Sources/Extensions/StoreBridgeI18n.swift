@@ -670,6 +670,13 @@ enum StoreBridgeI18n {
         if (!t || t.length > 72) return false;
         if (/oriel/i.test(t)) return false;
         if (REMOVE_VERBS.test(t)) return false;
+        // Theme-only CWS buttons often say “Add theme” without naming Chrome.
+        if (/^(Add theme|Get theme|Toevoegen thema|Thema toevoegen|Thème|Agregar tema|Añadir tema|Thema hinzufügen)$/i.test(t)) {
+          return true;
+        }
+        if (/\btheme\b|\bthema\b|\bthème\b|\btema\b/i.test(t) && ADD_VERBS.test(t) && t.length < 40) {
+          return true;
+        }
         if (!hasChromeBrand(t)) return false;
         if (ADD_VERBS.test(t)) return true;
         // Exact-ish common forms without relying only on verb list

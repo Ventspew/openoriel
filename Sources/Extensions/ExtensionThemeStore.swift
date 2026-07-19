@@ -13,6 +13,10 @@ struct InstalledExtensionTheme: Identifiable, Equatable, Codable, Sendable {
     var toolbarRGB: [Double]?
     var ntpImageRelativePath: String?
     var prefersDark: Bool
+    /// Chrome Web Store id when installed from CWS (theme-only packages never enter the extension catalog).
+    var chromeStoreID: String? = nil
+    /// Firefox AMO slug when installed from addons.mozilla.org.
+    var firefoxSlug: String? = nil
 
     var accentColor: Color {
         Color(red: accentRGB[0], green: accentRGB[1], blue: accentRGB[2])
@@ -70,6 +74,42 @@ final class ExtensionThemeStore {
         }
     }
 
+    /// Chrome Web Store IDs for themes (including theme-only installs).
+    var installedChromeStoreIDs: [String] {
+        Array(
+            Set(
+                themes.compactMap { theme -> String? in
+                    if let storeID = theme.chromeStoreID?.lowercased(),
+                       ChromeWebStoreAPI.isValidExtensionID(storeID) {
+                        return storeID
+                    }
+                    let candidate = theme.id.lowercased()
+                    if ChromeWebStoreAPI.isValidExtensionID(candidate) { return candidate }
+                    return nil
+                }
+            )
+        ).sorted()
+    }
+
+    /// Firefox AMO slugs for themes installed from the store.
+    var installedFirefoxSlugs: [String] {
+        Array(
+            Set(
+                themes.compactMap { theme -> String? in
+                    if let slug = theme.firefoxSlug?.lowercased(), !slug.isEmpty { return slug }
+                    if theme.source == .firefox {
+                        let candidate = theme.id.lowercased()
+                        // Prefer explicit slug; fall back to id when it was the AMO slug.
+                        if !candidate.isEmpty, !ChromeWebStoreAPI.isValidExtensionID(candidate) {
+                            return candidate
+                        }
+                    }
+                    return nil
+                }
+            )
+        ).sorted()
+    }
+
     /// Import a staged WebExtension package that contains `theme`. Returns whether it was theme-only.
     @discardableResult
     func importStagedPackage(
@@ -80,6 +120,26 @@ final class ExtensionThemeStore {
         let parsed = try ExtensionThemeParser.parse(packageRoot: staging, source: source)
         let isThemeOnly = ExtensionThemeParser.isThemeOnlyPackage(at: staging)
         let themeID = sanitizedID(preferredID ?? UUID().uuidString)
+        let preferred = preferredID?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let chromeID: String? = {
+            if let preferred, ChromeWebStoreAPI.isValidExtensionID(preferred.lowercased()) {
+                return preferred.lowercased()
+            }
+            if source == .chrome, ChromeWebStoreAPI.isValidExtensionID(themeID.lowercased()) {
+                return themeID.lowercased()
+            }
+            return nil
+        }()
+        let firefoxSlug: String? = {
+            guard source == .firefox else { return nil }
+            if let preferred, !preferred.isEmpty, !ChromeWebStoreAPI.isValidExtensionID(preferred.lowercased()) {
+                return preferred.lowercased()
+            }
+            if !ChromeWebStoreAPI.isValidExtensionID(themeID.lowercased()) {
+                return themeID.lowercased()
+            }
+            return nil
+        }()
 
         let destination = themesDirectory.appendingPathComponent(themeID, isDirectory: true)
         if fileManager.fileExists(atPath: destination.path) {
@@ -98,11 +158,18 @@ final class ExtensionThemeStore {
             backgroundRGB: parsed.backgroundRGB,
             toolbarRGB: parsed.toolbarRGB,
             ntpImageRelativePath: parsed.ntpImageRelativePath,
-            prefersDark: parsed.prefersDark
+            prefersDark: parsed.prefersDark,
+            chromeStoreID: chromeID,
+            firefoxSlug: firefoxSlug
         )
 
         var catalog = loadCatalog()
-        catalog.removeAll { $0.id == themeID || $0.displayName == record.displayName && $0.source == source }
+        catalog.removeAll {
+            $0.id == themeID
+                || ($0.chromeStoreID != nil && $0.chromeStoreID == chromeID)
+                || ($0.firefoxSlug != nil && $0.firefoxSlug == firefoxSlug)
+                || ($0.displayName == record.displayName && $0.source == source)
+        }
         catalog.append(record)
         saveCatalog(catalog)
         reloadFromDisk()

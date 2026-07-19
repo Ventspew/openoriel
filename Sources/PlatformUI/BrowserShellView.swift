@@ -1131,8 +1131,19 @@ struct BrowserShellView: View {
                 webExtensionController: environment.extensions.webExtensionControllerForConfiguration,
                 blockAutoplay: environment.settings.blockAutoplay,
                 chromeWebStoreInstallEnabled: environment.extensions.isSupported,
-                installedChromeStoreIDs: environment.extensions.installedChromeStoreIDs,
-                installedFirefoxSlugs: environment.extensions.installedFirefoxSlugs,
+                // Union extensions + themes so CWS/AMO show “Installed” for theme-only packages too.
+                installedChromeStoreIDs: Array(
+                    Set(
+                        environment.extensions.installedChromeStoreIDs
+                            + environment.extensionThemes.installedChromeStoreIDs
+                    )
+                ).sorted(),
+                installedFirefoxSlugs: Array(
+                    Set(
+                        environment.extensions.installedFirefoxSlugs
+                            + environment.extensionThemes.installedFirefoxSlugs
+                    )
+                ).sorted(),
                 applyContentBlocking: { webView, enabled in
                     environment.contentBlocker.apply(to: webView, enabled: enabled)
                 },

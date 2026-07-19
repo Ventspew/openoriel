@@ -87,6 +87,26 @@ final class ExtensionThemeAndFirefoxTests: XCTestCase {
         XCTAssertEqual(FirefoxAddonsAPI.displayName(fromDetailJSON: data), "Sample")
     }
 
+    func testThemeOnlyImportExposesChromeStoreIDForStoreUI() throws {
+        let root = try makeThemePackage(
+            colors: ["toolbar": [10, 20, 30], "ntp_background": [240, 240, 240]],
+            images: [:]
+        )
+        let store = ExtensionThemeStore()
+        let chromeID = "cjpalhdlnbpafiamejdnhcphjbkeiagm"
+        let (theme, isThemeOnly) = try store.importStagedPackage(
+            at: root,
+            source: .chrome,
+            preferredID: chromeID
+        )
+        XCTAssertTrue(isThemeOnly)
+        XCTAssertEqual(theme.chromeStoreID, chromeID)
+        XCTAssertTrue(store.installedChromeStoreIDs.contains(chromeID))
+        // Cleanup so other tests / local app support stay tidy.
+        store.remove(id: theme.id)
+        XCTAssertFalse(store.installedChromeStoreIDs.contains(chromeID))
+    }
+
     func testSettingsApplyAndClearExtensionTheme() async {
         await MainActor.run {
             let defaults = UserDefaults(suiteName: "oriel.tests.exttheme.\(UUID().uuidString)")!

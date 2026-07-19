@@ -86,29 +86,33 @@ final class WebExtensionManager {
         return nil
     }
 
-    /// Stable Chrome Web Store IDs only (never WebKit-generated unique IDs).
+    /// Stable Chrome Web Store IDs — extensions **and** themes (theme-only never hits the extension catalog).
     var installedChromeStoreIDs: [String] {
-        Array(
-            Set(
-                extensions.compactMap { item -> String? in
-                    guard let storeID = item.chromeStoreID?.lowercased(),
-                          ChromeWebStoreAPI.isValidExtensionID(storeID) else { return nil }
-                    return storeID
-                }
-            )
-        ).sorted()
+        var ids = Set(
+            extensions.compactMap { item -> String? in
+                guard let storeID = item.chromeStoreID?.lowercased(),
+                      ChromeWebStoreAPI.isValidExtensionID(storeID) else { return nil }
+                return storeID
+            }
+        )
+        if let themeIDs = themeStore?.installedChromeStoreIDs {
+            ids.formUnion(themeIDs)
+        }
+        return ids.sorted()
     }
 
-    /// Firefox AMO slugs for store pages (so “Installed in Oriel” can show on AMO).
+    /// Firefox AMO slugs for store pages (extensions + themes).
     var installedFirefoxSlugs: [String] {
-        Array(
-            Set(
-                extensions.compactMap { item -> String? in
-                    guard let slug = item.firefoxSlug?.lowercased(), !slug.isEmpty else { return nil }
-                    return slug
-                }
-            )
-        ).sorted()
+        var slugs = Set(
+            extensions.compactMap { item -> String? in
+                guard let slug = item.firefoxSlug?.lowercased(), !slug.isEmpty else { return nil }
+                return slug
+            }
+        )
+        if let themeSlugs = themeStore?.installedFirefoxSlugs {
+            slugs.formUnion(themeSlugs)
+        }
+        return slugs.sorted()
     }
 
     func isInstalledFromChromeWebStore(extensionID: String) -> Bool {
