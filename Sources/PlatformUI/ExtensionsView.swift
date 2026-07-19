@@ -83,7 +83,7 @@ struct ExtensionsView: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text("Prefer Oriel Store to browse Chrome and Firefox catalogs. You can also install .zip / .crx / .xpi, unpacked folders, or Safari .appex. Manifests are soft-rewritten for WebKit — not every Chrome/Firefox API exists.")
+                    Text("Prefer Oriel Store — one search across Chrome, Firefox, and Safari. You can also install .zip / .crx / .xpi, unpacked folders, or Safari .appex. Manifests are soft-rewritten for WebKit — not every Chrome/Firefox API exists.")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -134,7 +134,7 @@ struct ExtensionsView: View {
             } header: {
                 Text("Get extensions")
             } footer: {
-                Text("Prefer Oriel Store (Mac, iPhone, iPad) for Chrome and Firefox catalogs. Opening the store websites shows a tip. Also: .zip / .crx / .xpi, folders, or Safari .appex.")
+                Text("Prefer Oriel Store (Mac, iPhone, iPad): one universal catalog. Opening Chrome/Firefox store websites shows a tip. Also: .zip / .crx / .xpi, folders, or Safari .appex.")
                     .fixedSize(horizontal: false, vertical: true)
             }
 

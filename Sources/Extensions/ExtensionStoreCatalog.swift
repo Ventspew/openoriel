@@ -1,10 +1,27 @@
 import Foundation
 
-/// One installable item from Chrome Web Store or Firefox AMO, for Oriel’s native store UI.
+/// One installable offer from a single store (Chrome, Firefox, or local Safari).
 struct ExtensionStoreItem: Identifiable, Hashable, Sendable {
-    enum Source: String, Hashable, Sendable {
+    enum Source: String, Hashable, Sendable, CaseIterable {
         case chrome
         case firefox
+        case safari
+
+        var displayName: String {
+            switch self {
+            case .chrome: return "Chrome"
+            case .firefox: return "Firefox"
+            case .safari: return "Safari"
+            }
+        }
+
+        var installedFromLabel: String {
+            switch self {
+            case .chrome: return "Installed from Chrome Web Store"
+            case .firefox: return "Installed from Firefox Add-ons"
+            case .safari: return "Installed from Safari"
+            }
+        }
     }
 
     enum Kind: String, Hashable, Sendable {
@@ -12,18 +29,39 @@ struct ExtensionStoreItem: Identifiable, Hashable, Sendable {
         case theme
     }
 
-    /// Stable id: `chrome:<storeID>` or `firefox:<slug>`.
+    /// Stable id: `chrome:<storeID>`, `firefox:<slug>`, or `safari:<bundleID>`.
     var id: String { "\(source.rawValue):\(storeIdentifier)" }
 
     let source: Source
     let kind: Kind
-    /// Chrome: 32-char a–p id. Firefox: AMO slug.
+    /// Chrome: 32-char a–p id. Firefox: AMO slug. Safari: bundle id or path key.
     let storeIdentifier: String
     let name: String
     let summary: String
     let iconURL: URL?
     let rating: Double?
     let storeURL: URL?
+}
+
+/// One universal Oriel Store row — same extension may be available from several sources.
+struct UnifiedStoreListing: Identifiable, Hashable, Sendable {
+    /// Normalized merge key (usually the cleaned display name).
+    let id: String
+    let kind: ExtensionStoreItem.Kind
+    let name: String
+    let summary: String
+    let iconURL: URL?
+    /// Best-known rating across sources.
+    let rating: Double?
+    /// Available install sources, preferred order first.
+    let offers: [ExtensionStoreItem]
+
+    var availableSources: [ExtensionStoreItem.Source] {
+        offers.map(\.source)
+    }
+
+    /// Preferred offer for Add (first in `offers` after ranking).
+    var preferredOffer: ExtensionStoreItem? { offers.first }
 }
 
 /// Fetches searchable catalogs for the native Oriel Store.
@@ -38,8 +76,41 @@ enum ExtensionStoreCatalog {
         return URLSession(configuration: config)
     }()
 
-    // MARK: - Public
+    // MARK: - Public (universal)
 
+    /// Search Chrome + Firefox together and merge into one catalog. Optionally attach local Safari matches.
+    static func searchUniversal(
+        query: String,
+        kind: ExtensionStoreItem.Kind,
+        limit: Int = 40,
+        safariCandidates: [SafariExtensionCandidate] = []
+    ) async -> [UnifiedStoreListing] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        async let chromeResult: [ExtensionStoreItem] = {
+            (try? await searchChrome(query: trimmed, kind: kind, limit: limit)) ?? []
+        }()
+        async let firefoxResult: [ExtensionStoreItem] = {
+            (try? await searchFirefox(query: trimmed, kind: kind, limit: limit)) ?? []
+        }()
+        let chrome = await chromeResult
+        let firefox = await firefoxResult
+
+        var items = chrome + firefox
+        if chrome.isEmpty && firefox.isEmpty {
+            items = curatedFallback(source: .chrome, kind: kind, query: trimmed)
+                + curatedFallback(source: .firefox, kind: kind, query: trimmed)
+        }
+
+        // Seed well-known multi-store aliases so Dark Reader etc. show Chrome+Firefox(+Safari).
+        items.append(contentsOf: knownMultiStoreSeeds(kind: kind, query: trimmed))
+
+        let safariItems = safariOffers(matching: trimmed, kind: kind, candidates: safariCandidates)
+        items.append(contentsOf: safariItems)
+
+        return mergeIntoUniversal(items, kind: kind, limit: limit)
+    }
+
+    /// Per-source search (tests + callers that need a single store).
     static func search(
         query: String,
         source: ExtensionStoreItem.Source,
@@ -52,7 +123,190 @@ enum ExtensionStoreCatalog {
             return try await searchFirefox(query: trimmed, kind: kind, limit: limit)
         case .chrome:
             return try await searchChrome(query: trimmed, kind: kind, limit: limit)
+        case .safari:
+            return []
         }
+    }
+
+    // MARK: - Merge
+
+    static func mergeIntoUniversal(
+        _ items: [ExtensionStoreItem],
+        kind: ExtensionStoreItem.Kind,
+        limit: Int
+    ) -> [UnifiedStoreListing] {
+        var buckets: [String: [ExtensionStoreItem]] = [:]
+        var displayName: [String: String] = [:]
+
+        for item in items where item.kind == kind {
+            let key = normalizationKey(forName: item.name)
+            guard !key.isEmpty else { continue }
+            buckets[key, default: []].append(item)
+            // Prefer shorter canonical names ("Bitwarden" over "Bitwarden - Password Manager").
+            if displayName[key] == nil || item.name.count < (displayName[key]?.count ?? Int.max) {
+                displayName[key] = item.name
+            }
+        }
+
+        var listings: [UnifiedStoreListing] = []
+        for (key, group) in buckets {
+            let deduped = dedupeOffers(group)
+            guard !deduped.isEmpty else { continue }
+            let ranked = rankOffers(deduped)
+            let summary = ranked.compactMap { $0.summary.isEmpty ? nil : $0.summary }.first ?? ""
+            let icon = ranked.compactMap(\.iconURL).first
+            let rating = ranked.compactMap(\.rating).max()
+            let name = displayName[key] ?? ranked[0].name
+            listings.append(
+                UnifiedStoreListing(
+                    id: key,
+                    kind: kind,
+                    name: name,
+                    summary: summary,
+                    iconURL: icon,
+                    rating: rating,
+                    offers: ranked
+                )
+            )
+        }
+
+        // Popular / relevance-ish: more sources first, then rating, then name.
+        listings.sort { a, b in
+            if a.offers.count != b.offers.count { return a.offers.count > b.offers.count }
+            let ar = a.rating ?? -1
+            let br = b.rating ?? -1
+            if ar != br { return ar > br }
+            return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+        }
+        return Array(listings.prefix(limit))
+    }
+
+    static func normalizationKey(forName name: String) -> String {
+        var s = name.lowercased()
+        let strip: [String] = [
+            " for chrome", " for firefox", " for safari", " - chrome", " – chrome",
+            "™", "®", "©", " extension", " add-on", " addon", " theme"
+        ]
+        for token in strip {
+            s = s.replacingOccurrences(of: token, with: "")
+        }
+        // Keep letters/numbers only as merge key.
+        let allowed = CharacterSet.alphanumerics
+        s = String(s.unicodeScalars.map { allowed.contains($0) ? Character($0) : Character(" ") })
+        return s
+            .split(separator: " ")
+            .joined()
+    }
+
+    private static func dedupeOffers(_ items: [ExtensionStoreItem]) -> [ExtensionStoreItem] {
+        var seen = Set<String>()
+        var out: [ExtensionStoreItem] = []
+        for item in items {
+            let key = "\(item.source.rawValue):\(item.storeIdentifier.lowercased())"
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            out.append(item)
+        }
+        return out
+    }
+
+    /// Prefer Firefox (signed XPI + official API), then Chrome, then Safari.
+    private static func rankOffers(_ items: [ExtensionStoreItem]) -> [ExtensionStoreItem] {
+        let order: [ExtensionStoreItem.Source: Int] = [.firefox: 0, .chrome: 1, .safari: 2]
+        return items.sorted { a, b in
+            let ao = order[a.source] ?? 9
+            let bo = order[b.source] ?? 9
+            if ao != bo { return ao < bo }
+            let ar = a.rating ?? -1
+            let br = b.rating ?? -1
+            return ar > br
+        }
+    }
+
+    // MARK: - Safari (local) + known multi-store seeds
+
+    static func safariOffers(
+        matching query: String,
+        kind: ExtensionStoreItem.Kind,
+        candidates: [SafariExtensionCandidate]
+    ) -> [ExtensionStoreItem] {
+        guard kind == .extension else { return [] }
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return candidates.compactMap { candidate -> ExtensionStoreItem? in
+            guard candidate.isImportable else { return nil }
+            if !q.isEmpty {
+                let hay = (candidate.displayName + " " + candidate.bundleIdentifier).lowercased()
+                guard hay.contains(q) || normalizationKey(forName: candidate.displayName).contains(normalizationKey(forName: q)) else {
+                    return nil
+                }
+            }
+            return ExtensionStoreItem(
+                source: .safari,
+                kind: .extension,
+                storeIdentifier: candidate.bundleIdentifier,
+                name: candidate.displayName,
+                summary: candidate.containingAppName.map { "Safari Web Extension from \($0)" }
+                    ?? "Safari Web Extension on this Mac",
+                iconURL: nil,
+                rating: nil,
+                storeURL: candidate.appexURL
+            )
+        }
+    }
+
+    /// Well-known extensions that exist on multiple stores — keeps Source chips honest.
+    static func knownMultiStoreSeeds(
+        kind: ExtensionStoreItem.Kind,
+        query: String
+    ) -> [ExtensionStoreItem] {
+        guard kind == .extension else { return [] }
+        let seeds: [(String, String, String?, String?, Bool)] = [
+            // name, summary, chromeID?, firefoxSlug?, safariKnown
+            ("Bitwarden", "Password manager.", "nngceckbapebfimnlniiiahkandclblb", "bitwarden-password-manager", true),
+            ("Dark Reader", "Dark mode for every website.", "eimadpbcbfnmbkopoojfekhnkhdbieeh", "darkreader", true),
+            ("uBlock Origin", "Efficient ad blocker.", "cjpalhdlnbpafiamejdnhcphjbkeiagm", "ublock-origin", false),
+            ("uBlock Origin Lite", "Manifest V3 blocker.", "ddkjiahejlhfcafbddmgiahcphecmpfh", nil, false),
+            ("SponsorBlock", "Skip YouTube sponsors.", "ogdlpmhglpejoiomcodnpjnfgcpmgale", "sponsorblock", true),
+            ("Privacy Badger", "Automatically block trackers.", "pkehgijcmpdhfbdbbnkijodmdjhbjlgp", "privacy-badger17", false),
+            ("DuckDuckGo Privacy", "Privacy essentials.", "bkdgflcldnnnapblkhphbgpggdiikppg", "duckduckgo-for-firefox", true)
+        ]
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        var out: [ExtensionStoreItem] = []
+        for seed in seeds {
+            if !q.isEmpty {
+                let key = normalizationKey(forName: seed.0)
+                let qKey = normalizationKey(forName: query)
+                guard seed.0.lowercased().contains(q) || key.contains(qKey) || qKey.contains(key) else { continue }
+            } else {
+                // Empty query: only seed a handful of popular multi-source rows.
+            }
+            if let chromeID = seed.2 {
+                out.append(item(.chrome, .extension, chromeID, seed.0, seed.1))
+            }
+            if let firefox = seed.3 {
+                out.append(item(.firefox, .extension, firefox, seed.0, seed.1))
+            }
+            if seed.4 {
+                out.append(
+                    ExtensionStoreItem(
+                        source: .safari,
+                        kind: .extension,
+                        storeIdentifier: "known:\(normalizationKey(forName: seed.0))",
+                        name: seed.0,
+                        summary: "Also available as a Safari Web Extension (import .appex on Mac).",
+                        iconURL: nil,
+                        rating: nil,
+                        storeURL: nil
+                    )
+                )
+            }
+        }
+        if q.isEmpty {
+            // Limit seeds on the popular list so live results stay primary.
+            let popularNames: Set<String> = ["bitwarden", "darkreader", "ublockorigin", "sponsorblock"]
+            out = out.filter { popularNames.contains(normalizationKey(forName: $0.name)) }
+        }
+        return out
     }
 
     // MARK: - Firefox AMO (official API v5)
@@ -96,7 +350,6 @@ enum ExtensionStoreCatalog {
                 return Array(parsed.prefix(limit))
             }
         } catch {
-            // Fall through to curated list so the store is never blank offline.
             if !query.isEmpty { throw error }
         }
 
@@ -276,8 +529,7 @@ enum ExtensionStoreCatalog {
             }
         }
 
-        // 2) data-item-id cards (richer title text nearby).
-        // NOTE: do not use #"…\"…"# — in Swift raw strings that matches a literal backslash.
+        // 2) data-item-id cards
         let idPattern = "data-item-id=\"([a-p]{32})\""
         if let regex = try? NSRegularExpression(pattern: idPattern) {
             let ns = html as NSString
@@ -286,11 +538,7 @@ enum ExtensionStoreCatalog {
                 guard match.numberOfRanges >= 2,
                       let idRange = Range(match.range(at: 1), in: html) else { continue }
                 let storeID = String(html[idRange])
-                guard ChromeWebStoreAPI.isValidExtensionID(storeID) else { continue }
-                if seen.contains(storeID) {
-                    // Upgrade existing row with card title/summary/icon when richer.
-                    continue
-                }
+                guard ChromeWebStoreAPI.isValidExtensionID(storeID), !seen.contains(storeID) else { continue }
                 let start = match.range.location
                 let end = min(ns.length, start + 2200)
                 let chunk = ns.substring(with: NSRange(location: start, length: end - start))
@@ -347,7 +595,6 @@ enum ExtensionStoreCatalog {
             .replacingOccurrences(of: "\\/", with: "/")
     }
 
-    /// Best-effort summary string that often follows the rating fields in the embedded tuple.
     private static func chromeSummaryNearEmbeddedID(html: String, storeID: String) -> String? {
         let pattern =
             "\"\(NSRegularExpression.escapedPattern(for: storeID))\",\"https://[^\"]+\",\"(?:\\\\.|[^\"\\\\])+\",[0-9.]+,[0-9]+,\"https://[^\"]+\",\"((?:\\\\.|[^\"\\\\]){12,160})\""
@@ -450,7 +697,6 @@ enum ExtensionStoreCatalog {
 
     // MARK: - Curated fallback (never leave the store blank)
 
-    /// Popular installable items used when live catalog fetch/parse fails.
     static func curatedFallback(
         source: ExtensionStoreItem.Source,
         kind: ExtensionStoreItem.Kind,
@@ -498,6 +744,8 @@ enum ExtensionStoreCatalog {
                 item(.firefox, .theme, "lush-soft", "Lush – Soft", "Soft green theme."),
                 item(.firefox, .theme, "nicothin-space", "Dark space", "Dynamic space theme.")
             ]
+        case (.safari, _):
+            all = []
         }
 
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -522,6 +770,8 @@ enum ExtensionStoreCatalog {
                 return URL(string: "https://chromewebstore.google.com/detail/\(id)")
             case .firefox:
                 return URL(string: "https://addons.mozilla.org/firefox/addon/\(id)/")
+            case .safari:
+                return nil
             }
         }()
         return ExtensionStoreItem(

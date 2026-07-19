@@ -132,4 +132,69 @@ final class ExtensionStoreCatalogTests: XCTestCase {
         XCTAssertEqual(search.count, 1)
         XCTAssertTrue(search[0].absoluteString.contains("itemTypes=2"))
     }
+
+    func testNormalizationKeyMergesStoreVariants() {
+        XCTAssertEqual(
+            ExtensionStoreCatalog.normalizationKey(forName: "Dark Reader"),
+            ExtensionStoreCatalog.normalizationKey(forName: "Dark Reader for Firefox")
+        )
+        XCTAssertEqual(
+            ExtensionStoreCatalog.normalizationKey(forName: "uBlock Origin"),
+            "ublockorigin"
+        )
+        let bitwarden = ExtensionStoreCatalog.normalizationKey(forName: "Bitwarden")
+        let bitwardenLong = ExtensionStoreCatalog.normalizationKey(forName: "Bitwarden Password Manager")
+        XCTAssertTrue(bitwardenLong.hasPrefix(bitwarden))
+    }
+
+    func testMergeIntoUniversalCombinesSources() {
+        let items: [ExtensionStoreItem] = [
+            ExtensionStoreItem(
+                source: .chrome,
+                kind: .extension,
+                storeIdentifier: "eimadpbcbfnmbkopoojfekhnkhdbieeh",
+                name: "Dark Reader",
+                summary: "Dark mode",
+                iconURL: nil,
+                rating: 4.7,
+                storeURL: nil
+            ),
+            ExtensionStoreItem(
+                source: .firefox,
+                kind: .extension,
+                storeIdentifier: "darkreader",
+                name: "Dark Reader for Firefox",
+                summary: "Dark mode for every website",
+                iconURL: nil,
+                rating: 4.8,
+                storeURL: nil
+            ),
+            ExtensionStoreItem(
+                source: .safari,
+                kind: .extension,
+                storeIdentifier: "known:darkreader",
+                name: "Dark Reader",
+                summary: "Safari Web Extension",
+                iconURL: nil,
+                rating: nil,
+                storeURL: nil
+            )
+        ]
+        let listings = ExtensionStoreCatalog.mergeIntoUniversal(items, kind: .extension, limit: 10)
+        XCTAssertEqual(listings.count, 1)
+        XCTAssertEqual(listings[0].name, "Dark Reader")
+        XCTAssertEqual(Set(listings[0].availableSources), Set([.chrome, .firefox, .safari]))
+        // Firefox preferred for Add when not installed.
+        XCTAssertEqual(listings[0].preferredOffer?.source, .firefox)
+        XCTAssertEqual(ExtensionStoreItem.Source.chrome.installedFromLabel, "Installed from Chrome Web Store")
+        XCTAssertEqual(ExtensionStoreItem.Source.firefox.installedFromLabel, "Installed from Firefox Add-ons")
+    }
+
+    func testKnownMultiStoreSeedsIncludeDarkReader() {
+        let seeds = ExtensionStoreCatalog.knownMultiStoreSeeds(kind: .extension, query: "dark reader")
+        let sources = Set(seeds.map(\.source))
+        XCTAssertTrue(sources.contains(.chrome))
+        XCTAssertTrue(sources.contains(.firefox))
+        XCTAssertTrue(sources.contains(.safari))
+    }
 }

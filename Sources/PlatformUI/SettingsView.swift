@@ -408,7 +408,7 @@ struct SettingsView: View {
                     Text("Extensions")
                 } footer: {
                     if environment.extensions.isSupported {
-                        Text("Use Oriel Store for a readable Chrome + Firefox catalog on Mac, iPhone, and iPad. Or install .zip / .crx / .xpi / folder with manifest.json.")
+                        Text("Use Oriel Store — one search across Chrome, Firefox, and Safari on Mac, iPhone, and iPad. Or install .zip / .crx / .xpi / folder with manifest.json.")
                             .fixedSize(horizontal: false, vertical: true)
                     } else {
                         Text(environment.extensions.lastError

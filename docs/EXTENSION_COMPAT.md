@@ -25,11 +25,15 @@ A full “run Chromium extensions exactly like Chrome” or “run Gecko add-ons
 
 Prefer the native **Oriel Store** over the Chrome / Firefox websites:
 
-- **Chrome:** public CWS search/category HTML → list (desktop UA only for that fetch)
+- **One search** — users do not pick Chrome vs Firefox; results are a universal catalog
+- Each row shows source availability: Chrome / Firefox / Safari
+- **Chrome:** CWS HTML + embedded payload (desktop UA only for that fetch)
 - **Firefox:** AMO API v5 `addons/search/`
-- Extensions and themes; install via existing CRX/XPI pipeline
+- **Safari:** local `.appex` discovery on Mac + known multi-store seeds
+- **Add** auto-picks the best available source (prefer installed → Firefox → Chrome → Safari)
+- Installed rows show *Installed from Chrome Web Store* / *Firefox Add-ons* / *Safari*
 - Entry: Extensions → Browse Oriel Store, Settings, or overflow menu **Oriel Store**
-- Opening the Chrome Web Store or Firefox Add-ons **website** in a tab shows a one-time tip: **Use Oriel Store?** (all platforms)
+- Opening the Chrome Web Store or Firefox Add-ons **website** in a tab shows a tip: **Use Oriel Store?**
 
 Store **websites** are not forced to desktop mode/UA. Desktop Chrome UA is kept only for CRX downloads and Oriel Store’s Chrome catalog fetch. Website tabs still get JS bridges (CTA rewrite / sticky Add to Oriel) if the user keeps browsing.
 

@@ -125,6 +125,25 @@ final class WebExtensionManager {
         return installedFirefoxSlugs.contains(key)
     }
 
+    /// Best-effort: Safari import matched by bundle id or normalized display name.
+    func isInstalledFromSafari(bundleIdentifier: String) -> Bool {
+        if bundleIdentifier.hasPrefix("known:") {
+            let key = String(bundleIdentifier.dropFirst("known:".count))
+            return extensions.contains {
+                ExtensionStoreCatalog.normalizationKey(forName: $0.displayName) == key
+                    && $0.chromeStoreID == nil
+                    && $0.firefoxSlug == nil
+            }
+        }
+        if let candidate = safariCandidates.first(where: { $0.bundleIdentifier == bundleIdentifier }) {
+            let key = ExtensionStoreCatalog.normalizationKey(forName: candidate.displayName)
+            return extensions.contains {
+                ExtensionStoreCatalog.normalizationKey(forName: $0.displayName) == key
+            }
+        }
+        return false
+    }
+
     var extensionsDirectory: URL {
         let base = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? fileManager.temporaryDirectory
