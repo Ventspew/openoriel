@@ -8,7 +8,7 @@ enum BrowserEngineKind: String, CaseIterable, Identifiable, Codable, Sendable {
     case webkit
     /// macOS: WebKit host with Chromium desktop UA + extension-friendly shims.
     case chromiumCompatibility
-    /// macOS: real Blink via embedded CEF or managed system Chromium app-windows.
+    /// macOS: Oriel Engine — real Blink via bundled CEF, or managed system Chromium app-windows.
     case chromiumNative
 
     var id: String { rawValue }
@@ -18,20 +18,20 @@ enum BrowserEngineKind: String, CaseIterable, Identifiable, Codable, Sendable {
         case .smart: "Smart (best per tab)"
         case .webkit: "WebKit"
         case .chromiumCompatibility: "Chromium Compatible"
-        case .chromiumNative: "Chromium Native"
+        case .chromiumNative: "Oriel Engine"
         }
     }
 
     var subtitle: String {
         switch self {
         case .smart:
-            return "Each tab chooses for itself: real Blink (Native) when available for stubborn apps, Chromium Compatible as fallback, WebKit for Apple/captcha-sensitive sites."
+            return "Each tab chooses for itself: Oriel Engine (Blink) when available for stubborn apps, Chromium Compatible as fallback, WebKit for Apple/captcha-sensitive sites."
         case .webkit:
             return "Apple’s engine for every tab. Required on iPhone and iPad. Best system integration."
         case .chromiumCompatibility:
             return "Every tab uses Chrome desktop identity on WebKit (unless a site override forces WebKit). Not Blink."
         case .chromiumNative:
-            return "Real Chromium/Blink: embedded CEF when built in, otherwise managed system Chromium app-windows on Mac."
+            return "Oriel Engine — real Blink inside Oriel tabs when CEF is bundled; otherwise a managed Chromium app-window on Mac."
         }
     }
 
@@ -76,9 +76,9 @@ enum ChromiumNativeStatus: Sendable {
         case .unavailableOnIOS:
             return "Apple requires all iPhone and iPad browsers to use WebKit. Chromium cannot render pages here."
         case .frameworkNotLinked:
-            return "Embedded CEF is not linked in this binary yet. On Mac: run Scripts/fetch-cef-macos.sh and Scripts/enable-cef-macos.sh, then rebuild. Until then, Native mode opens a managed Chromium app-window (real Blink). Or use Chromium Compatible for WebKit + Chrome identity."
+            return "Oriel Engine is not bundled in this binary yet. On Mac: run Scripts/build-oriel-engine-macos.sh (or make-macos-dmg.sh). Until then, Oriel Engine mode opens a managed Chromium app-window (real Blink). Or use Chromium Compatible for WebKit + Chrome identity."
         case .available:
-            return "Chromium Native framework is available — rebuild with ORIEL_HAS_CEF for in-tab Blink, or use managed windows."
+            return "Oriel Engine is ready — in-tab Blink when this build includes CEF; otherwise managed Chromium windows."
         }
     }
 }
@@ -239,7 +239,7 @@ enum RenderingEnginePolicy {
             return "Site override uses Chromium Compatible (Chrome identity on WebKit — not Blink)."
         case .openInSystemChrome:
             return canUseNativeBlink
-                ? "Site preference uses Chromium Native / system Blink."
+                ? "Site preference uses Oriel Engine / system Blink."
                 : "Site preference asked for system Chrome; falling back to Compatible."
         case .followDefault:
             break
@@ -252,10 +252,10 @@ enum RenderingEnginePolicy {
             if ChromiumAutoSiteList.matches(host) {
                 if concrete == .chromiumNative {
                     return ChromiumAutoSiteList.prefersRealBlink(host)
-                        ? "Smart → Chromium Native / Blink (needs real Chromium)."
-                        : "Smart → Chromium Native / Blink (stubborn web app)."
+                        ? "Smart → Oriel Engine / Blink (needs real Chromium)."
+                        : "Smart → Oriel Engine / Blink (stubborn web app)."
                 }
-                return "Smart → Chromium Compatible (Native/Blink unavailable — install Chrome or CEF)."
+                return "Smart → Chromium Compatible (Oriel Engine unavailable — install Chrome or ship a CEF DMG)."
             }
             return "Smart → WebKit for this host."
         case .webkit:
@@ -270,11 +270,11 @@ enum RenderingEnginePolicy {
             return "Settings: Chromium Compatible (not Blink)."
         case .chromiumNative:
             if concrete == .webkit {
-                return "Native preferred, but this host stays on WebKit."
+                return "Oriel Engine preferred, but this host stays on WebKit."
             }
             return concrete == .chromiumNative
-                ? "Settings: Chromium Native (Blink)."
-                : "Native requested; Compatible until Blink (CEF or system Chromium) is available."
+                ? "Settings: Oriel Engine (Blink)."
+                : "Oriel Engine requested; Compatible until Blink (bundled CEF or system Chromium) is available."
         }
         #endif
     }

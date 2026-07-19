@@ -1,6 +1,6 @@
 import Foundation
 
-/// Chromium Native (Blink) availability — filesystem + compile-flag checks.
+/// Oriel Engine (Blink/CEF) availability — filesystem + compile-flag checks.
 enum OrielCEFSupport {
     static var frameworkURL: URL? {
         #if os(macOS)
@@ -18,11 +18,17 @@ enum OrielCEFSupport {
             appropriateFor: nil,
             create: false
         ) {
-            let candidate = support
+            let root = support
                 .appendingPathComponent("Oriel", isDirectory: true)
                 .appendingPathComponent("CEF", isDirectory: true)
-                .appendingPathComponent("Chromium Embedded Framework.framework", isDirectory: true)
-            if fm.fileExists(atPath: candidate.path) { return candidate }
+            let candidates = [
+                root.appendingPathComponent("Chromium Embedded Framework.framework", isDirectory: true),
+                root.appendingPathComponent("Release", isDirectory: true)
+                    .appendingPathComponent("Chromium Embedded Framework.framework", isDirectory: true),
+            ]
+            for candidate in candidates where fm.fileExists(atPath: candidate.path) {
+                return candidate
+            }
         }
         return nil
         #else
@@ -53,12 +59,12 @@ enum OrielCEFSupport {
         return "CEF / Blink Native is Mac-only. iPhone and iPad stay on WebKit."
         #else
         if !isFrameworkOnDisk {
-            return "CEF framework not installed. Run Scripts/fetch-cef-macos.sh."
+            return "Oriel Engine framework not installed. Run Scripts/fetch-cef-macos.sh (or build the Mac DMG)."
         }
         if !isEmbeddedHostingCompiled {
-            return "CEF framework on disk, but this binary was not built with ORIEL_HAS_CEF. Run Scripts/enable-cef-macos.sh and rebuild the Mac target."
+            return "Oriel Engine framework on disk, but this binary was not built with ORIEL_HAS_CEF. Run Scripts/build-oriel-engine-macos.sh and rebuild the Mac target."
         }
-        return "Embedded CEF ready — Chromium Native paints Blink inside Oriel tabs."
+        return "Oriel Engine ready — Blink paints inside Oriel tabs."
         #endif
     }
 }

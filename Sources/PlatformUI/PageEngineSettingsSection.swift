@@ -59,7 +59,7 @@ struct PageEngineSettingsSection: View {
         } header: {
             Text("Page engine")
         } footer: {
-            Text("Works in Classic and Pulse. Default is Smart: each tab picks WebKit, Chromium Native (real Blink when CEF or system Chrome is available), or Chromium Compatible (WebKit + Chrome identity). Apple/captcha hosts stay on WebKit.")
+            Text("Works in Classic and Pulse. Default is Smart: each tab picks WebKit, Oriel Engine (real Blink when CEF is bundled or system Chrome is available), or Chromium Compatible (WebKit + Chrome identity). Apple/captcha hosts stay on WebKit.")
                 .fixedSize(horizontal: false, vertical: true)
         }
         #else

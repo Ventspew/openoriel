@@ -2,7 +2,7 @@ import SwiftUI
 #if os(macOS)
 import AppKit
 
-/// Embeds a CEF (Blink) browser view for Chromium Native tabs.
+/// Embeds Oriel Engine (CEF/Blink) for Native tabs.
 struct CefWebHostView: NSViewRepresentable {
     @Bindable var tab: BrowserTab
     var onDownload: (URL, String?) -> Void

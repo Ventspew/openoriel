@@ -45,10 +45,16 @@ static NSURL *OrielCEFFrameworkURL(void) {
     }
     NSArray<NSURL *> *supports = [fm URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask];
     if (supports.count > 0) {
-        NSURL *url = [[[supports[0] URLByAppendingPathComponent:@"Oriel"]
-                       URLByAppendingPathComponent:@"CEF"]
-                      URLByAppendingPathComponent:@"Chromium Embedded Framework.framework"];
-        if ([fm fileExistsAtPath:url.path]) { return url; }
+        NSURL *root = [[supports[0] URLByAppendingPathComponent:@"Oriel"]
+                       URLByAppendingPathComponent:@"CEF"];
+        NSArray<NSURL *> *local = @[
+            [root URLByAppendingPathComponent:@"Chromium Embedded Framework.framework"],
+            [[root URLByAppendingPathComponent:@"Release"]
+             URLByAppendingPathComponent:@"Chromium Embedded Framework.framework"],
+        ];
+        for (NSURL *url in local) {
+            if ([fm fileExistsAtPath:url.path]) { return url; }
+        }
     }
     return nil;
 }
@@ -77,12 +83,12 @@ static NSURL *OrielCEFFrameworkURL(void) {
 
 + (NSString *)statusSummary {
     if (!self.isFrameworkOnDisk) {
-        return @"CEF framework not installed. Run Scripts/fetch-cef-macos.sh.";
+        return @"Oriel Engine framework not installed. Run Scripts/fetch-cef-macos.sh (or build the Mac DMG).";
     }
     if (!self.isEmbeddedHostingCompiled) {
-        return @"CEF framework on disk, but this binary was not built with ORIEL_HAS_CEF. Run Scripts/enable-cef-macos.sh and rebuild the Mac target.";
+        return @"Oriel Engine framework on disk, but this binary was not built with ORIEL_HAS_CEF. Run Scripts/build-oriel-engine-macos.sh and rebuild.";
     }
-    return @"Embedded CEF ready — Chromium Native paints Blink inside Oriel tabs.";
+    return @"Oriel Engine ready — Blink paints inside Oriel tabs.";
 }
 
 + (BOOL)startIfNeeded:(NSError **)error {

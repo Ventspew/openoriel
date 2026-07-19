@@ -37,3 +37,14 @@ That tool is not distributed or linked into Oriel; only the resulting
 JSON rule data is shipped.
 
 Script: Scripts/build_content_blocker.py
+
+---
+
+Chromium Embedded Framework (Oriel Engine on Mac)
+
+Mac release builds may bundle the Chromium Embedded Framework (CEF)
+from https://bitbucket.org/chromiumembedded/cef / Spotify CEF builds.
+CEF and Chromium components are covered by their respective BSD-style
+and other open-source licences; see the CEF distribution LICENSE /
+CREDITS.html. Oriel does not claim affiliation with Google or the
+Chromium authors.

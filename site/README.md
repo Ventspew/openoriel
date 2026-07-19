@@ -5,7 +5,7 @@ Static landing page for [openoriel.com](https://openoriel.com) (Cloudflare Pages
 ## What it covers
 
 - Classic / Pulse editions
-- Smart dual engine on Mac (WebKit + Chromium Compatible / Native Blink via CEF or managed Chromium)
+- Smart dual engine on Mac (WebKit + Chromium Compatible / Oriel Engine Blink via bundled CEF)
 - Password Vault, Mac governors, everyday page tools
 - Privacy and tracking controls (Shields + Fire)
 - Platforms (iPhone, iPad, Mac)

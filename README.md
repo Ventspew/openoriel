@@ -10,7 +10,7 @@ Native browser for **iPhone, iPad, and Mac**. Swift, SwiftUI, WebKit — with Cl
   <a href="https://inveil.net">inveil.net</a>
 </p>
 
-Bundle ID: `net.inveil.oriel` · Marketing site source: [`site/`](site/) · Latest: **1.0.0 (67)**
+Bundle ID: `net.inveil.oriel` · Marketing site source: [`site/`](site/) · Latest: **1.0.0 (68)**
 
 ---
 
@@ -20,8 +20,8 @@ Installers ship on [GitHub Releases](https://github.com/Ventspew/openoriel/relea
 
 | Platform | Asset | Notes |
 |----------|--------|--------|
-| **Mac** | `Oriel-*-macOS.dmg` | Open → drag into Applications. First launch: right-click → Open |
-| **iPhone / iPad** | `Oriel-*-unsigned.ipa` | Sideload (e.g. TrollStore). Re-sign with your Apple ID |
+| **Mac** | `Oriel-*-macOS.dmg` | Includes **Oriel Engine** (Blink/CEF). Open → drag into Applications. First launch: right-click → Open |
+| **iPhone / iPad** | `Oriel-*-unsigned.ipa` | WebKit only (Apple rule). Sideload (e.g. TrollStore) |
 
 TestFlight uploads: `Scripts/upload-testflight.sh` (needs Apple Developer Program).
 
@@ -43,12 +43,14 @@ Switch anytime in **Settings → Appearance**.
 
 | Mode | What it is |
 |------|------------|
-| **Smart** (default) | Per-tab: **Native/Blink** for stubborn web apps when CEF or system Chromium is available; **Compatible** as fallback; **WebKit** for Apple / captcha-sensitive hosts |
+| **Smart** (default) | Per-tab: **Oriel Engine (Blink)** for stubborn web apps when CEF is bundled or system Chromium is available; **Compatible** as fallback; **WebKit** for Apple / captcha-sensitive hosts |
 | **WebKit** | Native `WKWebView` |
 | **Chromium Compatible** | WebKit paint + Chrome User-Agent / Client Hints — **not Blink** |
-| **Chromium Native** | Real Blink: in-tab **CEF** when built in (`ORIEL_HAS_CEF`), else managed system Chromium app-window |
+| **Oriel Engine** | Oriel’s own Blink surface: in-tab **CEF** in release DMGs, else managed system Chromium app-window |
 
-**iPhone and iPad stay on WebKit only** — Apple’s rule. Details: [`docs/DUAL_ENGINE.md`](docs/DUAL_ENGINE.md) · CEF setup: [`docs/CEF_NATIVE.md`](docs/CEF_NATIVE.md).
+**iPhone and iPad stay on WebKit only** — Apple’s rule. Details: [`docs/DUAL_ENGINE.md`](docs/DUAL_ENGINE.md) · Engine packaging: [`docs/CEF_NATIVE.md`](docs/CEF_NATIVE.md).
+
+Mac DMGs are larger (~150–250 MB) because they ship Oriel Engine. Slim WebKit-only: `ORIEL_BUNDLE_CEF=0 bash Scripts/make-macos-dmg.sh`.
 
 ---
 
@@ -59,7 +61,7 @@ Switch anytime in **Settings → Appearance**.
 - **Extensions** — Chrome Web Store, Firefox Add-ons, Safari `.appex` import via Oriel Store (`WKWebExtension` where the OS allows)
 - **Password Vault** — optional AES-GCM vault, Keychain-wrapped key, Touch ID / Face ID unlock; system Keychain autofill still available
 - **Mac governors** — timer throttle, WebView pool, memory-pressure hibernate (real Oriel-side controls — not fake OS CPU% gauges)
-- **Smart + Blink (Mac)** — stubborn apps prefer real Chromium when available; toggle “Smart prefers Native / Blink” in Chromium settings (on by default)
+- **Oriel Engine (Mac)** — bundled Blink/CEF in release DMGs; Smart prefers it for stubborn apps (toggle in Chromium settings)
 - **iCloud sync** — bookmarks, Reading List, open tabs, limited history, appearance (not vault secrets)
 
 ---
@@ -90,17 +92,17 @@ bash Scripts/make-unsigned-ipa.sh
 # → build/ipa/Oriel-<version>-<build>-unsigned.ipa
 ```
 
-Optional Mac CEF (in-tab Blink for Chromium Native):
+Oriel Engine (Mac Blink) — bundled by default in the DMG script:
 
 ```bash
-bash Scripts/fetch-cef-macos.sh   # pinned Chromium Standard CEF (~250–300 MB)
-bash Scripts/enable-cef-macos.sh  # writes Vendor/CEF.xcconfig
-# Apply Vendor/CEF.xcconfig in Xcode (Mac), embed the framework, clean build.
+bash Scripts/fetch-cef-macos.sh            # pinned CEF (~250 MB, once)
+bash Scripts/build-oriel-engine-macos.sh   # wrapper + Helper apps
+bash Scripts/make-macos-dmg.sh             # Release app with Engine embedded
 ```
 
 See [`docs/CEF_NATIVE.md`](docs/CEF_NATIVE.md).
 
-CI builds the unsigned IPA on pushes to `main` (Actions → Build unsigned IPA). Tag `v*` runs the Release workflow (macOS DMG).
+CI builds the unsigned IPA on pushes to `main`. Tag `v*` runs Release (macOS DMG **with Oriel Engine**).
 
 ### Release tagging
 
@@ -117,7 +119,7 @@ git push origin v1.0.0-N
 Sources/
   App/              # Entry, composition root
   BrowserCore/      # Engines, Smart routing, Chromium Native host
-  CEF/              # ObjC++ CEF bridge + in-tab Blink host (Mac)
+  CEF/              # Oriel Engine bridge + Helper source (Mac Blink)
   WebView/          # WKWebView, pool, navigation
   Tabs/ History/ Bookmarks/ Downloads/
   Privacy/          # Shields, fingerprint, Fire
@@ -159,4 +161,4 @@ Copyright 2025–2026 inveil.net
 
 Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
-Oriel is independent and not affiliated with Apple, Google, or Opera. “Chromium Compatible” is not Blink. Chromium Native is real Blink (CEF or managed Chromium) on Mac only.
+Oriel is independent and not affiliated with Apple, Google, or Opera. “Chromium Compatible” is not Blink. **Oriel Engine** is real Blink (bundled CEF or managed Chromium) on Mac only.

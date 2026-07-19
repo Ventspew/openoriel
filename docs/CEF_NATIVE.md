@@ -1,79 +1,67 @@
-# Chromium Native / CEF (Mac Blink)
+# Oriel Engine / CEF (Mac Blink)
 
 Honest dual-engine notes: [`DUAL_ENGINE.md`](DUAL_ENGINE.md).
 
 ## Goal
 
-On **Mac only**, Chromium Native can paint with **real Blink** inside Oriel tabs via the Chromium Embedded Framework (CEF). iPhone and iPad stay WebKit — Apple’s rule.
+On **Mac only**, **Oriel Engine** paints with **real Blink** inside Oriel tabs via the Chromium Embedded Framework (CEF). Release DMGs bundle the engine by default (`ORIEL_BUNDLE_CEF=1`). iPhone and iPad stay WebKit — Apple’s rule.
 
-## The five pieces
+## What ships
 
-| # | Piece | What shipped |
-|---|--------|----------------|
-| 1 | **Fetch / pin CEF** | `Scripts/fetch-cef-macos.sh` downloads a pinned Standard build (Chromium 144), verifies SHA1, installs framework + headers under `~/Library/Application Support/Oriel/CEF/`, symlinks `Vendor/CEF` |
-| 2 | **ObjC++ ↔ Swift bridge** | `Sources/CEF/OrielCEFBridge.h/.mm` — stub always compiles; real `CefInitialize` / `CefBrowserHost` path when `ORIEL_HAS_CEF=1` |
-| 3 | **In-app tab host** | `CefWebHostView` + shell routing: Native + ready CEF → Blink view; otherwise managed Chromium window |
-| 4 | **Nav / downloads / cookies** | Address/title/loading sync; download callback → Oriel `DownloadManager`; `clearCookiesAndCache` via `CefCookieManager` (separate jar from WebKit — by design) |
-| 5 | **Sandbox / notarize / updates** | This doc + entitlements notes; pin bump = re-run fetch script |
+| Piece | Path |
+|--------|------|
+| Fetch / pin CEF | `Scripts/fetch-cef-macos.sh` — pinned Standard Chromium 144, SHA1, installs under `~/Library/Application Support/Oriel/CEF/` (Release + headers + wrapper sources; no Debug/tests) |
+| Build Engine | `Scripts/build-oriel-engine-macos.sh` — `libcef_dll_wrapper.a` + `Oriel Helper*.app` + `Vendor/CEF.xcconfig` |
+| Embed into .app | `Scripts/embed-oriel-engine-macos.sh` — versioned framework layout + helpers under `Contents/Frameworks/` |
+| DMG | `Scripts/make-macos-dmg.sh` — fetch → build → compile with `ORIEL_HAS_CEF` → embed → DMG |
+| Bridge | `Sources/CEF/OrielCEFBridge.*` + `CefWebHostView` |
+| Helper source | `Sources/CEF/Helper/process_helper_mac.cc` (compiled by the Engine script, not the iOS target) |
 
-## Enable on your Mac
+## Local Mac build
 
 ```bash
-bash Scripts/fetch-cef-macos.sh          # ~250–300 MB download
-bash Scripts/enable-cef-macos.sh         # writes Vendor/CEF.xcconfig
-xcodegen generate
-open Oriel.xcodeproj
+bash Scripts/fetch-cef-macos.sh          # ~250 MB download (once)
+bash Scripts/build-oriel-engine-macos.sh # wrapper + helpers
+bash Scripts/make-macos-dmg.sh           # full Release app + DMG with Engine
 ```
 
-Then for the **Mac** destination:
+Slim WebKit-only DMG (no Engine):
 
-1. Apply `Vendor/CEF.xcconfig` (or set `ORIEL_HAS_CEF=1`, header/framework search paths to `Vendor/CEF`).
-2. Embed **Chromium Embedded Framework.framework** into the app’s Frameworks (Copy Files), *or* keep loading from Application Support (runtime detection already checks both).
-3. Clean + Run.
+```bash
+ORIEL_BUNDLE_CEF=0 bash Scripts/make-macos-dmg.sh
+```
 
-Status strings in Settings → Engine / Mac Governors reflect:
-
-- framework missing  
-- framework present but binary not built with `ORIEL_HAS_CEF`  
-- embedded Blink ready  
+Needs: Xcode 16+, cmake, ninja (`brew install cmake ninja`).
 
 ## Runtime matrix
 
 | Situation | Behavior |
 |-----------|----------|
 | iPhone / iPad | Always WebKit |
-| Mac, no CEF, Chrome installed | Native → **managed Chromium app-window** (real Blink, separate process) |
+| Mac DMG with Engine (default) | Oriel Engine → **in-tab Blink** |
+| Mac, no CEF in binary, Chrome installed | Oriel Engine → **managed Chromium app-window** |
 | Mac, CEF on disk, app **without** `ORIEL_HAS_CEF` | Status explains rebuild; managed window still available |
-| Mac, CEF + `ORIEL_HAS_CEF` build | Native → **in-tab Blink** via CEF |
 
 ## Cookies, extensions, Shields
 
-- **Cookies / storage:** CEF uses its own profile (not `WKWebsiteDataStore`). Fire / clear actions should call both WebKit clear and `OrielCEFHost.clearCookiesAndCache` when Native tabs exist.
-- **WKWebExtension / Oriel Store:** WebKit-only. CEF tabs do not load Safari/Chrome WebExtensions through Apple’s API. Full Chrome-extension parity inside CEF is a separate project (`cef_extensions`).
-- **Shields / content blockers:** `WKContentRuleList` does not apply to CEF. Native tabs rely on site HTTPS and CEF defaults until a CEF request filter is added.
+- **Cookies / storage:** CEF uses its own profile (not `WKWebsiteDataStore`). Fire clears WebKit and CEF when Engine is linked.
+- **WKWebExtension / Oriel Store:** WebKit-only.
+- **Shields / content blockers:** `WKContentRuleList` does not apply to CEF tabs yet.
 
 ## Sandbox & notarization
 
-CEF spawns helper processes (GPU, renderer, utility). Under App Sandbox this is fragile.
+Engine builds use `Resources/Oriel-macOS-Engine.entitlements` (App Sandbox **off**) so CEF helpers can run. Ad-hoc Release DMGs are not notarized; Gatekeeper may require right-click → Open once.
 
-Practical approach for Oriel:
-
-1. **Debug / local Native:** `settings.no_sandbox = true` in the CEF bridge (already set when `ORIEL_HAS_CEF`). Prefer a non-sandboxed Debug Mac entitlement file when embedding CEF.
-2. **Release:** either  
-   - ship Native as **managed Chromium windows** (sandbox-friendly), or  
-   - ship CEF helpers as separate Mach-O helpers with hardened runtime + correct `com.apple.security.cs.disable-library-validation` / inheritance entitlements, and notarize the whole bundle.
-3. **Notarize:** `codesign` the framework and helpers, then `notarytool` the `.app` / DMG. CEF’s Spotify builds are unsigned for your Team — you must re-sign.
-
-See also Apple’s hardened runtime docs and CEF’s Mac distribution notes in the binary tree (`README.txt`).
+For notarized distribution later: re-sign the framework, every Helper, and the main app with your Developer ID, then `notarytool` the DMG.
 
 ## Updating Chromium / CEF
 
-1. Bump `PIN_VERSION` + SHA1s in `Scripts/fetch-cef-macos.sh` from [cef-builds.spotifycdn.com](https://cef-builds.spotifycdn.com/index.html) (`index.json` → `macosarm64` / `macosx64`, `type: standard`, non-beta).
-2. Re-run fetch + enable + clean build.
-3. Smoke-test: Native tab loads `chrome://version` / `https://example.com`, back/forward, download, Fire clears CEF cookies.
+1. Bump `PIN_VERSION` + SHA1s in `Scripts/fetch-cef-macos.sh` from [cef-builds.spotifycdn.com](https://cef-builds.spotifycdn.com/index.html).
+2. Re-run fetch + `build-oriel-engine-macos.sh` + DMG.
+3. Smoke-test: Oriel Engine tab loads a page, back/forward, download, Fire clears CEF cookies.
 
 ## What this is not
 
 - Not Blink on iOS.  
 - Not “Chromium Compatible” (that remains WebKit + Chrome UA).  
-- Not a full Chrome clone (extensions, sync, autofill parity).
+- Not a full Chrome clone (extensions, sync, autofill parity inside CEF).

@@ -44,8 +44,8 @@ jobs:
           xcodebuild -version
           xcodebuild -showsdks || true
 
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - name: Install XcodeGen + Engine build tools
+        run: brew install xcodegen cmake ninja
 
       - name: Resolve version
         id: version
@@ -73,10 +73,11 @@ jobs:
           echo "build=$BUILD" >> "$GITHUB_OUTPUT"
           echo "Resolved release $TAG → Oriel $MARKETING ($BUILD) (project.yml was $YML_MARKETING/$YML_BUILD)"
 
-      - name: Build DMG
+      - name: Build DMG (with Oriel Engine / CEF)
         env:
           ORIEL_MARKETING_VERSION: ${{ steps.version.outputs.marketing }}
           ORIEL_BUILD_NUMBER: ${{ steps.version.outputs.build }}
+          ORIEL_BUNDLE_CEF: "1"
         run: bash Scripts/make-macos-dmg.sh
 
       - name: Upload DMG artifact
@@ -102,6 +103,8 @@ jobs:
             1. Download **Oriel-${{ steps.version.outputs.marketing }}-${{ steps.version.outputs.build }}-macOS.dmg**
             2. Open the DMG and drag **Oriel** into **Applications**
             3. First launch: right-click Oriel → **Open** (ad-hoc signed build; Gatekeeper may warn once)
+
+            This Mac build includes **Oriel Engine** (Blink via CEF) for in-tab Chromium Native. Larger than WebKit-only builds by design.
 
             Website: https://openoriel.com  
             Bundle ID: `net.inveil.oriel`

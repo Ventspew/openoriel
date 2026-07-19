@@ -3,10 +3,10 @@ import Foundation
 import AppKit
 #endif
 
-/// Mac Chromium Native runtime.
+/// Mac Oriel Engine runtime (Blink).
 ///
-/// - **Embedded CEF**: framework on disk + binary built with `ORIEL_HAS_CEF` → in-tab Blink.
-/// - **Managed Chromium**: otherwise Native opens a real Chromium process (Chrome/Brave/Edge/Arc).
+/// - **Bundled CEF**: framework in the app + binary built with `ORIEL_HAS_CEF` → in-tab Blink.
+/// - **Managed Chromium**: otherwise Oriel Engine opens a real Chromium process (Chrome/Brave/Edge/Arc).
 @MainActor
 enum ChromiumNativeHost {
     /// True when a CEF/Chromium framework is present on disk (Application Support or app bundle).
@@ -35,9 +35,9 @@ enum ChromiumNativeHost {
         }
         if ChromiumEngineBridge.systemChromiumInstalled {
             let name = ChromiumEngineBridge.preferredSystemChromiumName ?? "Chrome"
-            return "No embedded CEF yet. Native mode uses managed \(name) app-windows (real Chromium process). Run Scripts/fetch-cef-macos.sh, then Scripts/enable-cef-macos.sh."
+            return "Oriel Engine CEF is not bundled in this build. Using managed \(name) app-windows (real Chromium process). Ship via Scripts/make-macos-dmg.sh (bundles Engine by default)."
         }
-        return "Install Chrome/Brave/Edge/Arc for managed Native windows, or run Scripts/fetch-cef-macos.sh to add CEF."
+        return "Install Chrome/Brave/Edge/Arc for managed Oriel Engine windows, or build a Mac DMG with Oriel Engine bundled."
         #endif
     }
 

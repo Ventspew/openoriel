@@ -12,7 +12,7 @@ settings:
   SWIFT_VERSION: "5.10"
   BASE_SDK: ""
   MARKETING_VERSION: "1.0.0"
-  CURRENT_PROJECT_VERSION: "67"
+  CURRENT_PROJECT_VERSION: "68"
 
 schemes:
   Oriel:
@@ -41,6 +41,8 @@ targets:
       - path: Sources
         excludes:
           - "ThirdParty/ZIPFoundation/LICENSE"
+          # Mac Oriel Engine helpers are compiled by Scripts/build-oriel-engine-macos.sh
+          - "CEF/Helper/**"
       - path: Resources/Assets.xcassets
         buildPhase: resources
       - path: Resources/AlternateIcons
@@ -86,7 +88,7 @@ targets:
       PRODUCT_BUNDLE_IDENTIFIER: net.inveil.oriel
       PRODUCT_NAME: Oriel
       MARKETING_VERSION: "1.0.0"
-      CURRENT_PROJECT_VERSION: "67"
+      CURRENT_PROJECT_VERSION: "68"
       DEVELOPMENT_TEAM: 2PP6UH4PWA
       CODE_SIGN_STYLE: Automatic
       GENERATE_INFOPLIST_FILE: YES

@@ -93,7 +93,7 @@ struct MacGovernorsView: View {
                               && !ChromiumNativeHost.isEmbeddedFrameworkAvailable)
                 }
             } header: {
-                Text("Chromium Native")
+                Text("Oriel Engine")
             } footer: {
                 Text("In-tab Blink: fetch-cef-macos.sh + enable-cef-macos.sh + rebuild. Until ORIEL_HAS_CEF, Native uses a real Chromium app-window. See docs/CEF_NATIVE.md.")
                     .fixedSize(horizontal: false, vertical: true)

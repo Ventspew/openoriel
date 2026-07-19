@@ -29,7 +29,7 @@ struct ChromiumFeaturesView: View {
         @Bindable var policy = environment.chromiumPolicy
         return Form {
             Section {
-                Text("Smart (default) picks per tab: WebKit for Apple/captcha hosts; Chromium Native (real Blink) for stubborn apps when CEF or system Chrome is available; Chromium Compatible (WebKit + Chrome identity) as fallback. Classic and Pulse share these controls.")
+                Text("Smart (default) picks per tab: WebKit for Apple/captcha hosts; Oriel Engine (real Blink) for stubborn apps when CEF is bundled or system Chrome is available; Chromium Compatible (WebKit + Chrome identity) as fallback. Classic and Pulse share these controls.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -59,7 +59,7 @@ struct ChromiumFeaturesView: View {
             }
 
             Section {
-                Toggle("Smart prefers Native / Blink for stubborn sites", isOn: $policy.smartPrefersNativeBlink)
+                Toggle("Smart prefers Oriel Engine (Blink) for stubborn sites", isOn: $policy.smartPrefersNativeBlink)
                 Toggle("Auto-upgrade stubborn sites when default is WebKit", isOn: $policy.autoChromiumForStubbornSites)
                 Toggle("Inject Chrome Client Hints (userAgentData)", isOn: $policy.injectChromeIdentity)
                 Toggle("Suggest Open in system Chrome for stubborn sites", isOn: $policy.suggestSystemChromeForStubbornSites)
