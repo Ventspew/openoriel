@@ -88,7 +88,9 @@ enum SafariWebExtensionImporter {
     // MARK: - Discovery (macOS Applications)
 
     /// Scans `/Applications` and `~/Applications` for Safari Web Extension `.appex` bundles.
+    /// On iOS this always returns an empty list (no Applications layout to scan).
     static func discoverInstalledCandidates(fileManager: FileManager = .default) -> [SafariExtensionCandidate] {
+        #if os(macOS)
         var roots: [URL] = [
             URL(fileURLWithPath: "/Applications", isDirectory: true)
         ]
@@ -108,11 +110,11 @@ enum SafariWebExtensionImporter {
             ) else { continue }
 
             for appURL in apps where appURL.pathExtension.lowercased() == "app" {
-                let plugins = appURL
+                let pluginsDir = appURL
                     .appendingPathComponent("Contents", isDirectory: true)
                     .appendingPathComponent("PlugIns", isDirectory: true)
                 guard let plugins = try? fileManager.contentsOfDirectory(
-                    at: plugins,
+                    at: pluginsDir,
                     includingPropertiesForKeys: nil,
                     options: [.skipsHiddenFiles]
                 ) else { continue }
@@ -132,6 +134,9 @@ enum SafariWebExtensionImporter {
         return found.sorted {
             $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
         }
+        #else
+        return []
+        #endif
     }
 
     // MARK: - Staging / extraction
