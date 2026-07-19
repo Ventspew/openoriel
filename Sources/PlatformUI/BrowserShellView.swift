@@ -128,6 +128,13 @@ struct BrowserShellView: View {
                 .orielSheetChrome()
                 .orielTheming(settings: environment.settings)
         }
+        #if os(macOS)
+        .sheet(isPresented: $environment.showChromiumFeatures) {
+            ChromiumFeaturesView()
+                .orielSheetChrome()
+                .orielTheming(settings: environment.settings)
+        }
+        #endif
         .sheet(isPresented: $environment.showTranslate) {
             TranslatePageView()
                 .orielSheetChrome()
@@ -917,6 +924,11 @@ struct BrowserShellView: View {
             environment.showProfiles = true
         }
         Button("Settings", systemImage: "gearshape") { openAppSettings() }
+        #if os(macOS)
+        Button("Chromium…", systemImage: "cpu") {
+            environment.showChromiumFeatures = true
+        }
+        #endif
         if environment.settings.edition.isPulse {
             Button("Pulse", systemImage: "bolt.horizontal") {
                 environment.showPulsePerformance = true
@@ -1008,6 +1020,11 @@ struct BrowserShellView: View {
         Button("Shields", systemImage: "shield.lefthalf.filled") {
             environment.showPrivacyShield = true
         }
+        #if os(macOS)
+        Button("Chromium…", systemImage: "cpu") {
+            environment.showChromiumFeatures = true
+        }
+        #endif
         if environment.settings.edition.isPulse {
             Button("Pulse", systemImage: "bolt.horizontal") {
                 environment.showPulsePerformance = true
@@ -1084,26 +1101,53 @@ struct BrowserShellView: View {
         }
         .disabled(tab.isShowingStartPage)
         #if os(macOS)
-        if let url = tab.navigation.url, !URLParser.isStartPage(url) {
-            Button("Open in System Chrome…") {
-                _ = ChromiumEngineBridge.openInSystemChromium(url)
+        Menu("Page Engine") {
+            Button("This Tab: WebKit") {
+                tab.setEngineOverride(.webkit)
+                tab.reload()
             }
-            .disabled(!ChromiumEngineBridge.systemChromiumInstalled)
+            Button("This Tab: Chromium Compatible") {
+                tab.setEngineOverride(.chromiumCompatibility)
+                tab.reload()
+            }
+            Button("Follow Default / Site Policy") {
+                tab.clearEngineOverride()
+                environment.applyResolvedEngine(to: tab)
+                tab.reload()
+            }
+            Divider()
+            if let host = tab.navigation.url?.host, !tab.isShowingStartPage {
+                Button("Always Chromium Compatible for \(host)") {
+                    environment.chromiumPolicy.setPreference(.forceChromiumCompatible, forHost: host)
+                    environment.applyResolvedEngine(to: tab)
+                    tab.reload()
+                }
+                Button("Always WebKit for \(host)") {
+                    environment.chromiumPolicy.setPreference(.forceWebKit, forHost: host)
+                    environment.applyResolvedEngine(to: tab)
+                    tab.reload()
+                }
+                Button("Always Open \(host) in System Chrome") {
+                    environment.chromiumPolicy.setPreference(.openInSystemChrome, forHost: host)
+                }
+                Button("Reset Site Preference") {
+                    environment.chromiumPolicy.setPreference(.followDefault, forHost: host)
+                    environment.applyResolvedEngine(to: tab)
+                    tab.reload()
+                }
+            }
+            Divider()
+            Button("Chromium Features…") {
+                environment.showChromiumFeatures = true
+            }
+            if let url = tab.navigation.url, !URLParser.isStartPage(url) {
+                Button("Open in System Chrome…") {
+                    _ = ChromiumEngineBridge.openInSystemChromium(url)
+                }
+                .disabled(!ChromiumEngineBridge.systemChromiumInstalled)
+            }
         }
-        Button("Use Chromium Compatible UA") {
-            environment.settings.preferredEngine = .chromiumCompatibility
-            environment.syncPulseRuntimeFlags()
-            environment.icloudSync.noteLocalChange()
-            tab.reload()
-        }
-        .disabled(RenderingEnginePolicy.resolved(environment.settings.preferredEngine) == .chromiumCompatibility)
-        Button("Use WebKit UA") {
-            environment.settings.preferredEngine = .webkit
-            environment.syncPulseRuntimeFlags()
-            environment.icloudSync.noteLocalChange()
-            tab.reload()
-        }
-        .disabled(RenderingEnginePolicy.resolved(environment.settings.preferredEngine) == .webkit)
+        .disabled(tab.isShowingStartPage)
         #endif
         Button(tab.javaScriptEnabled ? "Disable JavaScript" : "Enable JavaScript") {
             tab.toggleJavaScript()
@@ -1218,9 +1262,10 @@ struct BrowserShellView: View {
         }
     }
 
-    private func webViewPoolConfigKey(environment: AppEnvironment) -> String {
-        let engine = RenderingEnginePolicy.resolved(environment.settings.preferredEngine).rawValue
-        return "fp\(environment.privacy.fingerprintingProtection)-ap\(environment.settings.blockAutoplay)-p\(environment.profiles.activeProfileID.uuidString)-e\(engine)"
+    private func webViewPoolConfigKey(environment: AppEnvironment, tab: BrowserTab) -> String {
+        let engine = environment.resolvedEngine(for: tab).rawValue
+        let identity = environment.chromiumPolicy.injectChromeIdentity ? "1" : "0"
+        return "fp\(environment.privacy.fingerprintingProtection)-ap\(environment.settings.blockAutoplay)-p\(environment.profiles.activeProfileID.uuidString)-e\(engine)-ci\(identity)"
     }
 
     private func protectedWebViewTabIDs(environment: AppEnvironment) -> Set<UUID> {
@@ -1348,15 +1393,17 @@ struct BrowserShellView: View {
                 },
                 contentBlockerGeneration: environment.contentBlocker.generation,
                 websiteDataStore: environment.profiles.dataStore(isPrivateTab: tab.isPrivate),
-                preferChromeUserAgent: RenderingEnginePolicy.usesChromeDesktopUserAgent(environment.settings.preferredEngine),
-                poolConfigKey: webViewPoolConfigKey(environment: environment),
+                preferChromeUserAgent: RenderingEnginePolicy.usesChromeDesktopUserAgent(tab.preferredEngine),
+                injectChromiumIdentity: environment.chromiumPolicy.injectChromeIdentity
+                    && RenderingEnginePolicy.usesChromeDesktopUserAgent(tab.preferredEngine),
+                poolConfigKey: webViewPoolConfigKey(environment: environment, tab: tab),
                 protectedTabIDs: protectedWebViewTabIDs(environment: environment)
             )
             // Remount only when the WKWebView configuration must change.
             // Do NOT key on contentBlocker.generation — that wiped back/forward history
             // whenever filter lists finished compiling (rules re-attach in updateWebView).
             // Tab switches keep history via WebViewPool even when this view leaves the hierarchy.
-            .id("\(tab.id.uuidString)-\(webViewPoolConfigKey(environment: environment))")
+            .id("\(tab.id.uuidString)-\(webViewPoolConfigKey(environment: environment, tab: tab))")
             .opacity(showStart || showError ? 0 : 1)
             .allowsHitTesting(!(showStart || showError))
             .accessibilityHidden(showStart || showError)

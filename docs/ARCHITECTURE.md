@@ -34,7 +34,7 @@ Navigation chrome ← NavigationState ← WebViewCoordinator (WKNavigationDelega
 | Chrome | Compact toolbar | Adaptive | Native toolbar |
 | Tabs | Overview | Adaptive | Tab strip / overview |
 | Extensions | 18.4+ `WKWebExtension` | 18.4+ `WKWebExtension` | 15.4+ `WKWebExtension` |
-| Page engine | WebKit only | WebKit only | WebKit + Chromium Compatible (+ Native when CEF linked) |
+| Page engine | WebKit only | WebKit only | WebKit + Chromium Compatible (+ Native when CEF linked); per-site/tab policy, Client Hints, system Chrome hand-off |
 
 Use `#if os(macOS)` / `#if os(iOS)` only where UIKit/AppKit or API differences require it.
 

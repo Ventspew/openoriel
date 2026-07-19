@@ -41,6 +41,8 @@ struct BrowserWebView: PlatformViewRepresentable {
     var websiteDataStore: WKWebsiteDataStore?
     /// When true, force Chrome desktop UA (Chromium Compatible / Native preference on Mac).
     var preferChromeUserAgent: Bool = false
+    /// Inject Chrome Client Hints / navigator identity (Mac Chromium Compatible).
+    var injectChromiumIdentity: Bool = false
     /// Configuration fingerprint used by `WebViewPool` (profile / fingerprinting / autoplay).
     var poolConfigKey: String = "default"
     /// Tab IDs that must not be evicted while this view is alive (active + split).
@@ -124,6 +126,12 @@ struct BrowserWebView: PlatformViewRepresentable {
         }
         #endif
 
+        #if os(macOS)
+        if preferChromeUserAgent, injectChromiumIdentity {
+            configuration.userContentController.addUserScript(ChromiumIdentityScript.userScript)
+        }
+        #endif
+
         let webView = WKWebView(frame: .zero, configuration: configuration)
         // Keep the web view clear so themed start-page washes aren't covered by opaque white/black.
         #if os(iOS)
@@ -159,10 +167,11 @@ struct BrowserWebView: PlatformViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
 
-        if tab.requestsDesktopSite {
+        if tab.requestsDesktopSite || preferChromeUserAgent {
             webView.customUserAgent = UserAgentPolicy.customUserAgent(
                 for: tab.navigation.url,
-                requestsDesktopSite: true
+                requestsDesktopSite: tab.requestsDesktopSite,
+                preferredEngine: preferChromeUserAgent ? .chromiumCompatibility : .webkit
             )
         }
 

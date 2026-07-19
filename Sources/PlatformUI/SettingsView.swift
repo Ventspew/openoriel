@@ -686,7 +686,7 @@ private struct AboutSettingsPage: View {
                 LabeledContent("Edition", value: environment.settings.edition.displayName)
                 LabeledContent(
                     "Page engine",
-                    value: RenderingEnginePolicy.resolved(environment.settings.preferredEngine).displayName
+                    value: environment.resolvedEngine(for: environment.activeTab).displayName
                 )
                 LabeledContent("Website", value: BrowserConstants.productWebsiteHost)
                 LabeledContent("Publisher", value: BrowserConstants.publisherName)

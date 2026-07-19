@@ -13,19 +13,23 @@ enum ChromiumEngineBridge {
         RenderingEnginePolicy.chromiumNativeStatus == .available
     }
 
-    /// Open the URL in Google Chrome or Chromium if installed (Mac escape hatch).
+    private static let candidateBundleIDs = [
+        "com.google.Chrome",
+        "com.google.Chrome.beta",
+        "com.google.Chrome.dev",
+        "com.google.Chrome.canary",
+        "org.chromium.Chromium",
+        "company.thebrowser.Browser", // Arc
+        "com.brave.Browser",
+        "com.microsoft.edgemac"
+    ]
+
+    /// Open the URL in Google Chrome, Chromium, Arc, Brave, or Edge if installed (Mac escape hatch).
     @discardableResult
     static func openInSystemChromium(_ url: URL) -> Bool {
         #if os(macOS)
-        let candidates = [
-            "com.google.Chrome",
-            "com.google.Chrome.beta",
-            "com.google.Chrome.dev",
-            "org.chromium.Chromium",
-            "company.thebrowser.Browser" // Arc — Chromium-based
-        ]
         let workspace = NSWorkspace.shared
-        for bundleID in candidates {
+        for bundleID in candidateBundleIDs {
             if let appURL = workspace.urlForApplication(withBundleIdentifier: bundleID) {
                 let config = NSWorkspace.OpenConfiguration()
                 workspace.open([url], withApplicationAt: appURL, configuration: config) { _, _ in }
@@ -40,10 +44,40 @@ enum ChromiumEngineBridge {
 
     static var systemChromiumInstalled: Bool {
         #if os(macOS)
-        let ids = ["com.google.Chrome", "org.chromium.Chromium", "com.google.Chrome.beta"]
-        return ids.contains { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil }
+        return preferredSystemChromiumBundleID != nil
         #else
         return false
         #endif
+    }
+
+    static var preferredSystemChromiumBundleID: String? {
+        #if os(macOS)
+        for bundleID in candidateBundleIDs {
+            if NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) != nil {
+                return bundleID
+            }
+        }
+        return nil
+        #else
+        return nil
+        #endif
+    }
+
+    static var preferredSystemChromiumName: String? {
+        guard let id = preferredSystemChromiumBundleID else { return nil }
+        switch id {
+        case "com.google.Chrome", "com.google.Chrome.beta", "com.google.Chrome.dev", "com.google.Chrome.canary":
+            return "Google Chrome"
+        case "org.chromium.Chromium":
+            return "Chromium"
+        case "company.thebrowser.Browser":
+            return "Arc"
+        case "com.brave.Browser":
+            return "Brave"
+        case "com.microsoft.edgemac":
+            return "Microsoft Edge"
+        default:
+            return "Chromium browser"
+        }
     }
 }

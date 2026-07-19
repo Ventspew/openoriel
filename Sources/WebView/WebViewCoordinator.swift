@@ -307,6 +307,17 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             }
             #endif
 
+            #if os(macOS)
+            if navigationAction.targetFrame?.isMainFrame != false,
+               URLParser.isAllowedNavigation(url),
+               !URLParser.isStartPage(url),
+               tab.shouldHandOffToSystemChromium?(url) == true {
+                tab.onHandOffToSystemChromium?(url)
+                decisionHandler(.cancel, preferences)
+                return
+            }
+            #endif
+
             tab.syncUserAgentForNavigation(to: url)
 
             #if os(iOS)
@@ -403,6 +414,11 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             tab.onNavigationFinished?(tab)
             tab.applyPageEnhancementsAfterLoad()
             tab.applyElementHideRules()
+            #if os(macOS)
+            if RenderingEnginePolicy.usesChromeDesktopUserAgent(tab.preferredEngine) {
+                webView.evaluateJavaScript(ChromiumIdentityScript.source, in: nil, in: .page) { _ in }
+            }
+            #endif
             #if os(macOS) || os(iOS)
             injectInstalledExtensionIDs(into: webView)
             #endif

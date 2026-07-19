@@ -33,6 +33,7 @@ final class AppEnvironment {
     let defaultBrowser: DefaultBrowserService
     let appIcon: AppIconService
     let pulseAmbience: PulseAmbiencePlayer
+    let chromiumPolicy: ChromiumSitePolicy
 
     var showAbout = false
     var showTabOverview = false
@@ -58,6 +59,8 @@ final class AppEnvironment {
     var showPulsePerformance = false
     /// Compact Pulse Corner overlay (GX-style control strip).
     var showPulseCorner = false
+    /// Mac Chromium dual-engine features sheet.
+    var showChromiumFeatures = false
     var useVerticalTabs = false
     /// When set, content shows this tab beside the active tab.
     var splitTabID: UUID?
@@ -130,6 +133,7 @@ final class AppEnvironment {
         self.defaultBrowser = defaultBrowser ?? DefaultBrowserService()
         self.appIcon = AppIconService()
         self.pulseAmbience = PulseAmbiencePlayer()
+        self.chromiumPolicy = ChromiumSitePolicy()
         resolvedSession.restorePreviousSession = resolvedSettings.restorePreviousSession
 
         let snapshot = resolvedSession.load()
@@ -246,12 +250,26 @@ final class AppEnvironment {
         }
     }
 
-    /// Push Settings → preferred engine onto every tab (Classic + Pulse).
+    /// Push resolved engine (global + site + tab override) onto every tab.
     func applyPreferredEngineToAllTabs() {
-        let engine = RenderingEnginePolicy.resolved(settings.preferredEngine)
         for tab in tabs.tabs {
-            tab.applyPreferredEngine(engine)
+            applyResolvedEngine(to: tab)
         }
+    }
+
+    func resolvedEngine(for tab: BrowserTab?) -> BrowserEngineKind {
+        let host = tab?.navigation.url?.host
+        return RenderingEnginePolicy.resolve(
+            global: settings.preferredEngine,
+            tabOverride: tab?.engineOverride,
+            host: host,
+            policy: chromiumPolicy
+        )
+    }
+
+    func applyResolvedEngine(to tab: BrowserTab?) {
+        guard let tab else { return }
+        tab.applyPreferredEngine(resolvedEngine(for: tab))
     }
 
     /// Hibernate background tabs by releasing pooled WKWebViews (active + split kept).
@@ -485,9 +503,21 @@ final class AppEnvironment {
 
     func wireTabPrivacyHooks(for tab: BrowserTab? = nil) {
         let targets = tab.map { [$0] } ?? tabs.tabs
-        let engine = RenderingEnginePolicy.resolved(settings.preferredEngine)
         for item in targets {
-            item.applyPreferredEngine(engine)
+            applyResolvedEngine(to: item)
+            item.onResolveEngine = { [weak self] tab in
+                self?.applyResolvedEngine(to: tab)
+            }
+            item.shouldHandOffToSystemChromium = { [weak self] url in
+                guard let self else { return false }
+                return RenderingEnginePolicy.shouldHandOffToSystemChromium(
+                    host: url.host,
+                    policy: self.chromiumPolicy
+                )
+            }
+            item.onHandOffToSystemChromium = { url in
+                _ = ChromiumEngineBridge.openInSystemChromium(url)
+            }
             item.shouldUpgradeHTTPS = { [weak self] url in
                 guard let self else { return true }
                 return self.privacy.effectiveHTTPSUpgrade(forHost: url.host)

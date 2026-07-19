@@ -36,6 +36,8 @@ final class BrowserTab: Identifiable {
     var isReaderMode = false
     /// Mirrors Settings preferred engine for UA (WebKit vs Chromium Compatible).
     var preferredEngine: BrowserEngineKind = .webkit
+    /// Optional per-tab lock; `nil` follows global + site policy.
+    var engineOverride: BrowserEngineKind?
 
     /// Quiet browsing: mute media, pause playback, hide noisy sticky UI.
     var isFocusMode = false
@@ -52,6 +54,11 @@ final class BrowserTab: Identifiable {
     var shouldStripTracking: (() -> Bool)?
     var isHTTPSOnlyMode: (() -> Bool)?
     var elementHideScript: (() -> String)?
+    /// Refresh `preferredEngine` from global/site/tab policy before UA apply.
+    var onResolveEngine: ((BrowserTab) -> Void)?
+    /// When true, cancel navigation and open system Chromium for this URL.
+    var shouldHandOffToSystemChromium: ((URL) -> Bool)?
+    var onHandOffToSystemChromium: ((URL) -> Void)?
 
     init(
         id: UUID = UUID(),
@@ -383,6 +390,18 @@ final class BrowserTab: Identifiable {
         applyUserAgent()
     }
 
+    func clearEngineOverride() {
+        engineOverride = nil
+        onResolveEngine?(self)
+        applyUserAgent()
+    }
+
+    func setEngineOverride(_ engine: BrowserEngineKind?) {
+        engineOverride = engine
+        onResolveEngine?(self)
+        applyUserAgent()
+    }
+
     func toggleReaderMode() {
         guard !isShowingStartPage else { return }
         webView?.evaluateJavaScript(PageEnhancementScripts.readerMode) { [weak self] result, _ in
@@ -468,6 +487,7 @@ final class BrowserTab: Identifiable {
 
     /// Keeps desktop UA in sync during in-page navigations when Request Desktop Website is on.
     func syncUserAgentForNavigation(to url: URL?) {
+        onResolveEngine?(self)
         applyUserAgent(for: url)
     }
 

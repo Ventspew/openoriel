@@ -51,10 +51,15 @@ struct PageEngineSettingsSection: View {
                     _ = ChromiumEngineBridge.openInSystemChromium(url)
                 }
             }
+            NavigationLink {
+                ChromiumFeaturesView(showsDoneButton: false)
+            } label: {
+                Label("Chromium features…", systemImage: "cpu")
+            }
         } header: {
             Text("Page engine")
         } footer: {
-            Text("Works in Classic and Pulse. iPhone/iPad stay on WebKit (Apple rule). Chromium Compatible keeps WebKit painting with Chrome’s desktop identity; Chromium Native needs a future CEF framework.")
+            Text("Works in Classic and Pulse. Chromium Compatible keeps WebKit painting with Chrome’s desktop identity, Client Hints, and per-site overrides. Chromium Native needs a future CEF framework.")
                 .fixedSize(horizontal: false, vertical: true)
         }
         #else
