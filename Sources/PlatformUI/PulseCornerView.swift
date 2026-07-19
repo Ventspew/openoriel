@@ -3,6 +3,7 @@ import SwiftUI
 /// GX-style Pulse Corner — compact control strip for gaming chrome.
 struct PulseCornerView: View {
     @Environment(AppEnvironment.self) private var environment
+    @State private var showNews = false
 
     private let quickLinks: [(String, String, String)] = [
         ("Twitch", "play.tv.fill", "https://www.twitch.tv"),
@@ -17,13 +18,17 @@ struct PulseCornerView: View {
         ("IGN", "https://www.ign.com")
     ]
 
+    private var accent: Color {
+        environment.settings.brandColor
+    }
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Label("Pulse Corner", systemImage: "bolt.horizontal.circle.fill")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(EditionBranding.pulseAccent)
+                        .foregroundStyle(accent)
                     Spacer()
                     Button {
                         environment.showPulseCorner = false
@@ -37,11 +42,11 @@ struct PulseCornerView: View {
 
                 meterRow
 
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("Quick launch")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
                         ForEach(quickLinks, id: \.0) { item in
                             Button {
                                 if let url = URL(string: item.2) {
@@ -51,35 +56,36 @@ struct PulseCornerView: View {
                                 Label(item.0, systemImage: item.1)
                                     .font(.caption.weight(.medium))
                                     .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
+                                    .padding(.vertical, 7)
                             }
                             .buttonStyle(.bordered)
                         }
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Gaming news")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    ForEach(newsLinks, id: \.0) { item in
-                        Button {
-                            if let url = URL(string: item.1) {
-                                environment.openURLInNewTab(url)
+                DisclosureGroup("Gaming news", isExpanded: $showNews) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(newsLinks, id: \.0) { item in
+                            Button {
+                                if let url = URL(string: item.1) {
+                                    environment.openURLInNewTab(url)
+                                }
+                            } label: {
+                                Text(item.0)
+                                    .font(.caption)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                        } label: {
-                            Text(item.0)
-                                .font(.caption)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            .buttonStyle(.plain)
+                            .foregroundStyle(accent)
                         }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(EditionBranding.pulseAccent)
                     }
+                    .padding(.top, 4)
                 }
+                .font(.caption.weight(.semibold))
 
                 Divider()
 
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
                     Toggle("Data Saver", isOn: Binding(
                         get: { environment.settings.pulseDataSaver },
                         set: {
@@ -129,16 +135,21 @@ struct PulseCornerView: View {
                         }
                     }
                     .labelsHidden()
-                    .pickerStyle(.menu)
+                    if environment.pulseAmbience.track != .off {
+                        Slider(value: Binding(
+                            get: { Double(environment.pulseAmbience.volume) },
+                            set: { environment.pulseAmbience.volume = Float($0) }
+                        ), in: 0...0.6)
+                    }
                 }
 
                 HStack(spacing: 8) {
-                    Button("Performance") {
-                        environment.showPulsePerformance = true
-                    }
-                    .buttonStyle(.bordered)
                     Button("Shields") {
                         environment.showPrivacyShield = true
+                    }
+                    .buttonStyle(.bordered)
+                    Button("Pulse") {
+                        environment.showPulsePerformance = true
                     }
                     .buttonStyle(.bordered)
                 }
@@ -162,14 +173,14 @@ struct PulseCornerView: View {
                 }
                 #endif
             }
-            .padding(14)
+            .padding(12)
         }
-        .frame(width: 280)
-        .frame(maxHeight: 520)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .frame(width: 268)
+        .frame(maxHeight: 480)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: OrielTheme.sectionRadius, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(EditionBranding.pulseAccent.opacity(0.35), lineWidth: 1)
+            RoundedRectangle(cornerRadius: OrielTheme.sectionRadius, style: .continuous)
+                .strokeBorder(accent.opacity(0.32), lineWidth: 1)
         }
     }
 
@@ -177,7 +188,7 @@ struct PulseCornerView: View {
         let tabs = environment.tabs.tabs.count
         let limit = WebViewPool.shared.softLimit
         let engine = environment.resolvedEngine(for: environment.activeTab)
-        return VStack(alignment: .leading, spacing: 4) {
+        return VStack(alignment: .leading, spacing: 3) {
             Text("Tabs \(tabs) · Engine cap \(limit)")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.secondary)

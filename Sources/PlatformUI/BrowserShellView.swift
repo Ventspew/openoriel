@@ -221,7 +221,7 @@ struct BrowserShellView: View {
 
     private func phoneBottomChrome(tab: BrowserTab, environment: AppEnvironment) -> some View {
         let accent = environment.settings.brandColor
-        return VStack(spacing: 10) {
+        return VStack(spacing: OrielLayout.phoneChromeStackSpacing) {
             AddressBarView(
                 tab: tab,
                 searchEngine: environment.settings.searchEngine,
@@ -233,9 +233,9 @@ struct BrowserShellView: View {
             }
 
             // One calm row: back/forward · shields · more · tabs (New Tab lives in the menu).
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 NavigationControlsView(tab: tab, style: .compact, showsShields: false)
-                Spacer(minLength: 12)
+                Spacer(minLength: 8)
                 phoneToolbarButton(
                     systemName: environment.privacy.contentBlockingEnabled ? "shield.lefthalf.filled" : "shield.slash",
                     label: "Privacy Shields",
@@ -263,8 +263,8 @@ struct BrowserShellView: View {
             }
         }
         .padding(.horizontal, OrielLayout.phoneChromePadding)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
+        .padding(.top, OrielLayout.phoneChromeTopPadding)
+        .padding(.bottom, OrielLayout.phoneChromeBottomPadding)
     }
 
     private func phoneToolbarButton(
@@ -310,7 +310,7 @@ struct BrowserShellView: View {
                 iPadTabStrip(environment: environment)
             }
 
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 NavigationControlsView(tab: tab, showsShields: true)
                 AddressBarView(
                     tab: tab,
@@ -405,14 +405,14 @@ struct BrowserShellView: View {
                             }
                         }
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 7)
                         .frame(minWidth: 120, maxWidth: 220, alignment: .leading)
                         .background(
                             selected ? environment.settings.brandColor.opacity(0.16) : Color.primary.opacity(0.04),
-                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            in: RoundedRectangle(cornerRadius: OrielLayout.tabChipRadius, style: .continuous)
                         )
                         .overlay {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: OrielLayout.tabChipRadius, style: .continuous)
                                 .strokeBorder(
                                     selected ? environment.settings.brandColor.opacity(0.35) : Color.primary.opacity(0.06),
                                     lineWidth: 1
@@ -425,7 +425,7 @@ struct BrowserShellView: View {
                 }
             }
             .padding(.horizontal, OrielLayout.padChromePadding)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
         }
         .background(.bar)
     }
@@ -622,10 +622,10 @@ struct BrowserShellView: View {
                 }
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.vertical, 7)
             .background(
                 selected ? environment.settings.brandColor.opacity(0.16) : Color.clear,
-                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                in: RoundedRectangle(cornerRadius: OrielLayout.tabChipRadius, style: .continuous)
             )
             .contentShape(Rectangle())
         }
@@ -658,8 +658,8 @@ struct BrowserShellView: View {
                 chromeStyled: false
             )
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, OrielLayout.macChromePadding)
+        .padding(.vertical, 7)
         .background(.bar)
     }
 
@@ -720,7 +720,7 @@ struct BrowserShellView: View {
                             selected
                                 ? environment.settings.brandColor.opacity(0.14)
                                 : Color.primary.opacity(0.035),
-                            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            in: RoundedRectangle(cornerRadius: OrielLayout.tabChipRadius, style: .continuous)
                         )
                     }
                     .buttonStyle(.plain)
@@ -728,7 +728,7 @@ struct BrowserShellView: View {
                     .accessibilityAddTraits(selected ? .isSelected : [])
                 }
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, OrielLayout.macChromePadding)
             .padding(.vertical, 6)
         }
         .background(.bar)
