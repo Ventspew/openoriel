@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Build a macOS Release .app and package it as a drag-and-drop DMG for GitHub Releases.
-# By default bundles Oriel Engine (CEF/Blink). Set ORIEL_BUNDLE_CEF=0 for a WebKit-only slim DMG.
+# Build a macOS Release .app with Oriel Engine, then package installers for end users:
+#   - Drag-and-drop DMG  (Open → drag Oriel to Applications)
+#   - .pkg installer     (double-click → Installs into /Applications; no Terminal)
+# Set ORIEL_BUNDLE_CEF=0 for a WebKit-only slim build (no Engine).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -8,7 +10,7 @@ cd "$ROOT"
 
 YML_MARKETING="$(grep -E '^\s*MARKETING_VERSION:' project.yml | head -1 | sed 's/.*"\(.*\)".*/\1/')"
 YML_BUILD="$(grep -E '^\s*CURRENT_PROJECT_VERSION:' project.yml | head -1 | sed 's/.*"\(.*\)".*/\1/')"
-# Allow CI to override from the git tag (e.g. v1.0.0-31) so DMG names match the release.
+# Allow CI to override from the git tag (e.g. v1.0.0-31) so artifact names match the release.
 MARKETING="${ORIEL_MARKETING_VERSION:-${YML_MARKETING:-1.0.0}}"
 BUILD="${ORIEL_BUILD_NUMBER:-${YML_BUILD:-1}}"
 BUNDLE_CEF="${ORIEL_BUNDLE_CEF:-1}"
@@ -16,9 +18,13 @@ BUNDLE_CEF="${ORIEL_BUNDLE_CEF:-1}"
 OUT_DIR="${ORIEL_DMG_OUT:-$ROOT/build/dmg}"
 DERIVED="${ORIEL_DERIVED_DATA:-$ROOT/build/DerivedData-dmg}"
 STAGE="$OUT_DIR/stage"
+PKG_ROOT="$OUT_DIR/pkgroot"
 VOL_NAME="Oriel"
-DMG_NAME="Oriel-${MARKETING}-${BUILD}-macOS.dmg"
+BASE_NAME="Oriel-${MARKETING}-${BUILD}-macOS"
+DMG_NAME="${BASE_NAME}.dmg"
+PKG_NAME="${BASE_NAME}.pkg"
 DMG_PATH="$OUT_DIR/$DMG_NAME"
+PKG_PATH="$OUT_DIR/$PKG_NAME"
 
 echo "-> Building Oriel ${MARKETING} (${BUILD}) for macOS (Oriel Engine CEF=${BUNDLE_CEF})..."
 
@@ -72,9 +78,23 @@ if [[ "$BUNDLE_CEF" == "1" ]]; then
   bash "$ROOT/Scripts/embed-oriel-engine-macos.sh" "$APP"
 fi
 
+# --- Drag-and-drop DMG ---
 echo "-> Staging DMG contents..."
 ditto "${APP}" "${STAGE}/Oriel.app"
 ln -sf /Applications "${STAGE}/Applications"
+cat > "${STAGE}/How to Install.txt" <<EOF
+Oriel ${MARKETING} (build ${BUILD}) — macOS
+
+Install (no Terminal needed):
+  1. Drag Oriel into Applications
+  2. Open Applications → Oriel
+  3. First launch: right-click Oriel → Open (Gatekeeper may warn once on unsigned builds)
+
+This build includes Oriel Engine (Blink) for in-tab Chromium Native on Mac.
+iPhone / iPad builds stay WebKit-only (Apple rule).
+
+Website: https://openoriel.com
+EOF
 
 echo "-> Creating ${DMG_NAME}..."
 rm -f "${DMG_PATH}"
@@ -88,12 +108,30 @@ hdiutil create \
 
 rm -rf "${STAGE}"
 
+# --- .pkg installer (double-click → /Applications) ---
+echo "-> Creating ${PKG_NAME}..."
+rm -rf "${PKG_ROOT}"
+mkdir -p "${PKG_ROOT}/Applications"
+ditto "${APP}" "${PKG_ROOT}/Applications/Oriel.app"
+rm -f "${PKG_PATH}"
+pkgbuild \
+  --root "${PKG_ROOT}" \
+  --install-location / \
+  --identifier net.inveil.oriel \
+  --version "${MARKETING}.${BUILD}" \
+  --ownership recommended \
+  "${PKG_PATH}" >/dev/null
+rm -rf "${PKG_ROOT}"
+
 shasum -a 256 "${DMG_PATH}" | tee "${DMG_PATH}.sha256"
+shasum -a 256 "${PKG_PATH}" | tee "${PKG_PATH}.sha256"
 
 echo ""
-echo "OK: DMG ready: ${DMG_PATH}"
+echo "OK: Installers ready in ${OUT_DIR}"
+echo "  DMG: ${DMG_PATH}"
+echo "  PKG: ${PKG_PATH}"
 if [[ "$BUNDLE_CEF" == "1" ]]; then
-  echo "  Includes Oriel Engine (Blink/CEF) for in-tab Chromium Native."
+  echo "  Includes Oriel Engine (Blink/CEF) — end users do NOT run enable-cef scripts."
 fi
-echo "  Open the DMG and drag Oriel into Applications."
-echo "  Unsigned / ad-hoc builds: right-click Oriel -> Open the first time (Gatekeeper)."
+echo "  Prefer PKG for one-click install into Applications."
+echo "  Unsigned / ad-hoc: right-click Oriel → Open the first time (Gatekeeper)."

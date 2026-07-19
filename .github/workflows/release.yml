@@ -73,23 +73,24 @@ jobs:
           echo "build=$BUILD" >> "$GITHUB_OUTPUT"
           echo "Resolved release $TAG → Oriel $MARKETING ($BUILD) (project.yml was $YML_MARKETING/$YML_BUILD)"
 
-      - name: Build DMG (with Oriel Engine / CEF)
+      - name: Build macOS installers (DMG + PKG, with Oriel Engine / CEF)
         env:
           ORIEL_MARKETING_VERSION: ${{ steps.version.outputs.marketing }}
           ORIEL_BUILD_NUMBER: ${{ steps.version.outputs.build }}
           ORIEL_BUNDLE_CEF: "1"
         run: bash Scripts/make-macos-dmg.sh
 
-      - name: Upload DMG artifact
+      - name: Upload macOS installer artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Oriel-macOS-DMG
+          name: Oriel-macOS-Installers
           path: |
             build/dmg/*.dmg
+            build/dmg/*.pkg
             build/dmg/*.sha256
           if-no-files-found: error
 
-      - name: Attach DMG to GitHub Release
+      - name: Attach installers to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
@@ -98,22 +99,25 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
           body: |
-            ## Install (macOS)
+            ## Install (macOS) — no Terminal
 
-            1. Download **Oriel-${{ steps.version.outputs.marketing }}-${{ steps.version.outputs.build }}-macOS.dmg**
-            2. Open the DMG and drag **Oriel** into **Applications**
-            3. First launch: right-click Oriel → **Open** (ad-hoc signed build; Gatekeeper may warn once)
+            **Recommended:** download **Oriel-${{ steps.version.outputs.marketing }}-${{ steps.version.outputs.build }}-macOS.pkg**, double-click, and follow the installer. Oriel lands in **Applications** with **Oriel Engine** already inside.
 
-            This Mac build includes **Oriel Engine** (Blink via CEF) for in-tab Chromium Native. Larger than WebKit-only builds by design.
+            **Alternative:** download the **.dmg**, open it, drag **Oriel** into **Applications**.
+
+            First launch: right-click Oriel → **Open** (ad-hoc signed build; Gatekeeper may warn once).
+
+            You do **not** need `enable-cef-macos.sh` or any Terminal steps — Engine is bundled.
 
             Website: https://openoriel.com  
             Bundle ID: `net.inveil.oriel`
 
-            ### Checksum
+            ### Checksums
 
-            See the attached `.sha256` file (SHA-256 of the DMG).
+            See the attached `.sha256` files (SHA-256 of the DMG and PKG).
           files: |
             build/dmg/*.dmg
+            build/dmg/*.pkg
             build/dmg/*.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

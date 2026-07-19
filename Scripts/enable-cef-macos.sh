@@ -8,15 +8,16 @@ bash "$ROOT/Scripts/build-oriel-engine-macos.sh"
 
 cat <<EOF
 
-Oriel Engine enabled for local Mac builds.
+Oriel Engine ready for local Mac Xcode builds.
 
-In Xcode (Mac destination):
-  1. Apply Vendor/CEF.xcconfig as the configuration file for Debug/Release, or
-     set the same ORIEL_HAS_CEF / HEADER_SEARCH_PATHS / LIBRARY_SEARCH_PATHS flags.
-  2. Use Resources/Oriel-macOS-Engine.entitlements (App Sandbox off) for Mac Engine runs.
-  3. After Build, run:
-       bash Scripts/embed-oriel-engine-macos.sh DerivedData/.../Oriel.app
-     or use Scripts/make-macos-dmg.sh which does fetch → build → embed.
+project.yml already enables ORIEL_HAS_CEF + Engine entitlements on macosx,
+and runs Scripts/xcode-embed-oriel-engine.sh after each Mac build.
+
+One-time on this machine (already done if you just ran this script):
+  bash Scripts/enable-cef-macos.sh
+
+Then open Oriel.xcodeproj and build for My Mac — Frameworks/ will contain
+Chromium Embedded Framework + Oriel Helper*.app.
 
 Honesty: iPhone/iPad stay WebKit-only. Oriel Engine is Mac-only Blink (CEF).
 EOF

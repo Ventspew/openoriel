@@ -791,6 +791,7 @@
 			buildConfigurationList = 039E83014D97139CD2042875 /* Build configuration list for PBXNativeTarget "Oriel" */;
 			buildPhases = (
 				7A30D6BF1A21F01951BA6F76 /* Sources */,
+				C921FAAF768644B396091F13 /* Embed Oriel Engine (macOS) */,
 				D1E9A40691796E931F948B66 /* Resources */,
 			);
 			buildRules = (
@@ -912,6 +913,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		C921FAAF768644B396091F13 /* Embed Oriel Engine (macOS) */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Embed Oriel Engine (macOS)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/bin/bash \"${SRCROOT}/Scripts/xcode-embed-oriel-engine.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		7A30D6BF1A21F01951BA6F76 /* Sources */ = {
@@ -1147,7 +1170,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 71;
+				CURRENT_PROJECT_VERSION = 72;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1180,12 +1203,14 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_ENTITLEMENTS = Oriel.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Resources/Oriel-macOS-Engine.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 71;
+				CURRENT_PROJECT_VERSION = 72;
 				DEVELOPMENT_TEAM = 2PP6UH4PWA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				"HEADER_SEARCH_PATHS[sdk=macosx*]" = "$(inherited) $(SRCROOT)/Vendor/CEF";
 				INFOPLIST_FILE = Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Oriel;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -1202,7 +1227,13 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				"LIBRARY_SEARCH_PATHS[sdk=macosx*]" = "$(inherited) $(SRCROOT)/build/oriel-engine";
 				MARKETING_VERSION = 1.0.0;
+				"OTHER_CFLAGS[sdk=macosx*]" = "$(inherited) -DORIEL_HAS_CEF=1";
+				"OTHER_CPLUSPLUSFLAGS[sdk=macosx*]" = "$(inherited) -DORIEL_HAS_CEF=1 -std=c++17";
+				"OTHER_LDFLAGS[sdk=macosx*]" = "$(inherited) -lcef_dll_wrapper -lc++ -framework AppKit -framework CoreFoundation";
+				"OTHER_SWIFT_FLAGS[sdk=macosx*]" = "$(inherited) -DORIEL_HAS_CEF";
 				PRODUCT_BUNDLE_IDENTIFIER = net.inveil.oriel;
 				PRODUCT_NAME = Oriel;
 				SDKROOT = auto;
@@ -1210,6 +1241,7 @@
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=macosx*]" = "$(inherited) ORIEL_HAS_CEF";
 				SWIFT_OBJC_BRIDGING_HEADER = "Sources/CEF/Oriel-Bridging-Header.h";
 				SWIFT_STRICT_CONCURRENCY = targeted;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1270,12 +1302,14 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_ENTITLEMENTS = Oriel.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Resources/Oriel-macOS-Engine.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 71;
+				CURRENT_PROJECT_VERSION = 72;
 				DEVELOPMENT_TEAM = 2PP6UH4PWA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				"HEADER_SEARCH_PATHS[sdk=macosx*]" = "$(inherited) $(SRCROOT)/Vendor/CEF";
 				INFOPLIST_FILE = Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Oriel;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -1292,7 +1326,13 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				"LIBRARY_SEARCH_PATHS[sdk=macosx*]" = "$(inherited) $(SRCROOT)/build/oriel-engine";
 				MARKETING_VERSION = 1.0.0;
+				"OTHER_CFLAGS[sdk=macosx*]" = "$(inherited) -DORIEL_HAS_CEF=1";
+				"OTHER_CPLUSPLUSFLAGS[sdk=macosx*]" = "$(inherited) -DORIEL_HAS_CEF=1 -std=c++17";
+				"OTHER_LDFLAGS[sdk=macosx*]" = "$(inherited) -lcef_dll_wrapper -lc++ -framework AppKit -framework CoreFoundation";
+				"OTHER_SWIFT_FLAGS[sdk=macosx*]" = "$(inherited) -DORIEL_HAS_CEF";
 				PRODUCT_BUNDLE_IDENTIFIER = net.inveil.oriel;
 				PRODUCT_NAME = Oriel;
 				SDKROOT = auto;
@@ -1300,6 +1340,7 @@
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=macosx*]" = "$(inherited) ORIEL_HAS_CEF";
 				SWIFT_OBJC_BRIDGING_HEADER = "Sources/CEF/Oriel-Bridging-Header.h";
 				SWIFT_STRICT_CONCURRENCY = targeted;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1341,7 +1382,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 71;
+				CURRENT_PROJECT_VERSION = 72;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;

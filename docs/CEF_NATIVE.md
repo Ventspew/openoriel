@@ -13,7 +13,7 @@ On **Mac only**, **Oriel Engine** paints with **real Blink** inside Oriel tabs v
 | Fetch / pin CEF | `Scripts/fetch-cef-macos.sh` — pinned Standard Chromium 144, SHA1, installs under `~/Library/Application Support/Oriel/CEF/` (Release + headers + wrapper sources; no Debug/tests). Pin metadata lives in `oriel-meta/` (never a root `VERSION` file — that breaks C++ `<version>` on macOS). |
 | Build Engine | `Scripts/build-oriel-engine-macos.sh` — `libcef_dll_wrapper.a` + `Oriel Helper*.app` + `Vendor/CEF.xcconfig` |
 | Embed into .app | `Scripts/embed-oriel-engine-macos.sh` — versioned framework layout + helpers under `Contents/Frameworks/` |
-| DMG | `Scripts/make-macos-dmg.sh` — fetch → build → compile with `ORIEL_HAS_CEF` → embed → DMG |
+| Installers | `Scripts/make-macos-dmg.sh` — fetch → build → compile with `ORIEL_HAS_CEF` → embed → **DMG + .pkg** (Engine bundled; end users need no Terminal) |
 | Bridge | `Sources/CEF/OrielCEFBridge.*` + `CefWebHostView` |
 | Helper source | `Sources/CEF/Helper/process_helper_mac.cc` (compiled by the Engine script, not the iOS target) |
 
@@ -22,16 +22,18 @@ On **Mac only**, **Oriel Engine** paints with **real Blink** inside Oriel tabs v
 ```bash
 bash Scripts/fetch-cef-macos.sh          # ~250 MB download (once)
 bash Scripts/build-oriel-engine-macos.sh # wrapper + helpers
-bash Scripts/make-macos-dmg.sh           # full Release app + DMG with Engine
+bash Scripts/make-macos-dmg.sh           # Release app + DMG + .pkg with Engine
 ```
 
-Slim WebKit-only DMG (no Engine):
+End users install via the **.pkg** (double-click) or **.dmg** (drag to Applications). They never run fetch/build scripts.
+
+Slim WebKit-only (no Engine):
 
 ```bash
 ORIEL_BUNDLE_CEF=0 bash Scripts/make-macos-dmg.sh
 ```
 
-Needs: Xcode 16+, cmake, ninja (`brew install cmake ninja`).
+Needs (developers only): Xcode 16+, cmake, ninja (`brew install cmake ninja`).
 
 ## Runtime matrix
 
