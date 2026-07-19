@@ -19,12 +19,11 @@ struct NavigationControlsView: View {
     }
 
     private var buttonSize: CGFloat {
-        style == .compact ? 28 : 32
+        // Match phone toolbar hit targets (~44) without filled chrome tiles.
+        style == .compact ? 36 : 32
     }
 
-    private var markSize: CGFloat {
-        style == .compact ? 18 : 20
-    }
+    private var markSize: CGFloat { 20 }
 
     private var canGoBack: Bool {
         tab.navigation.canGoBack
@@ -90,7 +89,8 @@ struct NavigationControlsView: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: style == .compact ? 14 : 15, weight: .semibold))
+                .font(.system(size: style == .compact ? OrielLayout.phoneToolbarIconSize : 15, weight: .medium))
+                .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(enabled ? Color.primary.opacity(0.85) : Color.secondary.opacity(0.35))
                 .frame(width: buttonSize, height: buttonSize)
                 .contentShape(Rectangle())

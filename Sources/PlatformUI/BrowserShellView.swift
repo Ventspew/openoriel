@@ -197,7 +197,8 @@ struct BrowserShellView: View {
     }
 
     private func phoneBottomChrome(tab: BrowserTab, environment: AppEnvironment) -> some View {
-        VStack(spacing: 8) {
+        let accent = environment.settings.brandColor
+        return VStack(spacing: 10) {
             AddressBarView(
                 tab: tab,
                 searchEngine: environment.settings.searchEngine,
@@ -208,11 +209,34 @@ struct BrowserShellView: View {
                 hideKeyboard()
             }
 
-            HStack(spacing: 8) {
+            // One calm row: back/forward · shields · more · tabs (New Tab lives in the menu).
+            HStack(spacing: 10) {
                 NavigationControlsView(tab: tab, style: .compact, showsShields: false)
-                Spacer(minLength: 4)
-                ProfileSwitcherControl(style: .icon)
-                phoneTrailingChrome(environment: environment, tab: tab)
+                Spacer(minLength: 12)
+                phoneToolbarButton(
+                    systemName: environment.privacy.contentBlockingEnabled ? "shield.lefthalf.filled" : "shield.slash",
+                    label: "Privacy Shields",
+                    accent: accent,
+                    emphasized: environment.privacy.contentBlockingEnabled
+                ) {
+                    environment.showPrivacyShield = true
+                }
+                chromeMenu(
+                    environment: environment,
+                    tab: tab,
+                    density: .phone,
+                    size: OrielLayout.compactNavButtonSize,
+                    accent: accent,
+                    chromeStyled: false
+                )
+                phoneToolbarButton(
+                    systemName: "square.on.square",
+                    label: "Tabs",
+                    accent: accent,
+                    badge: "\(environment.tabs.tabs.count)"
+                ) {
+                    environment.showTabOverview = true
+                }
             }
         }
         .padding(.horizontal, OrielLayout.phoneChromePadding)
@@ -220,42 +244,35 @@ struct BrowserShellView: View {
         .padding(.bottom, 8)
     }
 
-    private func phoneTrailingChrome(environment: AppEnvironment, tab: BrowserTab) -> some View {
-        let accent = environment.settings.brandColor
-        let size: CGFloat = 34
-        return HStack(spacing: 8) {
-            chromeIconButton(
-                systemName: "plus",
-                label: "New Tab",
-                accent: accent,
-                size: size
-            ) {
-                environment.tabs.createTab(select: true)
-                environment.wireTabPrivacyHooks()
-            }
-
-            chromeIconButton(
-                systemName: environment.privacy.contentBlockingEnabled ? "shield.lefthalf.filled" : "shield.slash",
-                label: "Privacy Shields",
-                accent: accent,
-                size: size,
-                emphasized: environment.privacy.contentBlockingEnabled
-            ) {
-                environment.showPrivacyShield = true
-            }
-
-            chromeMenu(environment: environment, tab: tab, compact: false, size: size, accent: accent)
-
-            chromeIconButton(
-                systemName: "square.on.square",
-                label: "Tabs",
-                accent: accent,
-                size: size,
-                badge: "\(environment.tabs.tabs.count)"
-            ) {
-                environment.showTabOverview = true
+    private func phoneToolbarButton(
+        systemName: String,
+        label: String,
+        accent: Color,
+        emphasized: Bool = false,
+        badge: String? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: systemName)
+                    .font(.system(size: OrielLayout.phoneToolbarIconSize, weight: .medium))
+                    .symbolRenderingMode(.hierarchical)
+                if let badge {
+                    Text(badge)
+                        .font(.caption.weight(.semibold))
+                        .monospacedDigit()
+                }
             }
         }
+        .buttonStyle(
+            OrielPhoneToolbarButtonStyle(
+                isEnabled: true,
+                isEmphasized: emphasized,
+                accent: accent
+            )
+        )
+        .accessibilityLabel(badge.map { "\(label), \($0)" } ?? label)
+        .help(label)
     }
 
     // MARK: - iPad (regular width)
@@ -325,7 +342,7 @@ struct BrowserShellView: View {
             ) {
                 environment.showFireButton = true
             }
-            chromeMenu(environment: environment, tab: tab, compact: false, size: size, accent: accent)
+            chromeMenu(environment: environment, tab: tab, density: .standard, size: size, accent: accent)
             chromeIconButton(
                 systemName: "square.on.square",
                 label: "Tabs",
@@ -508,7 +525,7 @@ struct BrowserShellView: View {
                         }
                         .help("Tab Overview")
 
-                        chromeMenu(environment: environment, tab: tab, compact: false, chromeStyled: false)
+                        chromeMenu(environment: environment, tab: tab, density: .standard, chromeStyled: false)
                     }
                 }
             }
@@ -625,7 +642,7 @@ struct BrowserShellView: View {
             chromeMenu(
                 environment: environment,
                 tab: tab,
-                compact: true,
+                density: .macCompact,
                 chromeStyled: false
             )
         }
@@ -774,214 +791,340 @@ struct BrowserShellView: View {
         .disabled(tab.isShowingStartPage)
     }
 
+    private enum ChromeMenuDensity {
+        /// iPhone: nested groups, short top-level list.
+        case phone
+        /// iPad / macOS full chrome.
+        case standard
+        /// Narrow macOS window.
+        case macCompact
+    }
+
     @ViewBuilder
     private func chromeMenu(
         environment: AppEnvironment,
         tab: BrowserTab,
-        compact: Bool,
+        density: ChromeMenuDensity,
         size: CGFloat = OrielLayout.navButtonSize,
         accent: Color = OrielTheme.brandTeal,
         chromeStyled: Bool = true
     ) -> some View {
         Menu {
-            if compact {
-                // macOS narrow window — keep denser but still include New Tab + share essentials.
-                Button("New Tab") {
-                    environment.tabs.createTab(select: true)
-                    environment.wireTabPrivacyHooks()
-                }
-                Button("New Private Tab") {
-                    environment.tabs.createPrivateTab(select: true)
-                    environment.wireTabPrivacyHooks()
-                }
-                Button("Close Tab") { environment.tabs.closeActiveTab() }
-                Button("Find in Page…") { environment.showFindInPage = true }
-                    .disabled(tab.isShowingStartPage)
-                Button("Reload") { tab.reload() }
-                    .disabled(tab.isShowingStartPage)
-                Button("Home") { tab.goHome() }
-                    .disabled(tab.isShowingStartPage)
-                Button("Bookmark This Page") { environment.bookmarkActivePage() }
-                    .disabled(tab.isShowingStartPage || tab.isPrivate)
-                if let shareURL = environment.shareURL {
-                    ShareLink(item: shareURL) {
-                        Label("Share…", systemImage: "square.and.arrow.up")
-                    }
-                }
-
-                Divider()
-
-                Button("Bookmarks") { environment.showBookmarks = true }
-                Button("History") { environment.showHistory = true }
-                Button("Downloads") { environment.showDownloads = true }
-                if environment.extensions.isSupported {
-                    Button("Extensions") { environment.showExtensions = true }
-                    Button("Oriel Store") { environment.showOrielStore = true }
-                }
-                Button(environment.linkQueue.count == 0 ? "Open Later" : "Open Later (\(environment.linkQueue.count))") {
-                    environment.showLinkQueue = true
-                }
-                Button("Shields") { environment.showPrivacyShield = true }
-                Button("Fire…", role: .destructive) { environment.showFireButton = true }
-                Button {
-                    environment.showProfiles = true
-                } label: {
-                    Label("Profiles…", systemImage: "person.crop.circle")
-                }
-                Button("Workspaces…") { environment.showWorkspaces = true }
-                Button("Settings") { openAppSettings() }
-            } else {
-                Button("New Tab") {
-                    environment.tabs.createTab(select: true)
-                    environment.wireTabPrivacyHooks()
-                }
-                Button("New Private Tab") {
-                    environment.tabs.createPrivateTab(select: true)
-                    environment.wireTabPrivacyHooks()
-                }
-                Button("Duplicate Tab") {
-                    environment.tabs.duplicateActiveTab()
-                    environment.wireTabPrivacyHooks()
-                }
-                Button("Close Tab") { environment.tabs.closeActiveTab() }
-                Button(tab.isPinned ? "Unpin Tab" : "Pin Tab") {
-                    environment.tabs.togglePin(id: tab.id)
-                }
-                Button("Reopen Closed Tab") {
-                    _ = environment.tabs.restoreClosedTab()
-                    environment.wireTabPrivacyHooks()
-                }
-                .disabled(!environment.tabs.canRestoreClosedTab)
-
-                Divider()
-
-                Menu("Page") {
-                    Button("Find in Page…") { environment.showFindInPage = true }
-                        .disabled(tab.isShowingStartPage)
-                    Button(tab.isReaderMode ? "Exit Reader Mode" : "Reader Mode") {
-                        tab.toggleReaderMode()
-                    }
-                    .disabled(tab.isShowingStartPage)
-                    Button(environment.isSplitViewActive ? "Close Split View" : "Open Split View") {
-                        if environment.isSplitViewActive {
-                            environment.closeSplitView()
-                        } else {
-                            environment.openSplitView()
-                        }
-                    }
-                    Button("Picture in Picture…") {
-                        environment.showPictureInPicturePicker = true
-                    }
-                    .disabled(tab.isShowingStartPage)
-                    Button("Show Media Controls") {
-                        tab.enableMediaControls()
-                    }
-                    .disabled(tab.isShowingStartPage)
-                    Button("Workspaces…") {
-                        environment.showWorkspaces = true
-                    }
-                    Button(tab.forceDarkEnabled ? "Disable Force Dark" : "Force Dark on Page") {
-                        tab.toggleForceDark()
-                    }
-                    .disabled(tab.isShowingStartPage)
-                    Button("Zoom In") { tab.zoomIn() }
-                        .disabled(tab.isShowingStartPage)
-                    Button("Zoom Out") { tab.zoomOut() }
-                        .disabled(tab.isShowingStartPage)
-                    Button("Actual Size") { tab.resetZoom() }
-                        .disabled(tab.isShowingStartPage || tab.zoomFactor == 1.0)
-                    Button("Print…") { tab.printPage() }
-                        .disabled(tab.isShowingStartPage)
-                    Button(tab.requestsDesktopSite ? "Request Mobile Website" : "Request Desktop Website") {
-                        tab.toggleDesktopSite()
-                    }
-                    .disabled(tab.isShowingStartPage)
-                    Button(tab.javaScriptEnabled ? "Disable JavaScript" : "Enable JavaScript") {
-                        tab.toggleJavaScript()
-                    }
-                    .disabled(tab.isShowingStartPage)
-                    Button(tab.isFocusMode ? "Exit Focus Mode" : "Focus Mode") {
-                        tab.toggleFocusMode()
-                    }
-                    .disabled(tab.isShowingStartPage)
-                    Button("Translate Page…") {
-                        environment.showTranslate = true
-                    }
-                    .disabled(tab.isShowingStartPage)
-                    Button("Install as Web App") {
-                        Task { await environment.installCurrentPageAsWebApp() }
-                    }
-                    .disabled(tab.isShowingStartPage)
-                    Button("Autofill Password…") {
-                        Task { await environment.autofillPasswordForActivePage() }
-                    }
-                    .disabled(tab.isShowingStartPage)
-                    Button("Hide Element…") {
-                        tab.startElementPicker()
-                    }
-                    .disabled(tab.isShowingStartPage)
-                    Button("Clear Hidden Elements on Site") {
-                        environment.elementHide.clear(host: tab.navigation.url?.host)
-                        tab.reload()
-                    }
-                    .disabled(tab.isShowingStartPage)
-                }
-
-                Divider()
-
-                Button("Bookmark This Page") { environment.bookmarkActivePage() }
-                    .disabled(tab.isShowingStartPage || tab.isPrivate)
-                Button("Copy URL") { environment.copyCurrentURL() }
-                    .disabled(environment.shareURL == nil)
-                if let shareURL = environment.shareURL {
-                    ShareLink(item: shareURL) {
-                        Label("Share…", systemImage: "square.and.arrow.up")
-                    }
-                }
-
-                Divider()
-
-                Button("Bookmarks") { environment.showBookmarks = true }
-                Button("History") { environment.showHistory = true }
-                Button("Downloads") { environment.showDownloads = true }
-                if environment.extensions.isSupported {
-                    Button("Extensions") { environment.showExtensions = true }
-                    Button("Oriel Store") { environment.showOrielStore = true }
-                }
-                Button(environment.linkQueue.count == 0 ? "Open Later" : "Open Later (\(environment.linkQueue.count))") {
-                    environment.showLinkQueue = true
-                }
-                Button("Add Page to Open Later") {
-                    environment.enqueueCurrentPageForLater()
-                }
-                .disabled(tab.isShowingStartPage)
-                Button("Shields") { environment.showPrivacyShield = true }
-                Button("Fire…", role: .destructive) { environment.showFireButton = true }
-                Button {
-                    environment.showProfiles = true
-                } label: {
-                    Label("Profiles…", systemImage: "person.crop.circle")
-                }
-                Button("Workspaces…") { environment.showWorkspaces = true }
-                Button("Settings") { openAppSettings() }
-
-                Divider()
-
-                Button("Visit \(BrowserConstants.productWebsiteHost)") { tab.openProductSite() }
-                Button("About Oriel") { environment.showAbout = true }
+            switch density {
+            case .phone:
+                phoneChromeMenuContent(environment: environment, tab: tab)
+            case .macCompact:
+                macCompactChromeMenuContent(environment: environment, tab: tab)
+            case .standard:
+                standardChromeMenuContent(environment: environment, tab: tab)
             }
         } label: {
-            Image(systemName: chromeStyled ? "ellipsis" : "ellipsis.circle")
-                .symbolRenderingMode(.hierarchical)
-                .imageScale(.medium)
+            Group {
+                if density == .phone {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: OrielLayout.phoneToolbarIconSize, weight: .medium))
+                        .symbolRenderingMode(.hierarchical)
+                } else {
+                    Image(systemName: chromeStyled ? "ellipsis" : "ellipsis.circle")
+                        .symbolRenderingMode(.hierarchical)
+                        .imageScale(.medium)
+                }
+            }
         }
         .modifier(ChromeMenuButtonStyleModifier(
-            chromeStyled: chromeStyled,
+            chromeStyled: chromeStyled && density != .phone,
             size: size,
-            accent: accent
+            accent: accent,
+            phoneToolbar: density == .phone
         ))
         .accessibilityLabel("More")
         .help("More")
+    }
+
+    @ViewBuilder
+    private func phoneChromeMenuContent(environment: AppEnvironment, tab: BrowserTab) -> some View {
+        Button("New Tab", systemImage: "plus") {
+            environment.tabs.createTab(select: true)
+            environment.wireTabPrivacyHooks()
+        }
+        Button("New Private Tab", systemImage: "eyeglasses") {
+            environment.tabs.createPrivateTab(select: true)
+            environment.wireTabPrivacyHooks()
+        }
+
+        Menu("Tab", systemImage: "square.on.square") {
+            Button("Duplicate Tab") {
+                environment.tabs.duplicateActiveTab()
+                environment.wireTabPrivacyHooks()
+            }
+            Button("Close Tab") { environment.tabs.closeActiveTab() }
+            Button(tab.isPinned ? "Unpin Tab" : "Pin Tab") {
+                environment.tabs.togglePin(id: tab.id)
+            }
+            Button("Reopen Closed Tab") {
+                _ = environment.tabs.restoreClosedTab()
+                environment.wireTabPrivacyHooks()
+            }
+            .disabled(!environment.tabs.canRestoreClosedTab)
+        }
+
+        Divider()
+
+        Menu("Page", systemImage: "doc.text") {
+            pageMenuContent(environment: environment, tab: tab, includeWorkspaces: false)
+        }
+
+        Button("Bookmark This Page", systemImage: "bookmark") {
+            environment.bookmarkActivePage()
+        }
+        .disabled(tab.isShowingStartPage || tab.isPrivate)
+        if let shareURL = environment.shareURL {
+            ShareLink(item: shareURL) {
+                Label("Share…", systemImage: "square.and.arrow.up")
+            }
+        }
+
+        Divider()
+
+        Menu("Library", systemImage: "books.vertical") {
+            Button("Bookmarks") { environment.showBookmarks = true }
+            Button("History") { environment.showHistory = true }
+            Button("Downloads") { environment.showDownloads = true }
+            Button(environment.linkQueue.count == 0 ? "Open Later" : "Open Later (\(environment.linkQueue.count))") {
+                environment.showLinkQueue = true
+            }
+            Button("Add Page to Open Later") {
+                environment.enqueueCurrentPageForLater()
+            }
+            .disabled(tab.isShowingStartPage)
+        }
+
+        if environment.extensions.isSupported {
+            Menu("Add-ons", systemImage: "puzzlepiece.extension") {
+                Button("Oriel Store") { environment.showOrielStore = true }
+                Button("Extensions") { environment.showExtensions = true }
+            }
+        }
+
+        Divider()
+
+        Button("Profiles…", systemImage: "person.crop.circle") {
+            environment.showProfiles = true
+        }
+        Button("Settings", systemImage: "gearshape") { openAppSettings() }
+        Button("Fire…", systemImage: "flame", role: .destructive) {
+            environment.showFireButton = true
+        }
+    }
+
+    @ViewBuilder
+    private func macCompactChromeMenuContent(environment: AppEnvironment, tab: BrowserTab) -> some View {
+        Button("New Tab") {
+            environment.tabs.createTab(select: true)
+            environment.wireTabPrivacyHooks()
+        }
+        Button("New Private Tab") {
+            environment.tabs.createPrivateTab(select: true)
+            environment.wireTabPrivacyHooks()
+        }
+        Button("Close Tab") { environment.tabs.closeActiveTab() }
+        Button("Find in Page…") { environment.showFindInPage = true }
+            .disabled(tab.isShowingStartPage)
+        Button("Reload") { tab.reload() }
+            .disabled(tab.isShowingStartPage)
+        Button("Bookmark This Page") { environment.bookmarkActivePage() }
+            .disabled(tab.isShowingStartPage || tab.isPrivate)
+        if let shareURL = environment.shareURL {
+            ShareLink(item: shareURL) {
+                Label("Share…", systemImage: "square.and.arrow.up")
+            }
+        }
+
+        Divider()
+
+        Menu("Library") {
+            Button("Bookmarks") { environment.showBookmarks = true }
+            Button("History") { environment.showHistory = true }
+            Button("Downloads") { environment.showDownloads = true }
+            Button(environment.linkQueue.count == 0 ? "Open Later" : "Open Later (\(environment.linkQueue.count))") {
+                environment.showLinkQueue = true
+            }
+        }
+        if environment.extensions.isSupported {
+            Menu("Add-ons") {
+                Button("Oriel Store") { environment.showOrielStore = true }
+                Button("Extensions") { environment.showExtensions = true }
+            }
+        }
+        Button("Shields") { environment.showPrivacyShield = true }
+        Button("Fire…", role: .destructive) { environment.showFireButton = true }
+        Button("Profiles…") { environment.showProfiles = true }
+        Button("Settings") { openAppSettings() }
+    }
+
+    @ViewBuilder
+    private func standardChromeMenuContent(environment: AppEnvironment, tab: BrowserTab) -> some View {
+        Button("New Tab") {
+            environment.tabs.createTab(select: true)
+            environment.wireTabPrivacyHooks()
+        }
+        Button("New Private Tab") {
+            environment.tabs.createPrivateTab(select: true)
+            environment.wireTabPrivacyHooks()
+        }
+
+        Menu("Tab") {
+            Button("Duplicate Tab") {
+                environment.tabs.duplicateActiveTab()
+                environment.wireTabPrivacyHooks()
+            }
+            Button("Close Tab") { environment.tabs.closeActiveTab() }
+            Button(tab.isPinned ? "Unpin Tab" : "Pin Tab") {
+                environment.tabs.togglePin(id: tab.id)
+            }
+            Button("Reopen Closed Tab") {
+                _ = environment.tabs.restoreClosedTab()
+                environment.wireTabPrivacyHooks()
+            }
+            .disabled(!environment.tabs.canRestoreClosedTab)
+        }
+
+        Divider()
+
+        Menu("Page") {
+            pageMenuContent(environment: environment, tab: tab, includeWorkspaces: true)
+        }
+
+        Button("Bookmark This Page") { environment.bookmarkActivePage() }
+            .disabled(tab.isShowingStartPage || tab.isPrivate)
+        Button("Copy URL") { environment.copyCurrentURL() }
+            .disabled(environment.shareURL == nil)
+        if let shareURL = environment.shareURL {
+            ShareLink(item: shareURL) {
+                Label("Share…", systemImage: "square.and.arrow.up")
+            }
+        }
+
+        Divider()
+
+        Menu("Library") {
+            Button("Bookmarks") { environment.showBookmarks = true }
+            Button("History") { environment.showHistory = true }
+            Button("Downloads") { environment.showDownloads = true }
+            Button(environment.linkQueue.count == 0 ? "Open Later" : "Open Later (\(environment.linkQueue.count))") {
+                environment.showLinkQueue = true
+            }
+            Button("Add Page to Open Later") {
+                environment.enqueueCurrentPageForLater()
+            }
+            .disabled(tab.isShowingStartPage)
+        }
+
+        if environment.extensions.isSupported {
+            Menu("Add-ons") {
+                Button("Oriel Store") { environment.showOrielStore = true }
+                Button("Extensions") { environment.showExtensions = true }
+            }
+        }
+
+        Button("Shields") { environment.showPrivacyShield = true }
+        Button("Fire…", role: .destructive) { environment.showFireButton = true }
+        Button {
+            environment.showProfiles = true
+        } label: {
+            Label("Profiles…", systemImage: "person.crop.circle")
+        }
+        Button("Settings") { openAppSettings() }
+
+        Divider()
+
+        Button("Visit \(BrowserConstants.productWebsiteHost)") { tab.openProductSite() }
+        Button("About Oriel") { environment.showAbout = true }
+    }
+
+    @ViewBuilder
+    private func pageMenuContent(
+        environment: AppEnvironment,
+        tab: BrowserTab,
+        includeWorkspaces: Bool
+    ) -> some View {
+        Button("Find in Page…") { environment.showFindInPage = true }
+            .disabled(tab.isShowingStartPage)
+        Button(tab.isReaderMode ? "Exit Reader Mode" : "Reader Mode") {
+            tab.toggleReaderMode()
+        }
+        .disabled(tab.isShowingStartPage)
+        Button(environment.isSplitViewActive ? "Close Split View" : "Open Split View") {
+            if environment.isSplitViewActive {
+                environment.closeSplitView()
+            } else {
+                environment.openSplitView()
+            }
+        }
+        Button("Picture in Picture…") {
+            environment.showPictureInPicturePicker = true
+        }
+        .disabled(tab.isShowingStartPage)
+        Button("Show Media Controls") {
+            tab.enableMediaControls()
+        }
+        .disabled(tab.isShowingStartPage)
+        if includeWorkspaces {
+            Button("Workspaces…") {
+                environment.showWorkspaces = true
+            }
+        }
+        Button(tab.forceDarkEnabled ? "Disable Force Dark" : "Force Dark on Page") {
+            tab.toggleForceDark()
+        }
+        .disabled(tab.isShowingStartPage)
+        Button("Zoom In") { tab.zoomIn() }
+            .disabled(tab.isShowingStartPage)
+        Button("Zoom Out") { tab.zoomOut() }
+            .disabled(tab.isShowingStartPage)
+        Button("Actual Size") { tab.resetZoom() }
+            .disabled(tab.isShowingStartPage || tab.zoomFactor == 1.0)
+        Button("Print…") { tab.printPage() }
+            .disabled(tab.isShowingStartPage)
+        Button(tab.requestsDesktopSite ? "Request Mobile Website" : "Request Desktop Website") {
+            tab.toggleDesktopSite()
+        }
+        .disabled(tab.isShowingStartPage)
+        Button(tab.javaScriptEnabled ? "Disable JavaScript" : "Enable JavaScript") {
+            tab.toggleJavaScript()
+        }
+        .disabled(tab.isShowingStartPage)
+        Button(tab.isFocusMode ? "Exit Focus Mode" : "Focus Mode") {
+            tab.toggleFocusMode()
+        }
+        .disabled(tab.isShowingStartPage)
+        Button("Translate Page…") {
+            environment.showTranslate = true
+        }
+        .disabled(tab.isShowingStartPage)
+        Button("Install as Web App") {
+            Task { await environment.installCurrentPageAsWebApp() }
+        }
+        .disabled(tab.isShowingStartPage)
+        Button("Autofill Password…") {
+            Task { await environment.autofillPasswordForActivePage() }
+        }
+        .disabled(tab.isShowingStartPage)
+        Button("Hide Element…") {
+            tab.startElementPicker()
+        }
+        .disabled(tab.isShowingStartPage)
+        Button("Clear Hidden Elements on Site") {
+            environment.elementHide.clear(host: tab.navigation.url?.host)
+            tab.reload()
+        }
+        .disabled(tab.isShowingStartPage)
+        Button("Copy URL") { environment.copyCurrentURL() }
+            .disabled(environment.shareURL == nil)
+        Button("Reload") { tab.reload() }
+            .disabled(tab.isShowingStartPage)
+        Button("Home") { tab.goHome() }
+            .disabled(tab.isShowingStartPage)
     }
 
     @ViewBuilder
@@ -1238,9 +1381,13 @@ private struct ChromeMenuButtonStyleModifier: ViewModifier {
     var chromeStyled: Bool
     var size: CGFloat
     var accent: Color
+    var phoneToolbar: Bool = false
 
+    @ViewBuilder
     func body(content: Content) -> some View {
-        if chromeStyled {
+        if phoneToolbar {
+            content.buttonStyle(OrielPhoneToolbarButtonStyle())
+        } else if chromeStyled {
             content.buttonStyle(
                 OrielChromeButtonStyle(
                     isEnabled: true,

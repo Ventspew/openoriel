@@ -349,6 +349,33 @@ struct OrielChromeButtonStyle: ButtonStyle {
     }
 }
 
+/// Lighter Safari-like toolbar control for the iPhone bottom bar (no heavy filled tiles).
+struct OrielPhoneToolbarButtonStyle: ButtonStyle {
+    var isEnabled: Bool = true
+    var isEmphasized: Bool = false
+    var accent: Color = OrielTheme.brandTeal
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.body.weight(.medium))
+            .foregroundStyle(
+                isEnabled
+                    ? (isEmphasized ? accent : Color.primary.opacity(0.85))
+                    : Color.secondary.opacity(0.4)
+            )
+            .frame(minWidth: 44, minHeight: 36)
+            .padding(.horizontal, 4)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.primary.opacity(configuration.isPressed ? 0.10 : 0))
+            )
+            .scaleEffect(configuration.isPressed && isEnabled ? 0.96 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .contentShape(Rectangle())
+            .opacity(isEnabled ? 1 : 0.55)
+    }
+}
+
 // MARK: - Root theming
 
 extension View {
