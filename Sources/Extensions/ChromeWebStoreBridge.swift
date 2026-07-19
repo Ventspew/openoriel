@@ -337,30 +337,47 @@ enum ChromeWebStoreBridge {
       function isPhoneIncompatText(text) {
         var api = i18n();
         if (api) return api.isPhoneIncompatText(text);
-        return /not compatible with|Item currently unavailable|only (works|available|installable) on (a )?(desktop|computer)|alleen (beschikbaar|te installeren) op/i.test(text || '');
+        return /not compatible with|Item currently unavailable|only (works|available|installable) on (a )?(desktop|computer)|alleen (beschikbaar|te installeren) op|gebruik je desktopbrowser|use (your |a )?desktop browser|desktopbrowser om dit/i.test(text || '');
+      }
+
+      function hideNode(el) {
+        if (!el || el.getAttribute('data-oriel-hidden-unavailable') === '1') return;
+        el.style.setProperty('display', 'none', 'important');
+        el.setAttribute('data-oriel-hidden-unavailable', '1');
+      }
+
+      function bannerRootFor(el) {
+        var best = el;
+        var cur = el;
+        for (var depth = 0; depth < 6 && cur && cur !== document.body; depth++) {
+          var parent = cur.parentElement;
+          if (!parent || parent === document.body || parent === document.documentElement) break;
+          var pText = normalizeLabel(parent.textContent);
+          // Climb while the wrapper is still a compact banner (text + OK), not the page shell.
+          if (pText.length > 420) break;
+          if (parent.childElementCount > 8) break;
+          if (!isPhoneIncompatText(pText) && pText.indexOf(normalizeLabel(el.textContent)) === -1) break;
+          best = parent;
+          cur = parent;
+        }
+        return best;
       }
 
       function hideUnavailable() {
         if (!document.body) return;
-        var candidates = document.querySelectorAll('div, section, span, p, h1, h2, h3, li, button, a');
+        var candidates = document.querySelectorAll(
+          'div, section, span, p, h1, h2, h3, li, button, a, [role="alert"], [role="status"], [role="dialog"]'
+        );
         for (var i = 0; i < candidates.length; i++) {
           var el = candidates[i];
           if (el.getAttribute('data-oriel-hidden-unavailable') === '1') continue;
           if (el.id === 'oriel-add-to-oriel' || el.id === 'oriel-install-bar' || el.id === 'oriel-cws-tip') continue;
           if (el.closest && el.closest('#oriel-install-bar')) continue;
-          if (el.childElementCount > 12) continue;
+          if (el.childElementCount > 16) continue;
           var text = normalizeLabel(el.textContent);
           if (text.length < 10 || text.length > 320) continue;
           if (!isPhoneIncompatText(text)) continue;
-          var target = el;
-          // Prefer hiding a small banner wrapper, not the whole page.
-          var parent = el.parentElement;
-          if (parent && parent !== document.body && parent.childElementCount <= 4) {
-            var pText = normalizeLabel(parent.textContent);
-            if (pText.length <= 360 && isPhoneIncompatText(pText)) target = parent;
-          }
-          target.style.setProperty('display', 'none', 'important');
-          target.setAttribute('data-oriel-hidden-unavailable', '1');
+          hideNode(bannerRootFor(el));
         }
       }
 

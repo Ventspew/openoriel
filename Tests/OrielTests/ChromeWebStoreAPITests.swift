@@ -49,6 +49,9 @@ final class ChromeWebStoreAPITests: XCTestCase {
         XCTAssertTrue(StoreBridgeI18n.catalogSource.contains("Verwijderen uit Oriel"))
         XCTAssertTrue(StoreBridgeI18n.catalogSource.contains("isChromeInstallLabel"))
         XCTAssertTrue(StoreBridgeI18n.catalogSource.contains("only (works|available|installable) on"))
+        XCTAssertTrue(StoreBridgeI18n.catalogSource.contains("gebruik je desktopbrowser"))
+        XCTAssertTrue(StoreBridgeI18n.catalogSource.contains("use (your |a )?desktop browser"))
+        XCTAssertTrue(ChromeWebStoreBridge.userScriptSource.contains("bannerRootFor"))
         XCTAssertTrue(ChromeWebStoreBridge.userScriptSource.contains("isRemoveChromeLabel"))
         XCTAssertTrue(ChromeWebStoreBridge.userScriptSource.contains("L('remove')"))
     }

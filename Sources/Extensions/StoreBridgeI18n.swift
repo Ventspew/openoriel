@@ -822,6 +822,13 @@ enum StoreBridgeI18n {
         if (/only (works|available|installable) on (a )?(desktop|computer|pc)|alleen (beschikbaar|werkzaam|te installeren) op (een )?(desktop|computer|pc)|nur (auf|für) (dem )?(desktop|computer)|uniquement (sur|disponible).*(ordinateur|desktop)|solo (en|disponible).*(escritorio|ordenador|computadora)|solo su (desktop|computer)|apenas (no|em).*(computador|desktop)|только на|فقط على|デスクトップのみ|仅限电脑|僅限電腦|데스크톱에서만/i.test(text)) return true;
         if (/install( this)? (on|from) (a )?(desktop|computer)|installeer.*(desktop|computer)|auf (einem )?(desktop|computer) installieren/i.test(text)) return true;
         if (/available (for|on) chrome (on )?(desktop|mac|windows|computer)|beschikbaar (voor|op) chrome.*(desktop|computer|mac|windows)/i.test(text)) return true;
+        // Mini info banner: “Gebruik je desktopbrowser om dit thema toe te voegen.”
+        if (/gebruik je desktopbrowser|use (your |a )?desktop browser|use (your |a )?computer( browser)? to (add|install)|desktopbrowser om dit|utiliser (votre )?navigateur|benutzen sie.*(desktop|computer)|usa (tu )?navegador de escritorio|usa (il )?browser desktop|use o navegador/i.test(text)) return true;
+        if (/(desktop ?browser|desktopbrowser|computerbrowser).*(toe te voegen|toevoegen|to add|to install|hinzuzufügen|ajouter|añadir|aggiungere)/i.test(text)) return true;
+        if (/(add|install|toevoegen).*(desktop ?browser|desktopbrowser|computer)/i.test(text)
+            && /(theme|thema|extension|extensie|add-?on|erweiterung)/i.test(text)) {
+          return true;
+        }
         if (/requires? chrome|chrome (for )?(desktop|mac|windows) (required|nodig|erforderlich|requis|necesario|necessario|necessário)/i.test(text)) return true;
         return false;
       }
