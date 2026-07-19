@@ -10,6 +10,10 @@ final class DualEnginePolicyTests: XCTestCase {
         XCTAssertEqual(RenderingEnginePolicy.resolved(.webkit), .webkit)
     }
 
+    func testResolvedSmartFallsBackToWebKitWithoutHost() {
+        XCTAssertEqual(RenderingEnginePolicy.resolved(.smart), .webkit)
+    }
+
     func testChromeDesktopUAWhenCompatible() {
         #if os(macOS)
         XCTAssertTrue(RenderingEnginePolicy.usesChromeDesktopUserAgent(.chromiumCompatibility))

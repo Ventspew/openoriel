@@ -257,19 +257,19 @@ final class AppEnvironment {
         }
     }
 
-    func resolvedEngine(for tab: BrowserTab?) -> BrowserEngineKind {
-        let host = tab?.navigation.url?.host
+    func resolvedEngine(for tab: BrowserTab?, host: String? = nil) -> BrowserEngineKind {
+        let resolvedHost = host ?? tab?.navigation.url?.host
         return RenderingEnginePolicy.resolve(
             global: settings.preferredEngine,
             tabOverride: tab?.engineOverride,
-            host: host,
+            host: resolvedHost,
             policy: chromiumPolicy
         )
     }
 
-    func applyResolvedEngine(to tab: BrowserTab?) {
+    func applyResolvedEngine(to tab: BrowserTab?, host: String? = nil) {
         guard let tab else { return }
-        tab.applyPreferredEngine(resolvedEngine(for: tab))
+        tab.applyPreferredEngine(resolvedEngine(for: tab, host: host))
     }
 
     /// Hibernate background tabs by releasing pooled WKWebViews (active + split kept).
@@ -505,8 +505,8 @@ final class AppEnvironment {
         let targets = tab.map { [$0] } ?? tabs.tabs
         for item in targets {
             applyResolvedEngine(to: item)
-            item.onResolveEngine = { [weak self] tab in
-                self?.applyResolvedEngine(to: tab)
+            item.onResolveEngine = { [weak self] tab, url in
+                self?.applyResolvedEngine(to: tab, host: url?.host)
             }
             item.shouldHandOffToSystemChromium = { [weak self] url in
                 guard let self else { return false }

@@ -51,12 +51,39 @@ enum ChromiumAutoSiteList {
         "linear.app",
         "vercel.com",
         "github.dev",
-        "vscode.dev"
+        "vscode.dev",
+        "chromewebstore.google.com",
+        "classroom.google.com",
+        "calendar.google.com",
+        "mail.google.com"
+    ]
+
+    /// Prefer Safari/WebKit identity (captcha, Apple ID, banking-style trust).
+    static let webkitPreferredHosts: [String] = [
+        "apple.com",
+        "icloud.com",
+        "appleid.apple.com",
+        "idmsa.apple.com",
+        "account.apple.com",
+        "icloud.com.cn",
+        "accounts.google.com",
+        "myaccount.google.com",
+        "challenges.cloudflare.com",
+        "paypal.com",
+        "login.microsoftonline.com"
     ]
 
     static func matches(_ host: String?) -> Bool {
+        matches(host, in: stubbornDesktopHosts)
+    }
+
+    static func prefersWebKitIdentity(_ host: String?) -> Bool {
+        matches(host, in: webkitPreferredHosts)
+    }
+
+    private static func matches(_ host: String?, in list: [String]) -> Bool {
         guard let host = host?.lowercased(), !host.isEmpty else { return false }
-        for entry in stubbornDesktopHosts {
+        for entry in list {
             if host == entry || host.hasSuffix("." + entry) {
                 return true
             }
@@ -163,51 +190,6 @@ final class ChromiumSitePolicy {
             hostPreferences: encoded
         )
         try? JSONFileStore.save(snap, to: fileName)
-        #endif
-    }
-}
-
-extension RenderingEnginePolicy {
-    /// Resolve the effective engine for a tab/host on Mac.
-    /// Priority: tab override → host preference → auto stubborn list → global Settings.
-    static func resolve(
-        global: BrowserEngineKind,
-        tabOverride: BrowserEngineKind?,
-        host: String?,
-        policy: ChromiumSitePolicy
-    ) -> BrowserEngineKind {
-        #if os(iOS)
-        return .webkit
-        #else
-        if let tabOverride {
-            return resolved(tabOverride)
-        }
-
-        switch policy.preference(forHost: host) {
-        case .forceWebKit:
-            return .webkit
-        case .forceChromiumCompatible, .openInSystemChrome:
-            // Hand-off still uses Compatible identity if the user stays in Oriel.
-            return .chromiumCompatibility
-        case .followDefault:
-            break
-        }
-
-        let base = resolved(global)
-        if base == .webkit,
-           policy.autoChromiumForStubbornSites,
-           ChromiumAutoSiteList.matches(host) {
-            return .chromiumCompatibility
-        }
-        return base
-        #endif
-    }
-
-    static func shouldHandOffToSystemChromium(host: String?, policy: ChromiumSitePolicy) -> Bool {
-        #if os(macOS)
-        return policy.preference(forHost: host) == .openInSystemChrome
-        #else
-        return false
         #endif
     }
 }

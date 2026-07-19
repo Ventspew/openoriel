@@ -9,36 +9,58 @@ final class ChromiumMacFeaturesTests: XCTestCase {
         XCTAssertFalse(ChromiumAutoSiteList.matches("example.com"))
     }
 
-    func testResolvePrefersTabOverride() {
+    func testWebKitPreferredHosts() {
+        XCTAssertTrue(ChromiumAutoSiteList.prefersWebKitIdentity("appleid.apple.com"))
+        XCTAssertTrue(ChromiumAutoSiteList.prefersWebKitIdentity("accounts.google.com"))
+        XCTAssertFalse(ChromiumAutoSiteList.prefersWebKitIdentity("meet.google.com"))
+    }
+
+    func testSmartPicksChromiumForMeetAndWebKitForApple() {
         let policy = ChromiumSitePolicy()
-        policy.autoChromiumForStubbornSites = true
-        let engine = RenderingEnginePolicy.resolve(
-            global: .webkit,
-            tabOverride: .chromiumCompatibility,
-            host: "example.com",
-            policy: policy
-        )
         #if os(macOS)
-        XCTAssertEqual(engine, .chromiumCompatibility)
+        XCTAssertEqual(
+            RenderingEnginePolicy.resolve(global: .smart, tabOverride: nil, host: "meet.google.com", policy: policy),
+            .chromiumCompatibility
+        )
+        XCTAssertEqual(
+            RenderingEnginePolicy.resolve(global: .smart, tabOverride: nil, host: "www.apple.com", policy: policy),
+            .webkit
+        )
+        XCTAssertEqual(
+            RenderingEnginePolicy.resolve(global: .smart, tabOverride: nil, host: "example.com", policy: policy),
+            .webkit
+        )
         #else
-        XCTAssertEqual(engine, .webkit)
+        XCTAssertEqual(
+            RenderingEnginePolicy.resolve(global: .smart, tabOverride: nil, host: "meet.google.com", policy: policy),
+            .webkit
+        )
         #endif
     }
 
-    func testResolveAutoStubbornWhenWebKitDefault() {
+    func testTwoHostsCanResolveDifferentlyUnderSmart() {
         let policy = ChromiumSitePolicy()
-        policy.autoChromiumForStubbornSites = true
+        let meet = RenderingEnginePolicy.resolve(global: .smart, tabOverride: nil, host: "teams.microsoft.com", policy: policy)
+        let bbc = RenderingEnginePolicy.resolve(global: .smart, tabOverride: nil, host: "bbc.com", policy: policy)
+        #if os(macOS)
+        XCTAssertEqual(meet, .chromiumCompatibility)
+        XCTAssertEqual(bbc, .webkit)
+        XCTAssertNotEqual(meet, bbc)
+        #else
+        XCTAssertEqual(meet, .webkit)
+        XCTAssertEqual(bbc, .webkit)
+        #endif
+    }
+
+    func testTabOverrideBeatsSmart() {
+        let policy = ChromiumSitePolicy()
         let engine = RenderingEnginePolicy.resolve(
-            global: .webkit,
-            tabOverride: nil,
-            host: "teams.microsoft.com",
+            global: .smart,
+            tabOverride: .webkit,
+            host: "meet.google.com",
             policy: policy
         )
-        #if os(macOS)
-        XCTAssertEqual(engine, .chromiumCompatibility)
-        #else
         XCTAssertEqual(engine, .webkit)
-        #endif
     }
 
     func testForceWebKitBeatsAutoList() {
@@ -57,5 +79,13 @@ final class ChromiumMacFeaturesTests: XCTestCase {
     func testIdentityScriptIsNonEmpty() {
         XCTAssertTrue(ChromiumIdentityScript.source.contains("userAgentData"))
         XCTAssertTrue(ChromiumIdentityScript.source.contains("Chromium"))
+    }
+
+    func testSmartIsAvailableOnMacOnly() {
+        #if os(macOS)
+        XCTAssertTrue(BrowserEngineKind.availableOnThisPlatform.contains(.smart))
+        #else
+        XCTAssertFalse(BrowserEngineKind.availableOnThisPlatform.contains(.smart))
+        #endif
     }
 }

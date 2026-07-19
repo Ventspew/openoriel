@@ -55,7 +55,8 @@ final class BrowserTab: Identifiable {
     var isHTTPSOnlyMode: (() -> Bool)?
     var elementHideScript: (() -> String)?
     /// Refresh `preferredEngine` from global/site/tab policy before UA apply.
-    var onResolveEngine: ((BrowserTab) -> Void)?
+    /// Passes the destination URL so Smart mode can pick per navigation, not the previous page.
+    var onResolveEngine: ((BrowserTab, URL?) -> Void)?
     /// When true, cancel navigation and open system Chromium for this URL.
     var shouldHandOffToSystemChromium: ((URL) -> Bool)?
     var onHandOffToSystemChromium: ((URL) -> Void)?
@@ -392,13 +393,13 @@ final class BrowserTab: Identifiable {
 
     func clearEngineOverride() {
         engineOverride = nil
-        onResolveEngine?(self)
+        onResolveEngine?(self, navigation.url)
         applyUserAgent()
     }
 
     func setEngineOverride(_ engine: BrowserEngineKind?) {
         engineOverride = engine
-        onResolveEngine?(self)
+        onResolveEngine?(self, navigation.url)
         applyUserAgent()
     }
 
@@ -485,9 +486,9 @@ final class BrowserTab: Identifiable {
         }
     }
 
-    /// Keeps desktop UA in sync during in-page navigations when Request Desktop Website is on.
+    /// Keeps UA / Smart engine choice in sync for the destination URL of a navigation.
     func syncUserAgentForNavigation(to url: URL?) {
-        onResolveEngine?(self)
+        onResolveEngine?(self, url)
         applyUserAgent(for: url)
     }
 

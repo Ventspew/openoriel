@@ -165,6 +165,8 @@ struct BrowserShellView: View {
         }
         .onChange(of: environment.activeTab?.navigation.url) { _, newURL in
             environment.considerOrielStoreTip(for: newURL)
+            // Keep Smart / per-site engine aligned with the visible page.
+            environment.applyResolvedEngine(to: environment.activeTab, host: newURL?.host)
         }
         .onChange(of: environment.tabs.activeTabID) { _, _ in
             environment.considerOrielStoreTip(for: environment.activeTab?.navigation.url)
@@ -1262,10 +1264,17 @@ struct BrowserShellView: View {
         }
     }
 
-    private func webViewPoolConfigKey(environment: AppEnvironment, tab: BrowserTab) -> String {
-        let engine = environment.resolvedEngine(for: tab).rawValue
+    private func webViewStructuralID(environment: AppEnvironment, tab: BrowserTab) -> String {
+        // Do not include page-engine here — Smart mode changes engine per navigation
+        // and remounting mid-load would cancel the page. UA/identity update in-place.
         let identity = environment.chromiumPolicy.injectChromeIdentity ? "1" : "0"
-        return "fp\(environment.privacy.fingerprintingProtection)-ap\(environment.settings.blockAutoplay)-p\(environment.profiles.activeProfileID.uuidString)-e\(engine)-ci\(identity)"
+        return "\(tab.id.uuidString)-fp\(environment.privacy.fingerprintingProtection)-ap\(environment.settings.blockAutoplay)-p\(environment.profiles.activeProfileID.uuidString)-ci\(identity)"
+    }
+
+    private func webViewPoolConfigKey(environment: AppEnvironment, tab: BrowserTab) -> String {
+        // Pool still keys by concrete engine so a new tab can start with the right identity config.
+        let engine = tab.preferredEngine.rawValue
+        return "\(webViewStructuralID(environment: environment, tab: tab))-e\(engine)"
     }
 
     private func protectedWebViewTabIDs(environment: AppEnvironment) -> Set<UUID> {
@@ -1403,7 +1412,7 @@ struct BrowserShellView: View {
             // Do NOT key on contentBlocker.generation — that wiped back/forward history
             // whenever filter lists finished compiling (rules re-attach in updateWebView).
             // Tab switches keep history via WebViewPool even when this view leaves the hierarchy.
-            .id("\(tab.id.uuidString)-\(webViewPoolConfigKey(environment: environment, tab: tab))")
+            .id(webViewStructuralID(environment: environment, tab: tab))
             .opacity(showStart || showError ? 0 : 1)
             .allowsHitTesting(!(showStart || showError))
             .accessibilityHidden(showStart || showError)

@@ -410,7 +410,11 @@ final class BrowserSettings {
            engine.isSelectableOnThisPlatform {
             self.preferredEngine = engine
         } else {
+            #if os(macOS)
+            self.preferredEngine = .smart
+            #else
             self.preferredEngine = .webkit
+            #endif
         }
         self.pulseLucidMode = defaults.bool(forKey: pulseLucidModeKey)
         self.pulseNetworkSaver = defaults.bool(forKey: pulseNetworkSaverKey)

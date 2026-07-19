@@ -176,7 +176,7 @@ struct PulseCornerView: View {
     private var meterRow: some View {
         let tabs = environment.tabs.tabs.count
         let limit = WebViewPool.shared.softLimit
-        let engine = RenderingEnginePolicy.resolved(environment.settings.preferredEngine)
+        let engine = environment.resolvedEngine(for: environment.activeTab)
         return VStack(alignment: .leading, spacing: 4) {
             Text("Tabs \(tabs) · Engine cap \(limit)")
                 .font(.caption2.weight(.semibold))

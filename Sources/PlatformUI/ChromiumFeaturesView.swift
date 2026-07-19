@@ -29,7 +29,7 @@ struct ChromiumFeaturesView: View {
         @Bindable var policy = environment.chromiumPolicy
         return Form {
             Section {
-                Text("Oriel still paints with WebKit. Chromium Compatible gives Chrome’s desktop identity (UA + Client Hints). Chromium Native needs a linked CEF framework later. These controls work in Classic and Pulse.")
+                Text("Oriel still paints with WebKit. Smart mode picks WebKit or Chromium Compatible per tab from the page. Chromium Compatible adds Chrome’s desktop identity (UA + Client Hints). Chromium Native needs a linked CEF framework later. Classic and Pulse share these controls.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
