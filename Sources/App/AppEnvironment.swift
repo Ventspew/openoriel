@@ -34,6 +34,7 @@ final class AppEnvironment {
     let appIcon: AppIconService
     let pulseAmbience: PulseAmbiencePlayer
     let chromiumPolicy: ChromiumSitePolicy
+    let siteZoom: SiteZoomStore
 
     var showAbout = false
     var showTabOverview = false
@@ -66,6 +67,9 @@ final class AppEnvironment {
     var splitTabID: UUID?
     var findQuery = ""
     var authPopup: WebAuthPopupState?
+    /// Short transient status (install web app, screenshot saved, …).
+    var statusBanner: String?
+    private var statusBannerTask: Task<Void, Never>?
 
     var activeTab: BrowserTab? { tabs.activeTab }
 
@@ -134,6 +138,7 @@ final class AppEnvironment {
         self.appIcon = AppIconService()
         self.pulseAmbience = PulseAmbiencePlayer()
         self.chromiumPolicy = ChromiumSitePolicy()
+        self.siteZoom = SiteZoomStore()
         resolvedSession.restorePreviousSession = resolvedSettings.restorePreviousSession
 
         let snapshot = resolvedSession.load()
@@ -445,6 +450,66 @@ final class AppEnvironment {
         activeTab?.clearFindInPage()
     }
 
+    func flashStatus(_ message: String) {
+        statusBannerTask?.cancel()
+        statusBanner = message
+        statusBannerTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_400_000_000)
+            guard !Task.isCancelled else { return }
+            if statusBanner == message {
+                statusBanner = nil
+            }
+        }
+    }
+
+    func sharePageScreenshot() async {
+        guard let tab = activeTab else { return }
+        guard let image = await tab.captureScreenshot() else {
+            flashStatus("Couldn’t capture screenshot")
+            return
+        }
+        presentShare(items: [image], subject: tab.displayTitle)
+        flashStatus("Screenshot ready to share")
+    }
+
+    func sharePagePDF() async {
+        guard let tab = activeTab else { return }
+        guard let data = await tab.capturePDF() else {
+            flashStatus("Couldn’t create PDF")
+            return
+        }
+        let safeName = tab.displayTitle
+            .replacingOccurrences(of: "/", with: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let fileName = (safeName.isEmpty ? "Page" : safeName) + ".pdf"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        do {
+            try data.write(to: url, options: .atomic)
+            presentShare(items: [url], subject: fileName)
+            flashStatus("PDF ready to share")
+        } catch {
+            flashStatus("Couldn’t save PDF")
+        }
+    }
+
+    private func presentShare(items: [Any], subject: String) {
+        #if os(iOS)
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let root = scene.windows.first(where: \.isKeyWindow)?.rootViewController
+                ?? scene.windows.first?.rootViewController else { return }
+        let top = root.presentedViewController ?? root
+        let activity = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        activity.popoverPresentationController?.sourceView = top.view
+        top.present(activity, animated: true)
+        #elseif os(macOS)
+        let picker = NSSharingServicePicker(items: items)
+        if let view = NSApp.keyWindow?.contentView {
+            picker.show(relativeTo: .zero, of: view, preferredEdge: .minY)
+        }
+        #endif
+        _ = subject
+    }
+
     func setSearchEngine(_ engine: SearchEngine) {
         settings.searchEngine = engine
         tabs.searchEngine = engine
@@ -517,6 +582,12 @@ final class AppEnvironment {
             }
             item.onHandOffToSystemChromium = { url in
                 _ = ChromiumEngineBridge.openInSystemChromium(url)
+            }
+            item.siteZoomProvider = { [weak self] host in
+                self?.siteZoom.zoom(forHost: host) ?? 1.0
+            }
+            item.onZoomChanged = { [weak self] host, factor in
+                self?.siteZoom.setZoom(factor, forHost: host)
             }
             item.shouldUpgradeHTTPS = { [weak self] url in
                 guard let self else { return true }
@@ -617,6 +688,7 @@ final class AppEnvironment {
         let info = ProgressiveWebAppDetector.parseDetectResult(value, pageURL: url)
             ?? ProgressiveWebAppInfo(name: tab.displayTitle, startURL: url, manifestURL: nil, iconURL: nil)
         installedWebApps.install(info)
+        flashStatus("Added “\(info.name)” to Web Apps")
     }
 }
 

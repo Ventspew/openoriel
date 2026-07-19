@@ -33,6 +33,24 @@ struct BrowserShellView: View {
                 }
                 .frame(width: proxy.size.width, height: proxy.size.height)
 
+                if let banner = environment.statusBanner {
+                    Text(banner)
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+                        .overlay {
+                            Capsule(style: .continuous)
+                                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                        }
+                        .padding(.bottom, 72)
+                        .padding(.trailing, 16)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .zIndex(30)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                        .allowsHitTesting(false)
+                }
+
                 if environment.showPulseCorner, environment.settings.edition.isPulse {
                     PulseCornerView()
                         .padding(12)
@@ -41,6 +59,7 @@ struct BrowserShellView: View {
                 }
             }
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: environment.showPulseCorner)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: environment.statusBanner)
         }
         #if os(iOS)
         .background {
@@ -175,6 +194,14 @@ struct BrowserShellView: View {
         .onChange(of: environment.tabs.activeTabID) { _, _ in
             Task { @MainActor in
                 environment.considerOrielStoreTip(for: environment.activeTab?.navigation.url)
+            }
+        }
+        .onChange(of: environment.findQuery) { _, newValue in
+            guard environment.showFindInPage else { return }
+            if newValue.isEmpty {
+                environment.activeTab?.clearFindInPage()
+            } else {
+                environment.performFind(forward: true)
             }
         }
         .alert(
@@ -397,6 +424,10 @@ struct BrowserShellView: View {
                             if item.isPinned {
                                 Image(systemName: "pin.fill").font(.caption2)
                             }
+                            if item.isMediaMuted {
+                                Image(systemName: "speaker.slash.fill").font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                             if item.isPrivate {
                                 Image(systemName: "eyeglasses").font(.caption2)
                             }
@@ -477,6 +508,8 @@ struct BrowserShellView: View {
         @Bindable var environment = environment
         FindInPageBar(
             query: $environment.findQuery,
+            matchCount: environment.activeTab?.findMatchCount,
+            matchFound: environment.activeTab?.findMatchFound ?? false,
             onSubmit: { environment.performFind(forward: true) },
             onNext: { environment.performFind(forward: true) },
             onPrevious: { environment.performFind(forward: false) },
@@ -514,6 +547,8 @@ struct BrowserShellView: View {
                     if environment.showFindInPage {
                         FindInPageBar(
                             query: $environment.findQuery,
+                            matchCount: environment.activeTab?.findMatchCount,
+                            matchFound: environment.activeTab?.findMatchFound ?? false,
                             onSubmit: { environment.performFind(forward: true) },
                             onNext: { environment.performFind(forward: true) },
                             onPrevious: { environment.performFind(forward: false) },
@@ -617,6 +652,11 @@ struct BrowserShellView: View {
         } label: {
             HStack(spacing: 8) {
                 FaviconImage(pageURL: item.restorableURL, size: 14)
+                if item.isMediaMuted {
+                    Image(systemName: "speaker.slash.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
                 Text(item.displayTitle)
                     .lineLimit(1)
                     .font(.callout)
@@ -705,6 +745,10 @@ struct BrowserShellView: View {
                             FaviconImage(pageURL: item.restorableURL, size: 12)
                             if item.isPinned {
                                 Image(systemName: "pin.fill").font(.caption2)
+                            }
+                            if item.isMediaMuted {
+                                Image(systemName: "speaker.slash.fill").font(.caption2)
+                                    .foregroundStyle(.secondary)
                             }
                             if item.isPrivate {
                                 Image(systemName: "eyeglasses").font(.caption2)
@@ -1068,6 +1112,10 @@ struct BrowserShellView: View {
     ) -> some View {
         Button("Find in Page…") { environment.showFindInPage = true }
             .disabled(tab.isShowingStartPage)
+        Button(tab.isMediaMuted ? "Unmute Tab" : "Mute Tab") {
+            tab.toggleMediaMute()
+        }
+        .disabled(tab.isShowingStartPage)
         Button(tab.isReaderMode ? "Exit Reader Mode" : "Reader Mode") {
             tab.toggleReaderMode()
         }
@@ -1102,6 +1150,14 @@ struct BrowserShellView: View {
             .disabled(tab.isShowingStartPage)
         Button("Actual Size") { tab.resetZoom() }
             .disabled(tab.isShowingStartPage || tab.zoomFactor == 1.0)
+        Button("Screenshot…") {
+            Task { await environment.sharePageScreenshot() }
+        }
+        .disabled(tab.isShowingStartPage)
+        Button("Save as PDF…") {
+            Task { await environment.sharePagePDF() }
+        }
+        .disabled(tab.isShowingStartPage)
         Button("Print…") { tab.printPage() }
             .disabled(tab.isShowingStartPage)
         Button(tab.requestsDesktopSite ? "Request Mobile Website" : "Request Desktop Website") {

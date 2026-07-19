@@ -125,6 +125,10 @@ struct PulsePerformanceView: View {
                 Button("Hibernate background tabs") {
                     environment.hibernateBackgroundTabs()
                 }
+                Button(environment.activeTab?.isMediaMuted == true ? "Unmute active tab" : "Mute active tab") {
+                    environment.activeTab?.toggleMediaMute()
+                }
+                .disabled(environment.activeTab?.isShowingStartPage != false)
             } header: {
                 Text("Performance")
             } footer: {

@@ -17,7 +17,7 @@ enum DownloadState: String, Codable, Sendable {
     case cancelled
 }
 
-struct DownloadItem: Identifiable, Equatable, Sendable {
+struct DownloadItem: Identifiable, Equatable, Sendable, Codable {
     let id: UUID
     var fileName: String
     var sourceURL: URL?
@@ -64,6 +64,8 @@ final class DownloadManager: NSObject {
     private var session: URLSession!
 
     private let destinationBookmarkKey = "oriel.downloadDestinationBookmark"
+    private let historyFileName = "download-history.json"
+    private let maxHistoryItems = 80
     private let maxConcurrent = 3
 
     /// Custom destination folder (security-scoped bookmark). Falls back to system Downloads/Documents.
@@ -78,6 +80,7 @@ final class DownloadManager: NSObject {
         config.timeoutIntervalForResource = 60 * 60 * 6
         session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
         restoreDestinationBookmark()
+        restoreHistory()
     }
 
     var hasActiveDownloads: Bool {
@@ -97,6 +100,7 @@ final class DownloadManager: NSObject {
         if let cookieStore {
             cookieStores[item.id] = cookieStore
         }
+        persistHistory()
         pumpQueue()
     }
 
@@ -158,10 +162,12 @@ final class DownloadManager: NSObject {
     func remove(_ id: UUID) {
         cancel(id)
         items.removeAll { $0.id == id }
+        persistHistory()
     }
 
     func clearCompleted() {
         items.removeAll { $0.state == .completed || $0.state == .cancelled }
+        persistHistory()
     }
 
     func clearAll() {
@@ -169,6 +175,7 @@ final class DownloadManager: NSObject {
             cancel(item.id)
         }
         items.removeAll()
+        persistHistory()
     }
 
     func setDestinationFolder(_ url: URL?) {
@@ -263,6 +270,34 @@ final class DownloadManager: NSObject {
         var item = items[index]
         mutate(&item)
         items[index] = item
+        if item.state == .completed || item.state == .failed || item.state == .cancelled || item.state == .paused {
+            persistHistory()
+        }
+    }
+
+    private func persistHistory() {
+        // Keep finished / paused rows so Downloads survives relaunch; drop in-flight jobs.
+        let durable = items
+            .filter { $0.state != .downloading && $0.state != .queued }
+            .prefix(maxHistoryItems)
+        try? JSONFileStore.save(Array(durable), to: historyFileName, prettyPrinted: false)
+    }
+
+    private func restoreHistory() {
+        guard let loaded = try? JSONFileStore.load([DownloadItem].self, from: historyFileName) else { return }
+            items = Array(
+                loaded
+                    .map { item -> DownloadItem in
+                        var copy = item
+                        // Never restore as actively downloading — user can Retry.
+                        if copy.state == .downloading || copy.state == .queued {
+                            copy.state = .paused
+                            copy.errorMessage = copy.errorMessage ?? "Interrupted"
+                        }
+                        return copy
+                    }
+                    .prefix(maxHistoryItems)
+            )
     }
 
     private func defaultDestinationDirectory() -> URL {

@@ -182,4 +182,62 @@ enum PageEnhancementScripts {
       return true;
     })();
     """#
+
+    /// Mute all media elements (and keep muting newly added ones).
+    static let enableMediaMute = #"""
+    (function() {
+      function hush(el) {
+        try {
+          el.muted = true;
+          el.volume = 0;
+        } catch (e) {}
+      }
+      document.querySelectorAll('video, audio').forEach(hush);
+      if (!window.__orielMuteObserver) {
+        window.__orielMuteObserver = new MutationObserver(function(muts) {
+          muts.forEach(function(m) {
+            m.addedNodes.forEach(function(n) {
+              if (n.querySelectorAll) n.querySelectorAll('video, audio').forEach(hush);
+              if (n.tagName === 'VIDEO' || n.tagName === 'AUDIO') hush(n);
+            });
+          });
+        });
+        window.__orielMuteObserver.observe(document.documentElement, { childList: true, subtree: true });
+      }
+      return true;
+    })();
+    """#
+
+    static let disableMediaMute = #"""
+    (function() {
+      if (window.__orielMuteObserver) {
+        try { window.__orielMuteObserver.disconnect(); } catch (e) {}
+        window.__orielMuteObserver = null;
+      }
+      document.querySelectorAll('video, audio').forEach(function(el) {
+        try { el.muted = false; } catch (e) {}
+      });
+      return true;
+    })();
+    """#
+
+    /// Approximate match count without mutating the DOM (for find UI).
+    static func countTextMatches(_ query: String) -> String {
+        let escaped = query
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "'", with: "\\'")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "\\r")
+        return """
+        (function() {
+          var q = '\(escaped)'.toLowerCase();
+          if (!q) return 0;
+          var text = (document.body && (document.body.innerText || document.body.textContent)) || '';
+          var hay = String(text).toLowerCase();
+          var count = 0, idx = 0;
+          while ((idx = hay.indexOf(q, idx)) !== -1) { count++; idx += q.length; }
+          return count;
+        })();
+        """
+    }
 }

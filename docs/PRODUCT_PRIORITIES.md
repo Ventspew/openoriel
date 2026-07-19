@@ -60,3 +60,4 @@ Kandidaten:
 **Ship status**
 - Onboarding ~5 pages with Skip.
 - Marketing site has hero; App Store screenshots still open.
+- Build 62+: find match counts, mute tab, screenshot/PDF share, download history persistence, per-site zoom.

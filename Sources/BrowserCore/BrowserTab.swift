@@ -34,6 +34,11 @@ final class BrowserTab: Identifiable {
     var forceDarkEnabled = false
     var lucidModeEnabled = false
     var isReaderMode = false
+    /// When true, media in this tab is forced muted.
+    var isMediaMuted = false
+    /// Last find-in-page match count (approx); `nil` when inactive.
+    var findMatchCount: Int?
+    var findMatchFound = false
     /// Mirrors Settings preferred engine for UA (WebKit vs Chromium Compatible).
     var preferredEngine: BrowserEngineKind = .webkit
     /// Optional per-tab lock; `nil` follows global + site policy.
@@ -60,6 +65,9 @@ final class BrowserTab: Identifiable {
     /// When true, cancel navigation and open system Chromium for this URL.
     var shouldHandOffToSystemChromium: ((URL) -> Bool)?
     var onHandOffToSystemChromium: ((URL) -> Void)?
+    /// Per-host zoom lookup / save (wired by AppEnvironment).
+    var siteZoomProvider: ((String?) -> Double)?
+    var onZoomChanged: ((String?, Double) -> Void)?
 
     init(
         id: UUID = UUID(),
@@ -322,13 +330,32 @@ final class BrowserTab: Identifiable {
         config.backwards = !forward
         config.caseSensitive = false
         config.wraps = true
-        webView?.find(query, configuration: config) { _ in }
+        webView?.find(query, configuration: config) { [weak self] result in
+            Task { @MainActor in
+                guard let self else { return }
+                self.findMatchFound = result.matchFound
+                if !result.matchFound {
+                    self.findMatchCount = 0
+                }
+            }
+        }
+        webView?.evaluateJavaScript(PageEnhancementScripts.countTextMatches(query)) { [weak self] value, _ in
+            Task { @MainActor in
+                guard let self else { return }
+                if let number = value as? Int {
+                    self.findMatchCount = number
+                } else if let number = value as? Double {
+                    self.findMatchCount = Int(number)
+                } else if let number = value as? NSNumber {
+                    self.findMatchCount = number.intValue
+                }
+            }
+        }
     }
 
     func clearFindInPage() {
-        #if os(macOS)
-        // WKWebView has no public clear-highlights API on all platforms; empty find is best-effort.
-        #endif
+        findMatchCount = nil
+        findMatchFound = false
         let config = WKFindConfiguration()
         webView?.find("", configuration: config) { _ in }
     }
@@ -346,14 +373,28 @@ final class BrowserTab: Identifiable {
     }
 
     func setZoom(_ factor: Double) {
+        applyZoomValue(factor, persist: true)
+    }
+
+    private func applyZoomValue(_ factor: Double, persist: Bool) {
         zoomFactor = min(3.0, max(0.5, (factor * 10).rounded() / 10))
         #if os(macOS)
         webView?.pageZoom = zoomFactor
         #endif
         webView?.evaluateJavaScript(PageEnhancementScripts.setZoom(zoomFactor), completionHandler: nil)
+        if persist {
+            onZoomChanged?(navigation.url?.host, zoomFactor)
+        }
     }
 
     func applyPageEnhancementsAfterLoad() {
+        let host = navigation.url?.host
+        if let provider = siteZoomProvider {
+            let desired = provider(host)
+            if abs(desired - zoomFactor) > 0.01 {
+                applyZoomValue(desired, persist: false)
+            }
+        }
         #if os(macOS)
         webView?.pageZoom = zoomFactor
         #endif
@@ -366,6 +407,25 @@ final class BrowserTab: Identifiable {
         if lucidModeEnabled {
             webView?.evaluateJavaScript(PageEnhancementScripts.enableLucidMode, completionHandler: nil)
         }
+        if isMediaMuted {
+            webView?.evaluateJavaScript(PageEnhancementScripts.enableMediaMute, completionHandler: nil)
+        }
+        if isFocusMode {
+            applyFocusMode()
+        }
+    }
+
+    func toggleMediaMute() {
+        setMediaMuted(!isMediaMuted)
+    }
+
+    func setMediaMuted(_ muted: Bool) {
+        isMediaMuted = muted
+        guard !isShowingStartPage else { return }
+        let script = muted
+            ? PageEnhancementScripts.enableMediaMute
+            : PageEnhancementScripts.disableMediaMute
+        webView?.evaluateJavaScript(script, completionHandler: nil)
     }
 
     func toggleFocusMode() {
@@ -451,6 +511,42 @@ final class BrowserTab: Identifiable {
         operation.showsProgressPanel = true
         operation.run()
         #endif
+    }
+
+    /// Capture a bitmap of the visible page (for Share / Save).
+    #if os(iOS)
+    func captureScreenshot() async -> UIImage? {
+        guard let webView, !isShowingStartPage else { return nil }
+        return await withCheckedContinuation { continuation in
+            webView.takeSnapshot(with: nil) { image, _ in
+                continuation.resume(returning: image)
+            }
+        }
+    }
+    #elseif os(macOS)
+    func captureScreenshot() async -> NSImage? {
+        guard let webView, !isShowingStartPage else { return nil }
+        return await withCheckedContinuation { continuation in
+            webView.takeSnapshot(with: nil) { image, _ in
+                continuation.resume(returning: image)
+            }
+        }
+    }
+    #endif
+
+    /// Create a PDF of the current page.
+    func capturePDF() async -> Data? {
+        guard let webView, !isShowingStartPage else { return nil }
+        return await withCheckedContinuation { continuation in
+            webView.createPDF { result in
+                switch result {
+                case .success(let data):
+                    continuation.resume(returning: data)
+                case .failure:
+                    continuation.resume(returning: nil)
+                }
+            }
+        }
     }
 
     /// Call after WebKit navigation changes so toolbar buttons stay accurate.
