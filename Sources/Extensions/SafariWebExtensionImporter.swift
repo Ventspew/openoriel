@@ -192,48 +192,10 @@ enum SafariWebExtensionImporter {
         try normalizeSafariManifestIfNeeded(at: copiedManifest)
     }
 
-    /// Soft-normalize Safari-only manifest keys so WebKit accepts more packages.
+    /// Soft-normalize Safari/Chrome/Firefox packaging quirks for `WKWebExtension`.
+    /// Delegates to ``ManifestCompatNormalizer`` (shared with CRX/XPI/zip installs on iOS + macOS).
     static func normalizeSafariManifestIfNeeded(at manifestURL: URL) throws {
-        guard let data = try? Data(contentsOf: manifestURL),
-              var root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return
-        }
-        var changed = false
-
-        // Some Safari packages put icons only under browser_action / action nested dicts — leave those.
-        // Ensure MV3 background service_worker packages aren't marked persistent (iOS rejects that).
-        if var background = root["background"] as? [String: Any] {
-            if background["service_worker"] != nil, background["persistent"] as? Bool == true {
-                background["persistent"] = false
-                root["background"] = background
-                changed = true
-            }
-        }
-
-        // Drop Safari-only browser_specific_settings; keep gecko/other if present.
-        if var bss = root["browser_specific_settings"] as? [String: Any], bss["safari"] != nil {
-            bss.removeValue(forKey: "safari")
-            if bss.isEmpty {
-                root.removeValue(forKey: "browser_specific_settings")
-            } else {
-                root["browser_specific_settings"] = bss
-            }
-            changed = true
-        }
-
-        // Prefer `browser_specific_settings` / `applications` leftovers don't block WebKit, but
-        // strip empty Safari-only permission stubs that confuse validation.
-        if let permissions = root["permissions"] as? [String] {
-            let filtered = permissions.filter { $0 != "nativeMessaging" || root["browser_specific_settings"] == nil }
-            if filtered.count != permissions.count {
-                root["permissions"] = filtered
-                changed = true
-            }
-        }
-
-        guard changed else { return }
-        let out = try JSONSerialization.data(withJSONObject: root, options: [.prettyPrinted, .sortedKeys])
-        try out.write(to: manifestURL, options: .atomic)
+        _ = try ManifestCompatNormalizer.normalize(at: manifestURL)
     }
 
     // MARK: - Helpers

@@ -2,15 +2,21 @@
 
 Chrome/Firefox-style WebExtensions on **macOS 15.4+** and **iOS / iPadOS 18.4+** via `WKWebExtension`.
 
+See also: [Extension compatibility (iOS research)](EXTENSION_COMPAT.md).
+
 ## Install sources
 
 | Source | Notes |
 |--------|--------|
 | Chrome Web Store | Install controls become **Add to Oriel** |
 | Firefox Add-ons (AMO) | On addons.mozilla.org, install / theme buttons become **Add to Oriel** / **Add theme to Oriel** |
-| `.zip` / `.crx` / `.xpi` | Extensions → Install from file… |
+| `.zip` / `.crx` / `.xpi` | Extensions → Install from file… (iOS + macOS) |
 | Unpacked folder | Directory with `manifest.json` |
-| Safari Web Extension `.appex` | Peel WebExtension resources (macOS can scan Applications) |
+| Safari Web Extension `.appex` | Peel WebExtension resources (macOS can also scan Applications) |
+
+## Built-in compat
+
+Before load, Oriel soft-rewrites manifests (`ManifestCompatNormalizer`) so more Chrome/Firefox/Safari packages validate under WebKit — action aliases, background shape, Safari BSS, unsafe permissions. This is packaging compat, not a full API shim.
 
 ## Safari extensions
 

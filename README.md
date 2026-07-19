@@ -20,7 +20,7 @@ iOS / iPadOS: build from source, or use TestFlight when a build is up (`Scripts/
 
 ## Build
 
-Needs Xcode 16+, [XcodeGen](https://github.com/yonaskolb/XcodeGen), iOS/iPadOS 17+, macOS 14+ (WebExtensions need macOS 15.4+).
+Needs Xcode 16+, [XcodeGen](https://github.com/yonaskolb/XcodeGen), iOS/iPadOS 17+, macOS 14+ (WebExtensions need iOS/iPadOS 18.4+ or macOS 15.4+).
 
 ```bash
 git clone https://github.com/macdirtycow/openoriel.git
@@ -65,7 +65,8 @@ git push origin v1.0.0
 |--|--|
 | [Architecture](docs/ARCHITECTURE.md) | Source layout |
 | [Privacy](docs/PRIVACY.md) | WebKit privacy limits |
-| [Extensions](docs/EXTENSIONS.md) | macOS WebExtensions |
+| [Extensions](docs/EXTENSIONS.md) | WebExtensions (iOS 18.4+ / macOS 15.4+) |
+| [Extension compat](docs/EXTENSION_COMPAT.md) | Chrome/Firefox on iPhone & iPad |
 | [Entitlements](docs/ENTITLEMENTS.md) | Sandbox capabilities |
 | [App Store](docs/APP_STORE.md) | Release checklist |
 | [Content blocker](Resources/ContentBlocker/README.md) | Filter lists |

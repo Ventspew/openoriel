@@ -598,7 +598,7 @@ final class WebExtensionManager {
         guard let manifest = findManifest(in: tempRoot) else {
             throw ExtensionError.missingManifest
         }
-        try? SafariWebExtensionImporter.normalizeSafariManifestIfNeeded(at: manifest)
+        try? ManifestCompatNormalizer.normalize(at: manifest)
 
         let root = manifest.deletingLastPathComponent()
         if root != tempRoot {
@@ -607,7 +607,7 @@ final class WebExtensionManager {
             try fileManager.moveItem(at: root, to: promoted)
             try? fileManager.removeItem(at: tempRoot)
             if let promotedManifest = findManifest(in: promoted) {
-                try? SafariWebExtensionImporter.normalizeSafariManifestIfNeeded(at: promotedManifest)
+                try? ManifestCompatNormalizer.normalize(at: promotedManifest)
             }
             return promoted
         }

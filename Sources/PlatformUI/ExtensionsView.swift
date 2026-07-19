@@ -84,7 +84,7 @@ struct ExtensionsView: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     #if os(iOS)
-                    Text("On iPhone and iPad, pick a Safari Web Extension .appex or a folder that contains manifest.json. Extension action popups open as sheets when provided.")
+                    Text("On iPhone and iPad (18.4+): install .zip / .crx / .xpi, Chrome Web Store, Firefox Add-ons, unpacked folders, or Safari .appex. A built-in compat layer soft-rewrites manifests for WebKit — not every Chrome/Firefox API exists.")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)

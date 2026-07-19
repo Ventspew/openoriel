@@ -33,7 +33,7 @@ Version **1.0.0 (20)** — bump `CURRENT_PROJECT_VERSION` in `project.yml` for e
 - [ ] Release build on device (iPhone, iPad, Mac)
 - [ ] Private tab does not write history
 - [ ] Shields compile on first launch
-- [ ] Extension install on macOS 15.4+
+- [ ] Extension install on macOS 15.4+ / iOS 18.4+
 
 ## Metadata (App Store Connect)
 

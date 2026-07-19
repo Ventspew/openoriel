@@ -25,4 +25,4 @@ Shields and related features use Apple WebKit APIs.
 | Not Brave / uBlock | `WKContentRuleList` is a different engine |
 | Some YouTube in-stream ads | Shared first-party video CDNs |
 | No custom TLS pinning | System certificate validation |
-| No Chrome install APIs | CRX download + `WKWebExtension` on macOS |
+| No Chrome install APIs | CRX/XPI download + `WKWebExtension` (iOS 18.4+ / macOS 15.4+) |
