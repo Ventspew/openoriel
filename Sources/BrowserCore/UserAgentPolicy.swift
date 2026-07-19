@@ -3,10 +3,11 @@ import Foundation
 /// User-Agent selection. Prefer WebKit’s native Safari UA so sites (Google, Cloudflare)
 /// don’t treat Oriel as a spoofed Chrome browser and trigger bot checks.
 ///
-/// Store installability on iPhone/iPad uses **JS spoofing** in the store bridges
-/// (not a full-site desktop layout), so the Chrome Web Store stays readable.
+/// Chrome Web Store is special: a mobile Safari UA gets a **marketing landing page**
+/// with no installable catalog. Oriel uses desktop Chrome UA **only** on CWS hosts,
+/// then `StoreReadableLayout` keeps that catalog phone-readable.
 enum UserAgentPolicy {
-    /// Chrome desktop UA — CRX **downloads** only (not for everyday page browsing).
+    /// Chrome desktop UA — Chrome Web Store **page browsing** + CRX downloads.
     static let chromeDesktop =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 
@@ -74,13 +75,16 @@ enum UserAgentPolicy {
 
     /// `nil` means “use WebKit’s default Safari UA” (mobile-friendly on iPhone/iPad).
     ///
-    /// Intentionally does **not** force desktop Chrome/Firefox UA for store page browsing:
-    /// that made the whole Web Store a tiny desktop layout. Install works via bridge JS spoof;
-    /// CRX/XPI downloads still use desktop UAs in `WebExtensionManager`.
+    /// - **Chrome Web Store only:** desktop Chrome UA so Google serves the real catalog
+    ///   (mobile UA = “boost your desktop browser” marketing page with no items).
+    /// - **Everywhere else:** never auto-desktop; only an explicit Request Desktop Website.
     static func customUserAgent(for url: URL?, requestsDesktopSite: Bool) -> String? {
-        // Never auto-desktop normal sites. Only honor an explicit user toggle.
         if requestsDesktopSite {
             return safariDesktop
+        }
+        // Catalog HTML is UA-gated; readability is handled by StoreReadableLayout + CSS.
+        if isChromeWebStoreURL(url) {
+            return chromeDesktop
         }
         return nil
     }

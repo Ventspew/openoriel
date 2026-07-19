@@ -314,9 +314,12 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             if navigationAction.targetFrame?.isMainFrame != false {
                 if tab.requestsDesktopSite {
                     preferences.preferredContentMode = .desktop
+                } else if UserAgentPolicy.isChromeWebStoreURL(url) {
+                    // CWS must use desktop content mode + Chrome UA or Google serves a
+                    // marketing landing page with no extensions/themes. Phone readability
+                    // comes from StoreReadableLayout (min-width kill), not mobile content mode.
+                    preferences.preferredContentMode = .desktop
                 } else {
-                    // Mobile/recommended for normal browsing AND store pages (readable on iPhone/iPad).
-                    // Store installability comes from JS spoof + CRX download UA, not desktop layout.
                     preferences.preferredContentMode = .mobile
                 }
             }

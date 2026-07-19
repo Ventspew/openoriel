@@ -31,11 +31,20 @@ final class Phase6SearchSettingsTests: XCTestCase {
         XCTAssertEqual(desktop, UserAgentPolicy.safariDesktop)
     }
 
-    func testStoreBrowsingDoesNotForceDesktopUserAgent() {
+    func testChromeWebStoreUsesDesktopChromeUAForCatalog() {
         let store = URL(string: "https://chromewebstore.google.com/detail/foo/cjpalhdlnbpafiamejdnhcphjbkeiagm")!
         XCTAssertTrue(UserAgentPolicy.isChromeWebStoreURL(store))
-        // Readable mobile Safari UA — install spoof is JS-side; CRX download still uses chromeDesktop.
-        XCTAssertNil(UserAgentPolicy.customUserAgent(for: store, requestsDesktopSite: false))
+        // Mobile Safari UA → marketing landing page with no catalog; desktop Chrome UA required.
+        XCTAssertEqual(
+            UserAgentPolicy.customUserAgent(for: store, requestsDesktopSite: false),
+            UserAgentPolicy.chromeDesktop
+        )
+
+        let home = URL(string: "https://chromewebstore.google.com/")!
+        XCTAssertEqual(
+            UserAgentPolicy.customUserAgent(for: home, requestsDesktopSite: false),
+            UserAgentPolicy.chromeDesktop
+        )
 
         let chromeMarketing = URL(string: "https://chrome.google.com/chrome/")!
         XCTAssertFalse(UserAgentPolicy.isChromeWebStoreURL(chromeMarketing))
@@ -43,8 +52,12 @@ final class Phase6SearchSettingsTests: XCTestCase {
 
         let amo = URL(string: "https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/")!
         XCTAssertTrue(UserAgentPolicy.isFirefoxAddonsURL(amo))
+        // AMO stays on Safari UA; Firefox bridge spoofs installability in JS.
         XCTAssertNil(UserAgentPolicy.customUserAgent(for: amo, requestsDesktopSite: false))
         XCTAssertFalse(UserAgentPolicy.isFirefoxAddonsHost("www.mozilla.org"))
+
+        let example = URL(string: "https://example.com")!
+        XCTAssertNil(UserAgentPolicy.customUserAgent(for: example, requestsDesktopSite: false))
     }
 
     func testOnlyExplicitDesktopToggleChangesUA() {
