@@ -20,10 +20,14 @@ enum JSONFileStore {
         return try JSONDecoder().decode(T.self, from: data)
     }
 
-    static func save<T: Encodable>(_ value: T, to fileName: String) throws {
+    static func save<T: Encodable>(_ value: T, to fileName: String, prettyPrinted: Bool = true) throws {
         let url = try applicationSupportDirectory().appendingPathComponent(fileName)
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if prettyPrinted {
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        } else {
+            encoder.outputFormatting = [.sortedKeys]
+        }
         let data = try encoder.encode(value)
         try data.write(to: url, options: [.atomic])
     }

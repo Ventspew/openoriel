@@ -1020,6 +1020,21 @@ struct BrowserShellView: View {
         }
     }
 
+    private func webViewPoolConfigKey(environment: AppEnvironment) -> String {
+        "fp\(environment.privacy.fingerprintingProtection)-ap\(environment.settings.blockAutoplay)-p\(environment.profiles.activeProfileID.uuidString)"
+    }
+
+    private func protectedWebViewTabIDs(environment: AppEnvironment) -> Set<UUID> {
+        var ids = Set<UUID>()
+        if let active = environment.tabs.activeTabID {
+            ids.insert(active)
+        }
+        if let split = environment.splitTabID {
+            ids.insert(split)
+        }
+        return ids
+    }
+
     private func readerChromeBar(tab: BrowserTab) -> some View {
         HStack(spacing: 12) {
             Text("Reader")
@@ -1121,12 +1136,15 @@ struct BrowserShellView: View {
                     environment.contentBlocker.apply(to: webView, enabled: enabled)
                 },
                 contentBlockerGeneration: environment.contentBlocker.generation,
-                websiteDataStore: environment.profiles.dataStore(isPrivateTab: tab.isPrivate)
+                websiteDataStore: environment.profiles.dataStore(isPrivateTab: tab.isPrivate),
+                poolConfigKey: webViewPoolConfigKey(environment: environment),
+                protectedTabIDs: protectedWebViewTabIDs(environment: environment)
             )
             // Remount only when the WKWebView configuration must change.
             // Do NOT key on contentBlocker.generation — that wiped back/forward history
             // whenever filter lists finished compiling (rules re-attach in updateWebView).
-            .id("\(tab.id.uuidString)-fp\(environment.privacy.fingerprintingProtection)-ap\(environment.settings.blockAutoplay)-p\(environment.profiles.activeProfileID.uuidString)")
+            // Tab switches keep history via WebViewPool even when this view leaves the hierarchy.
+            .id("\(tab.id.uuidString)-\(webViewPoolConfigKey(environment: environment))")
             .opacity(showStart || showError ? 0 : 1)
             .allowsHitTesting(!(showStart || showError))
             .accessibilityHidden(showStart || showError)

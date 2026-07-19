@@ -146,7 +146,7 @@ final class AppEnvironment {
         }
         manager.onSessionChanged = { [weak self] in
             self?.wireTabPrivacyHooks()
-            self?.persistSession()
+            self?.persistSession() // debounced
             self?.icloudSync.noteSessionChange()
             if let split = self?.splitTabID, self?.tabs.tabs.contains(where: { $0.id == split }) != true {
                 self?.splitTabID = nil
@@ -154,7 +154,7 @@ final class AppEnvironment {
         }
 
         wireTabPrivacyHooks()
-        persistSession()
+        persistSessionNow()
         resolvedBookmarks.onDidChange = { [weak self] in
             self?.icloudSync.noteLocalChange()
         }
@@ -181,7 +181,7 @@ final class AppEnvironment {
                 if onlyStart, !remote.tabs.isEmpty {
                     self.tabs.replaceNormalTabs(from: remote)
                     self.wireTabPrivacyHooks()
-                    self.persistSession()
+                    self.persistSessionNow()
                 }
             }
         )
@@ -190,10 +190,29 @@ final class AppEnvironment {
         Task { await resolvedBlocker.prepare() }
     }
 
+    private var sessionPersistTask: Task<Void, Never>?
+
+    /// Coalesces rapid tab churn (open/close/select) into one disk write.
     func persistSession() {
+        sessionPersistTask?.cancel()
+        sessionPersistTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            persistSessionNow()
+        }
+    }
+
+    func persistSessionNow() {
+        sessionPersistTask?.cancel()
+        sessionPersistTask = nil
         let snapshot = tabs.makeSessionSnapshot()
         sessionStore.save(snapshot)
         workspaces.saveActiveSnapshot(snapshot)
+    }
+
+    func flushPendingPersistence() {
+        persistSessionNow()
+        privacyStats.flush()
     }
 
     func switchWorkspace(id: UUID) {
@@ -201,7 +220,7 @@ final class AppEnvironment {
         splitTabID = nil
         tabs.replaceNormalTabs(from: next)
         wireTabPrivacyHooks()
-        persistSession()
+        persistSessionNow()
         icloudSync.noteSessionChange()
     }
 
@@ -282,6 +301,9 @@ final class AppEnvironment {
     /// Switch cookie jar and remount every non-private tab onto the active profile store.
     func applyProfile(id: UUID) {
         profiles.select(id: id)
+        WebViewPool.shared.releaseAll { tabID in
+            tabs.tabs.contains { $0.id == tabID && !$0.isPrivate }
+        }
         for tab in tabs.tabs where !tab.isPrivate {
             let url = tab.restorableURL
             tab.webView = nil
@@ -290,7 +312,7 @@ final class AppEnvironment {
             }
         }
         wireTabPrivacyHooks()
-        persistSession()
+        persistSessionNow()
     }
 
     func copyCurrentURL() {

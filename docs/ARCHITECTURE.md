@@ -8,7 +8,7 @@ Oriel is a single multiplatform app target (XcodeGen). Source folders are module
 |--------|------|
 | `App` | `@main`, scene, composition root (`AppEnvironment`) |
 | `BrowserCore` | Session helpers, URL/search parsing |
-| `WebView` | `WKWebView` wrapper, coordinator, navigation policy |
+| `WebView` | `BrowserWebView`, coordinator, navigation policy, `WebViewPool` (history across tab switches) |
 | `Tabs` | Tab model and manager |
 | `History` / `Bookmarks` / `Downloads` | Local stores |
 | `Privacy` | Shields settings, per-site overrides, persisted stats (session until Fire + lifetime) |
@@ -33,7 +33,7 @@ Navigation chrome ← NavigationState ← WebViewCoordinator (WKNavigationDelega
 |--|--------|------|-------|
 | Chrome | Compact toolbar | Adaptive | Native toolbar |
 | Tabs | Overview | Adaptive | Tab strip / overview |
-| Extensions | — | — | 15.4+ `WKWebExtension` |
+| Extensions | 18.4+ `WKWebExtension` | 18.4+ `WKWebExtension` | 15.4+ `WKWebExtension` |
 
 Use `#if os(macOS)` / `#if os(iOS)` only where UIKit/AppKit or API differences require it.
 

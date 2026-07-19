@@ -47,16 +47,18 @@ enum FireButtonService {
         }
         if options.closeTabs {
             environment.tabs.closeAllTabs(includingPrivate: true)
+            WebViewPool.shared.releaseAll()
             environment.sessionStore.clear()
         } else if options.closePrivateTabsOnly {
             environment.tabs.closeAllPrivateTabs()
             // Keep the restore snapshot in sync with remaining tabs.
-            environment.persistSession()
+            environment.persistSessionNow()
         } else {
             // Do not delete session.json when tabs stay open — otherwise a force-quit
             // before the next persist leaves the next launch empty.
-            environment.persistSession()
+            environment.persistSessionNow()
         }
         environment.privacyStats.resetSessionCounters()
+        environment.privacyStats.flush()
     }
 }

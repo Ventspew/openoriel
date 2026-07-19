@@ -21,6 +21,7 @@ final class PrivacyStats {
     static let millisecondsSavedPerBlock = 50
 
     private let fileName: String
+    private var persistTask: Task<Void, Never>?
 
     init(fileName: String = "privacy-stats.json") {
         self.fileName = fileName
@@ -59,20 +60,20 @@ final class PrivacyStats {
             cookiesBlockedSession += count
             cookiesBlockedLifetime += count
         }
-        persist()
+        schedulePersist()
     }
 
     func recordCookiesBlocked(_ count: Int = 1) {
         guard count > 0 else { return }
         cookiesBlockedSession += count
         cookiesBlockedLifetime += count
-        persist()
+        schedulePersist()
     }
 
     func recordHTTPSUpgrade() {
         httpsUpgradesSession += 1
         httpsUpgradesLifetime += 1
-        persist()
+        schedulePersist()
     }
 
     func resetSessionCounters() {
@@ -80,7 +81,12 @@ final class PrivacyStats {
         httpsUpgradesSession = 0
         cookiesBlockedSession = 0
         timeSavedMillisecondsSession = 0
-        persist()
+        persistNow()
+    }
+
+    /// Writes immediately (app background / Fire).
+    func flush() {
+        persistNow()
     }
 
     /// Hosts / paths commonly used for cookie sync, consent pixels, and identity trackers.
@@ -164,7 +170,18 @@ final class PrivacyStats {
         }
     }
 
-    private func persist() {
+    private func schedulePersist() {
+        persistTask?.cancel()
+        persistTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+            persistNow()
+        }
+    }
+
+    private func persistNow() {
+        persistTask?.cancel()
+        persistTask = nil
         let data = Persisted(
             blockedRequestsSession: blockedRequestsSession,
             httpsUpgradesSession: httpsUpgradesSession,
@@ -175,6 +192,6 @@ final class PrivacyStats {
             cookiesBlockedLifetime: cookiesBlockedLifetime,
             timeSavedMillisecondsLifetime: timeSavedMillisecondsLifetime
         )
-        try? JSONFileStore.save(data, to: fileName)
+        try? JSONFileStore.save(data, to: fileName, prettyPrinted: false)
     }
 }

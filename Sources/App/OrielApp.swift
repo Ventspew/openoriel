@@ -172,6 +172,7 @@ struct OrielApp: App {
 /// Root content view so appearance/accent observe `BrowserSettings` correctly.
 private struct OrielRootView: View {
     @Bindable var environment: AppEnvironment
+    @Environment(\.scenePhase) private var scenePhase
 
     private var showOnboarding: Binding<Bool> {
         Binding(
@@ -184,6 +185,11 @@ private struct OrielRootView: View {
         BrowserShellView()
             .environment(environment)
             .orielTheming(settings: environment.settings)
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .inactive || phase == .background {
+                    environment.flushPendingPersistence()
+                }
+            }
             #if os(iOS)
             .fullScreenCover(isPresented: showOnboarding) {
                 OnboardingView()

@@ -125,6 +125,8 @@ final class TabManager {
             }
         }
 
+        WebViewPool.shared.release(id)
+        tab.webView = nil
         tabs.remove(at: index)
         if tabs.isEmpty {
             let fresh = makeTab(isPrivate: false)
@@ -193,6 +195,10 @@ final class TabManager {
 
     /// Replace normal (non-private) tabs from a session snapshot. Keeps private tabs.
     func replaceNormalTabs(from snapshot: SessionSnapshot) {
+        let retiringIDs = tabs.filter { !$0.isPrivate }.map(\.id)
+        for id in retiringIDs {
+            WebViewPool.shared.release(id)
+        }
         let privateOnes = tabs.filter(\.isPrivate)
         let restored: [BrowserTab] = snapshot.tabs.compactMap { item in
             guard !item.isPrivate else { return nil }

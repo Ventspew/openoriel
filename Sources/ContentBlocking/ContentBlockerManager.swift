@@ -85,29 +85,68 @@ final class ContentBlockerManager {
         compiledLists = []
         listNames = []
         ruleCount = 0
-        var hints: [String] = []
-        var errors: [String] = []
 
         let names = discoverBundledListNames()
+        // Load + validate large JSON off the main actor so launch stays responsive.
+        let payloads: [(name: String, data: Data)] = names.compactMap { name in
+            guard let data = loadBundledJSON(named: name) else { return nil }
+            return (name, data)
+        }
+
+        struct PreparedList: Sendable {
+            var name: String
+            var json: String
+            var ruleCount: Int
+            var hints: [String]
+        }
+
+        let prepared: (lists: [PreparedList], errors: [String]) = await Task.detached(priority: .userInitiated) {
+            var lists: [PreparedList] = []
+            var errors: [String] = []
+            for item in payloads {
+                do {
+                    let rules = try ContentRuleListValidator.validate(item.data)
+                    let json = String(data: item.data, encoding: .utf8) ?? "[]"
+                    let hints = ContentRuleListValidator.blockedHostHints(from: rules)
+                    lists.append(
+                        PreparedList(
+                            name: item.name,
+                            json: json,
+                            ruleCount: rules.count,
+                            hints: hints
+                        )
+                    )
+                } catch {
+                    errors.append("\(item.name): \(error.localizedDescription)")
+                }
+            }
+            return (lists, errors)
+        }.value
+
+        var lists: [WKContentRuleList] = []
+        var loadedNames: [String] = []
+        var totalRules = 0
+        var hints: [String] = []
+        var errors = prepared.errors
         var loadedPrimary = false
 
-        for name in names {
-            guard let data = loadBundledJSON(named: name) else { continue }
+        for item in prepared.lists {
             do {
-                let rules = try ContentRuleListValidator.validate(data)
-                let json = String(data: data, encoding: .utf8) ?? "[]"
-                let identifier = "\(compileIdentifierPrefix).\(name)"
-                let list = try await compile(json: json, identifier: identifier)
-                compiledLists.append(list)
-                listNames.append(name)
-                ruleCount += rules.count
-                hints.append(contentsOf: ContentRuleListValidator.blockedHostHints(from: rules))
-                if name != "example-blocklist" { loadedPrimary = true }
+                let identifier = "\(compileIdentifierPrefix).\(item.name)"
+                let list = try await compile(json: item.json, identifier: identifier)
+                lists.append(list)
+                loadedNames.append(item.name)
+                totalRules += item.ruleCount
+                hints.append(contentsOf: item.hints)
+                if item.name != "example-blocklist" { loadedPrimary = true }
             } catch {
-                errors.append("\(name): \(error.localizedDescription)")
+                errors.append("\(item.name): \(error.localizedDescription)")
             }
         }
 
+        compiledLists = lists
+        listNames = loadedNames
+        ruleCount = totalRules
         blockedHostHints = Array(Set(hints)).sorted()
         cachedProbeHosts = makeTrackerProbeHosts(limit: 500)
         isReady = !compiledLists.isEmpty

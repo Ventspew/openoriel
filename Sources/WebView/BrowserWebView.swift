@@ -38,6 +38,10 @@ struct BrowserWebView: PlatformViewRepresentable {
     var contentBlockerGeneration: Int = 0
     /// Isolated cookie/storage jar for the active browser profile.
     var websiteDataStore: WKWebsiteDataStore?
+    /// Configuration fingerprint used by `WebViewPool` (profile / fingerprinting / autoplay).
+    var poolConfigKey: String = "default"
+    /// Tab IDs that must not be evicted while this view is alive (active + split).
+    var protectedTabIDs: Set<UUID> = []
 
     #if os(iOS)
     func makeUIView(context: Context) -> WKWebView {
@@ -47,6 +51,12 @@ struct BrowserWebView: PlatformViewRepresentable {
     func updateUIView(_ webView: WKWebView, context: Context) {
         updateWebView(webView, context: context)
     }
+
+    static func dismantleUIView(_ uiView: WKWebView, coordinator: WebViewCoordinator) {
+        // Keep the WKWebView in the pool — do not release on tab switch.
+        uiView.navigationDelegate = nil
+        uiView.uiDelegate = nil
+    }
     #elseif os(macOS)
     func makeNSView(context: Context) -> WKWebView {
         makeWebView(context: context)
@@ -54,6 +64,11 @@ struct BrowserWebView: PlatformViewRepresentable {
 
     func updateNSView(_ webView: WKWebView, context: Context) {
         updateWebView(webView, context: context)
+    }
+
+    static func dismantleNSView(_ nsView: WKWebView, coordinator: WebViewCoordinator) {
+        nsView.navigationDelegate = nil
+        nsView.uiDelegate = nil
     }
     #endif
 
@@ -79,6 +94,10 @@ struct BrowserWebView: PlatformViewRepresentable {
     }
 
     private func makeWebView(context: Context) -> WKWebView {
+        if let pooled = WebViewPool.shared.existing(for: tab.id, configKey: poolConfigKey) {
+            return attach(pooled, context: context, isReuse: true)
+        }
+
         let configuration = SharedWebViewConfiguration.make(
             isPrivate: tab.isPrivate,
             javaScriptEnabled: tab.javaScriptEnabled,
@@ -93,45 +112,15 @@ struct BrowserWebView: PlatformViewRepresentable {
 
         #if os(macOS) || os(iOS)
         if chromeWebStoreInstallEnabled, !tab.isPrivate {
-            let ucc = configuration.userContentController
-            let handler = context.coordinator.chromeWebStoreScriptMessageHandler()
-            ucc.removeScriptMessageHandler(forName: ChromeWebStoreBridge.handlerName, contentWorld: .page)
-            ucc.removeScriptMessageHandler(forName: ChromeWebStoreBridge.handlerName, contentWorld: .defaultClient)
-            ucc.add(handler, contentWorld: .page, name: ChromeWebStoreBridge.handlerName)
-
-            let firefoxHandler = context.coordinator.firefoxAddonsScriptMessageHandler()
-            ucc.removeScriptMessageHandler(forName: FirefoxAddonsBridge.handlerName, contentWorld: .page)
-            ucc.removeScriptMessageHandler(forName: FirefoxAddonsBridge.handlerName, contentWorld: .defaultClient)
-            ucc.add(firefoxHandler, contentWorld: .page, name: FirefoxAddonsBridge.handlerName)
-
-            let apiStub = WKUserScript(
-                source: ChromeWebStoreBridge.chromeAPIStubSource,
-                injectionTime: .atDocumentStart,
-                forMainFrameOnly: true,
-                in: .page
+            installStoreBridges(
+                into: configuration.userContentController,
+                context: context,
+                includeUserScripts: true
             )
-            let uiBridge = WKUserScript(
-                source: ChromeWebStoreBridge.userScriptSource,
-                injectionTime: .atDocumentEnd,
-                forMainFrameOnly: true,
-                in: .page
-            )
-            let firefoxBridge = WKUserScript(
-                source: FirefoxAddonsBridge.userScriptSource,
-                injectionTime: .atDocumentEnd,
-                forMainFrameOnly: true,
-                in: .page
-            )
-            ucc.addUserScript(apiStub)
-            ucc.addUserScript(uiBridge)
-            ucc.addUserScript(firefoxBridge)
         }
         #endif
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.navigationDelegate = context.coordinator
-        webView.uiDelegate = context.coordinator
-        webView.allowsBackForwardNavigationGestures = true
         // Keep the web view clear so themed start-page washes aren't covered by opaque white/black.
         #if os(iOS)
         webView.isOpaque = false
@@ -142,12 +131,47 @@ struct BrowserWebView: PlatformViewRepresentable {
         webView.underPageBackgroundColor = .clear
         #endif
 
+        webView.allowsBackForwardNavigationGestures = true
+        let attached = attach(webView, context: context, isReuse: false)
+        WebViewPool.shared.store(
+            attached,
+            for: tab.id,
+            configKey: poolConfigKey,
+            protecting: protectedTabIDs
+        )
+
+        Task { @MainActor in
+            await ThirdPartyCookieBlocker.apply(to: attached, enabled: blockThirdPartyCookies)
+        }
+
+        if let url = tab.navigation.url, !URLParser.isStartPage(url) {
+            attached.load(URLRequest(url: url))
+        }
+
+        return attached
+    }
+
+    private func attach(_ webView: WKWebView, context: Context, isReuse: Bool) -> WKWebView {
+        webView.navigationDelegate = context.coordinator
+        webView.uiDelegate = context.coordinator
+
         if tab.requestsDesktopSite {
             webView.customUserAgent = UserAgentPolicy.customUserAgent(
                 for: tab.navigation.url,
                 requestsDesktopSite: true
             )
         }
+
+        #if os(macOS) || os(iOS)
+        if chromeWebStoreInstallEnabled, !tab.isPrivate {
+            // User scripts already live on a reused configuration; only rebind handlers.
+            installStoreBridges(
+                into: webView.configuration.userContentController,
+                context: context,
+                includeUserScripts: false
+            )
+        }
+        #endif
 
         let hideHandler = context.coordinator.hideElementScriptMessageHandler()
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "orielHideElement")
@@ -168,17 +192,56 @@ struct BrowserWebView: PlatformViewRepresentable {
         context.coordinator.appliedThirdPartyCookieBlocking = blockThirdPartyCookies
         tab.webView = webView
         tab.refreshNavigationChrome()
+        WebViewPool.shared.touch(tab.id)
 
-        Task { @MainActor in
-            await ThirdPartyCookieBlocker.apply(to: webView, enabled: blockThirdPartyCookies)
-        }
-
-        if let url = tab.navigation.url, !URLParser.isStartPage(url) {
-            webView.load(URLRequest(url: url))
+        if isReuse {
+            // Re-apply rule lists that may have compiled while this tab was detached.
+            applyContentBlocking?(webView, contentBlockingEnabled)
         }
 
         return webView
     }
+
+    #if os(macOS) || os(iOS)
+    private func installStoreBridges(
+        into ucc: WKUserContentController,
+        context: Context,
+        includeUserScripts: Bool
+    ) {
+        let handler = context.coordinator.chromeWebStoreScriptMessageHandler()
+        ucc.removeScriptMessageHandler(forName: ChromeWebStoreBridge.handlerName, contentWorld: .page)
+        ucc.removeScriptMessageHandler(forName: ChromeWebStoreBridge.handlerName, contentWorld: .defaultClient)
+        ucc.add(handler, contentWorld: .page, name: ChromeWebStoreBridge.handlerName)
+
+        let firefoxHandler = context.coordinator.firefoxAddonsScriptMessageHandler()
+        ucc.removeScriptMessageHandler(forName: FirefoxAddonsBridge.handlerName, contentWorld: .page)
+        ucc.removeScriptMessageHandler(forName: FirefoxAddonsBridge.handlerName, contentWorld: .defaultClient)
+        ucc.add(firefoxHandler, contentWorld: .page, name: FirefoxAddonsBridge.handlerName)
+
+        guard includeUserScripts else { return }
+        let apiStub = WKUserScript(
+            source: ChromeWebStoreBridge.chromeAPIStubSource,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true,
+            in: .page
+        )
+        let uiBridge = WKUserScript(
+            source: ChromeWebStoreBridge.userScriptSource,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: true,
+            in: .page
+        )
+        let firefoxBridge = WKUserScript(
+            source: FirefoxAddonsBridge.userScriptSource,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: true,
+            in: .page
+        )
+        ucc.addUserScript(apiStub)
+        ucc.addUserScript(uiBridge)
+        ucc.addUserScript(firefoxBridge)
+    }
+    #endif
 
     private func updateWebView(_ webView: WKWebView, context: Context) {
         if tab.webView !== webView {
