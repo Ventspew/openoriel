@@ -428,7 +428,7 @@ private struct AppearanceSettingsPage: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(theme.displayName)
                         .foregroundStyle(.primary)
-                    Text(isActive ? "\(theme.sourceLabel) · Active" : theme.sourceLabel)
+                    Text(isActive ? "\(theme.sourceLabel), Active" : theme.sourceLabel)
                         .font(.caption2)
                         .foregroundStyle(isActive ? environment.settings.brandColor : .secondary)
                 }

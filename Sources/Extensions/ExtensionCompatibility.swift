@@ -8,9 +8,9 @@ enum ExtensionCompatLevel: String, Hashable, Sendable, CaseIterable {
 
     var title: String {
         switch self {
-        case .full: return "Fully supported"
-        case .partial: return "Partial support"
-        case .unsupported: return "Not supported"
+        case .full: return "Supported"
+        case .partial: return "Limited"
+        case .unsupported: return "Unsupported"
         }
     }
 

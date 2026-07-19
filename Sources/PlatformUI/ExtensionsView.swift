@@ -72,20 +72,15 @@ struct ExtensionsView: View {
     private var supportedList: some View {
         List {
             Section {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Oriel runs Chrome/Firefox-style WebExtensions via Apple’s WKWebExtension API on macOS 15.4+ and iOS/iPadOS 18.4+.")
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Oriel runs Chrome and Firefox WebExtensions through Apple’s WKWebExtension API (macOS 15.4+, iOS 18.4+).")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text("Chrome, Firefox (.xpi), and Safari Web Extensions are supported. Static themes from those packages can restyle Oriel’s chrome — pick them under Settings → Appearance.")
+                    Text("Use Oriel Store for one catalog across Chrome, Firefox, and Safari. You can also install .zip, .crx, .xpi, folders, or Safari .appex packages.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text("Prefer Oriel Store — one search across Chrome, Firefox, and Safari. You can also install .zip / .crx / .xpi, unpacked folders, or Safari .appex. Manifests are soft-rewritten for WebKit — not every Chrome/Firefox API exists.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.vertical, 4)
@@ -104,21 +99,21 @@ struct ExtensionsView: View {
                 NavigationLink {
                     OrielStoreView(showsDoneButton: false)
                 } label: {
-                    Label("Browse Oriel Store", systemImage: "storefront")
+                    Label("Oriel Store", systemImage: "storefront")
                 }
 
                 Button {
                     environment.openURLInNewTab(BrowserConstants.chromeWebStoreURL)
                     dismiss()
                 } label: {
-                    Label("Open Chrome Web Store (website)", systemImage: "bag")
+                    Label("Chrome Web Store", systemImage: "bag")
                 }
 
                 Button {
                     environment.openURLInNewTab(BrowserConstants.firefoxAddonsURL)
                     dismiss()
                 } label: {
-                    Label("Open Firefox Add-ons (website)", systemImage: "flame")
+                    Label("Firefox Add-ons", systemImage: "flame")
                 }
 
                 Button {
@@ -128,13 +123,13 @@ struct ExtensionsView: View {
                     showImporter = true
                     #endif
                 } label: {
-                    Label(isInstalling ? "Installing…" : "Install from file or folder…", systemImage: "plus.square.on.square")
+                    Label(isInstalling ? "Installing…" : "Install from file", systemImage: "plus.square.on.square")
                 }
                 .disabled(isInstalling || environment.extensions.isInstallingFromStore)
             } header: {
                 Text("Get extensions")
             } footer: {
-                Text("Prefer Oriel Store (Mac, iPhone, iPad): one universal catalog. Opening Chrome/Firefox store websites shows a tip. Also: .zip / .crx / .xpi, folders, or Safari .appex.")
+                Text("Listings show Oriel compatibility. Not every Chrome or Firefox API runs on WebKit.")
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -212,7 +207,7 @@ struct ExtensionsView: View {
                             Text(theme.displayName)
                                 .font(.body.weight(.semibold))
                                 .lineLimit(1)
-                            Text("\(theme.sourceLabel) · v\(theme.version)")
+                            Text("\(theme.sourceLabel), v\(theme.version)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -254,14 +249,14 @@ struct ExtensionsView: View {
                     Button {
                         environment.extensionThemes.clearActive()
                     } label: {
-                        Label("Deactivate theme — use Oriel default", systemImage: "circle.lefthalf.filled")
+                        Label("Deactivate theme, use Oriel default", systemImage: "circle.lefthalf.filled")
                     }
                 }
             }
         } header: {
             Text("Themes")
         } footer: {
-            Text("Activate/deactivate without removing. Themes stay installed until you delete them. Sources: Chrome, Firefox AMO, Safari packages with a theme block.")
+            Text("Activate or deactivate without removing. Themes stay until you delete them.")
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -348,7 +343,7 @@ struct ExtensionsView: View {
             parts.append(app)
         }
         parts.append(candidate.statusDetail)
-        return parts.joined(separator: " · ")
+        return parts.joined(separator: ", ")
     }
     #endif
 
@@ -363,7 +358,7 @@ struct ExtensionsView: View {
                 Text(item.displayName)
                     .font(.body.weight(.semibold))
                     .lineLimit(1)
-                Text(item.isEnabled ? "Version \(item.version)" : "Disabled · v\(item.version)")
+                Text(item.isEnabled ? "Version \(item.version)" : "Disabled, v\(item.version)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

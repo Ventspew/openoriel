@@ -163,9 +163,9 @@ struct BrowserShellView: View {
 
     private func orielStoreTipMessage(for url: URL?) -> String {
         if UserAgentPolicy.isFirefoxAddonsURL(url) {
-            return "Oriel Store searches Chrome, Firefox, and Safari in one list — easier than browsing Firefox Add-ons here."
+            return "Oriel Store searches Chrome, Firefox, and Safari together. Easier than browsing Firefox Add-ons here."
         }
-        return "Oriel Store searches Chrome, Firefox, and Safari in one list — easier than browsing the Chrome Web Store here."
+        return "Oriel Store searches Chrome, Firefox, and Safari together. Easier than browsing the Chrome Web Store here."
     }
 
     private func openAppSettings() {
@@ -334,7 +334,7 @@ struct BrowserShellView: View {
             }
             chromeIconButton(
                 systemName: "flame.fill",
-                label: "Fire — clear browsing data",
+                label: "Fire",
                 accent: accent,
                 size: size
             ) {

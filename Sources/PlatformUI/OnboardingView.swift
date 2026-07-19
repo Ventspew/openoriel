@@ -25,7 +25,7 @@ struct OnboardingView: View {
         OnboardingPage(
             symbol: "puzzlepiece.extension",
             title: "Extensions",
-            body: "Install Chrome Web Store or WebExtension packages (.zip / .crx). Safari App Store extensions stay tied to Safari — Oriel uses the open WebExtensions format instead."
+            body: "Install Chrome Web Store or WebExtension packages (.zip, .crx). Safari App Store extensions stay in Safari. Oriel uses the open WebExtensions format."
         ),
         OnboardingPage(
             symbol: "safari",

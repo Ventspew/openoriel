@@ -44,7 +44,7 @@ struct StoreBrowseCategory: Identifiable, Hashable, Sendable {
         featuredExtensions,
         StoreBrowseCategory(
             id: "privacy-security",
-            title: "Privacy & Security",
+            title: "Privacy",
             kind: .extension,
             firefoxCategory: "privacy-security",
             chromeCategoryPaths: ["extensions/make_chrome_yours/privacy"],
@@ -132,7 +132,7 @@ struct StoreBrowseCategory: Identifiable, Hashable, Sendable {
         ),
         StoreBrowseCategory(
             id: "feeds-news-blogging",
-            title: "News & Blogs",
+            title: "News",
             kind: .extension,
             firefoxCategory: "feeds-news-blogging",
             chromeCategoryPaths: ["extensions/lifestyle/news"],
@@ -174,7 +174,7 @@ struct StoreBrowseCategory: Identifiable, Hashable, Sendable {
         StoreBrowseCategory(id: "theme-holiday", title: "Holiday", kind: .theme, firefoxCategory: "holiday", chromeCategoryPaths: ["themes"], systemImage: "gift.fill"),
         StoreBrowseCategory(id: "theme-music", title: "Music", kind: .theme, firefoxCategory: "music", chromeCategoryPaths: ["themes"], systemImage: "music.note"),
         StoreBrowseCategory(id: "theme-fashion", title: "Fashion", kind: .theme, firefoxCategory: "fashion", chromeCategoryPaths: ["themes"], systemImage: "tshirt.fill"),
-        StoreBrowseCategory(id: "theme-film-tv", title: "Film & TV", kind: .theme, firefoxCategory: "film-and-tv", chromeCategoryPaths: ["themes"], systemImage: "film.fill"),
+        StoreBrowseCategory(id: "theme-film-tv", title: "Film", kind: .theme, firefoxCategory: "film-and-tv", chromeCategoryPaths: ["themes"], systemImage: "film.fill"),
         StoreBrowseCategory(id: "theme-sports", title: "Sports", kind: .theme, firefoxCategory: "sports", chromeCategoryPaths: ["themes"], systemImage: "sportscourt.fill"),
         StoreBrowseCategory(id: "theme-websites", title: "Websites", kind: .theme, firefoxCategory: "websites", chromeCategoryPaths: ["themes"], systemImage: "safari.fill"),
         StoreBrowseCategory(id: "theme-firefox", title: "Firefox", kind: .theme, firefoxCategory: "firefox", chromeCategoryPaths: ["themes"], systemImage: "flame.fill"),
@@ -195,7 +195,7 @@ enum StoreBrowseSort: String, CaseIterable, Identifiable, Sendable {
         case .popular: return "Popular"
         case .rating: return "Top rated"
         case .recent: return "Newest"
-        case .relevance: return "Relevance"
+        case .relevance: return "Best match"
         }
     }
 

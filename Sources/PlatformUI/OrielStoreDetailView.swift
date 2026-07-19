@@ -187,16 +187,14 @@ struct OrielStoreDetailView: View {
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                } else if body == summary, !summary.isEmpty {
-                    EmptyView()
                 } else if summary.isEmpty {
-                    Text("No description available yet.")
+                    Text("No description available.")
                         .font(.subheadline)
                         .foregroundStyle(.tertiary)
                 }
             }
             if let homepage = detail?.homepageURL {
-                Link("Developer website", destination: homepage)
+                Link("Developer site", destination: homepage)
                     .font(.subheadline.weight(.semibold))
             }
             if let storeURL = detail?.storeURL ?? listing.preferredOffer?.storeURL {
@@ -217,25 +215,17 @@ struct OrielStoreDetailView: View {
 
     private var sourcesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Available from")
+            Text("Sources")
                 .font(.headline)
             ForEach(listing.offers, id: \.id) { offer in
                 HStack(spacing: 10) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(accent)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(offer.source.displayName)
-                            .font(.subheadline.weight(.semibold))
-                        if !offer.summary.isEmpty {
-                            Text(offer.summary)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                        }
-                    }
+                    Text(offer.source.displayName)
+                        .font(.subheadline.weight(.semibold))
                     Spacer(minLength: 0)
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, 2)
             }
         }
     }
@@ -244,12 +234,12 @@ struct OrielStoreDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Permissions")
                 .font(.headline)
-            Text(permissions.prefix(12).joined(separator: " · "))
+            Text(permissions.prefix(12).joined(separator: ", "))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             if permissions.count > 12 {
-                Text("+\(permissions.count - 12) more")
+                Text("\(permissions.count - 12) more")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -265,7 +255,7 @@ struct OrielStoreDetailView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 4)
             } else {
-                Text(installed != nil ? "Open in Extensions" : "Add to Oriel")
+                Text(installed != nil ? "Open Extensions" : "Add to Oriel")
                     .font(.body.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 4)
@@ -274,7 +264,7 @@ struct OrielStoreDetailView: View {
         .buttonStyle(.borderedProminent)
         .tint(accent)
         .disabled(installing || environment.extensions.isInstallingFromStore)
-        .padding(.top, 4)
+        .padding(.top, 8)
     }
 
     @ViewBuilder
@@ -356,7 +346,7 @@ struct OrielStoreDetailView: View {
         detail = result
         if result.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && result.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            loadError = "Couldn’t load a full description. You can still install from the available sources."
+            loadError = "Description unavailable. You can still install from the listed sources."
         }
         isLoading = false
     }

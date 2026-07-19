@@ -125,7 +125,7 @@ struct OrielShieldButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.borderless)
-        .help(shieldsOn ? "Oriel Shields on — click to turn off" : "Oriel Shields off — click to turn on")
+        .help(shieldsOn ? "Oriel Shields on. Click to turn off." : "Oriel Shields off. Click to turn on.")
         .accessibilityLabel("Oriel Shields")
         .accessibilityValue(shieldsOn ? "On" : "Off")
         .accessibilityHint("Toggles tracker blocking and HTTPS upgrades")

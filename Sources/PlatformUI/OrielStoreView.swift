@@ -141,19 +141,18 @@ struct OrielStoreView: View {
                     Text("Themes").tag(ExtensionStoreItem.Kind.theme)
                 }
                 .pickerStyle(.segmented)
-                .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 6, trailing: 16))
+                .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16))
                 .listRowBackground(Color.clear)
 
                 storeSearchField
-                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 10, trailing: 16))
                     .listRowBackground(Color.clear)
 
                 categoryChips
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 6, trailing: 0))
                     .listRowBackground(Color.clear)
             } footer: {
-                Text(footerBlurb)
-                    .fixedSize(horizontal: false, vertical: true)
+                Text("Search or pick a category. Tap a listing for details and install.")
             }
 
             if let installStatus {
@@ -176,7 +175,7 @@ struct OrielStoreView: View {
                 .foregroundStyle(searchFocused ? accent : Color.secondary)
 
             TextField(
-                kind == .theme ? "Search all themes" : "Search all extensions",
+                kind == .theme ? "Search themes" : "Search extensions",
                 text: $query
             )
             .textFieldStyle(.plain)
@@ -219,25 +218,32 @@ struct OrielStoreView: View {
 
     private var categoryChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 ForEach(categories) { item in
+                    let selected = item.id == category.id
                     Button {
                         category = item
                     } label: {
-                        Label(item.title, systemImage: item.systemImage)
-                            .font(.caption.weight(.semibold))
+                        Text(item.title)
+                            .font(.subheadline.weight(selected ? .semibold : .medium))
                             .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
+                            .padding(.vertical, 7)
                             .background(
-                                item.id == category.id
-                                    ? accent.opacity(0.18)
-                                    : Color.primary.opacity(0.05),
+                                selected ? accent.opacity(0.16) : Color.clear,
                                 in: Capsule(style: .continuous)
                             )
-                            .foregroundStyle(item.id == category.id ? accent : Color.primary.opacity(0.8))
+                            .overlay {
+                                Capsule(style: .continuous)
+                                    .strokeBorder(
+                                        selected ? accent.opacity(0.35) : Color.primary.opacity(0.12),
+                                        lineWidth: 1
+                                    )
+                            }
+                            .foregroundStyle(selected ? accent : Color.primary.opacity(0.75))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityAddTraits(item.id == category.id ? .isSelected : [])
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                    .accessibilityLabel(item.title)
                 }
             }
             .padding(.horizontal, 16)
@@ -260,7 +266,7 @@ struct OrielStoreView: View {
         } else if let errorMessage, listings.isEmpty {
             Section {
                 ContentUnavailableView(
-                    "Couldn’t load store",
+                    "Couldn’t load the store",
                     systemImage: "wifi.exclamationmark",
                     description: Text(errorMessage)
                 )
@@ -278,7 +284,7 @@ struct OrielStoreView: View {
                 ContentUnavailableView(
                     "No results",
                     systemImage: "puzzlepiece.extension",
-                    description: Text("Try another category or search across Chrome, Firefox, and Safari.")
+                    description: Text("Try another category or a different search.")
                 )
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
@@ -317,21 +323,15 @@ struct OrielStoreView: View {
                 }
             } header: {
                 Text(sectionTitle)
-            } footer: {
-                Text("Browsing Chrome Web Store and Firefox Add-ons. Open a listing for screenshots and the full description.")
             }
         }
     }
 
     private var sectionTitle: String {
         if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "Results · \(sort.title)"
+            return "Results"
         }
-        return "\(category.title) · \(sort.title)"
-    }
-
-    private var footerBlurb: String {
-        "Browse by category or search the full Chrome and Firefox catalogs. Open a listing for the full description — Oriel picks the best source when you install."
+        return category.title
     }
 
     private func storeRow(_ listing: UnifiedStoreListing) -> some View {
@@ -340,7 +340,7 @@ struct OrielStoreView: View {
         return HStack(alignment: .center, spacing: 12) {
             iconView(for: listing)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(listing.name)
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.primary)
@@ -353,38 +353,33 @@ struct OrielStoreView: View {
                         .lineLimit(2)
                 }
 
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     compatBadge(report.level)
-                    Text(metaLine(for: listing, report: report, installed: installed))
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
+                    if let installed {
+                        Text(installed.displayName)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.tertiary)
+                    } else {
+                        Text(sourceSummary(for: listing))
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
-        .accessibilityHint("Shows description and screenshots")
+        .accessibilityHint("Opens details")
     }
 
-    private func metaLine(
-        for listing: UnifiedStoreListing,
-        report: ExtensionCompatReport,
-        installed: ExtensionStoreItem.Source?
-    ) -> String {
-        if let installed {
-            return installed.installedFromLabel
-        }
-        var parts: [String] = []
-        let sources = listing.availableSources.map(\.displayName)
-        if !sources.isEmpty {
-            parts.append(sources.joined(separator: " · "))
-        }
-        parts.append("\(report.score.percent)% Oriel")
+    private func sourceSummary(for listing: UnifiedStoreListing) -> String {
+        let names = listing.availableSources.map(\.displayName)
+        guard !names.isEmpty else { return "" }
         if let rating = listing.rating {
-            parts.append(String(format: "%.1f★", rating))
+            return "\(names.joined(separator: ", ")), \(String(format: "%.1f", rating))★"
         }
-        return parts.joined(separator: " · ")
+        return names.joined(separator: ", ")
     }
 
     private func compatBadge(_ level: ExtensionCompatLevel) -> some View {

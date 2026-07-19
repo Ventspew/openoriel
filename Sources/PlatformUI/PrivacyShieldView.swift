@@ -140,7 +140,7 @@ struct PrivacyShieldView: View {
             Toggle(isOn: $privacy.fingerprintingProtection) {
                 labeledToggle(
                     "Fingerprinting protection",
-                    subtitle: "Noise canvas/audio signals (can increase “are you a robot?” checks — leave off for fewer challenges)"
+                    subtitle: "Noise canvas and audio signals. Can increase bot checks, so leave off for fewer challenges."
                 )
             }
             Toggle(isOn: $privacy.httpsOnlyMode) {
@@ -271,7 +271,7 @@ struct PrivacyShieldView: View {
             .accessibilityElement(children: .combine)
 
             if !environment.contentBlocker.listNames.isEmpty {
-                Text(environment.contentBlocker.listNames.joined(separator: " · "))
+                Text(environment.contentBlocker.listNames.joined(separator: ", "))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
