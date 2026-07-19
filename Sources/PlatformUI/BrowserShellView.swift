@@ -165,9 +165,9 @@ struct BrowserShellView: View {
 
     private func orielStoreTipMessage(for url: URL?) -> String {
         if UserAgentPolicy.isFirefoxAddonsURL(url) {
-            return "Firefox Add-ons is awkward on iPhone and iPad. You can search and install extensions and themes in Oriel Store instead."
+            return "You can search and install Firefox extensions and themes more easily in Oriel Store."
         }
-        return "Chrome Web Store is awkward on iPhone and iPad. You can search and install extensions and themes in Oriel Store instead."
+        return "You can search and install Chrome extensions and themes more easily in Oriel Store."
     }
 
     private func openAppSettings() {

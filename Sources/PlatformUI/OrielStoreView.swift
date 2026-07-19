@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Phone-readable extension/theme browser backed by Chrome Web Store + Firefox AMO catalogs.
-/// Avoids rendering the broken desktop CWS layout inside WKWebView on iPhone/iPad.
+/// Native extension/theme browser backed by Chrome Web Store + Firefox AMO catalogs.
+/// Preferred over opening the store websites (iPhone, iPad, and Mac).
 struct OrielStoreView: View {
     @Environment(AppEnvironment.self) private var environment
     @Environment(\.dismiss) private var dismiss
@@ -153,7 +153,7 @@ struct OrielStoreView: View {
     }
 
     private var footerBlurb: String {
-        "Oriel Store loads catalogs for iPhone and iPad — no tiny desktop Web Store layout. Install uses the same CRX/XPI pipeline as Add to Oriel."
+        "Oriel Store loads Chrome and Firefox catalogs in a readable list on Mac, iPhone, and iPad. Install uses the same CRX/XPI pipeline as Add to Oriel."
     }
 
     private func storeRow(_ item: ExtensionStoreItem) -> some View {

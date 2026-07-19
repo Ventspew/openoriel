@@ -83,12 +83,10 @@ struct ExtensionsView: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    #if os(iOS)
-                    Text("On iPhone and iPad (18.4+): install .zip / .crx / .xpi, Chrome Web Store, Firefox Add-ons, unpacked folders, or Safari .appex. Oriel pretends to be desktop Chrome on the Web Store and desktop Firefox on AMO so phone / “need Firefox” banners do not block Add to Oriel. Manifests are soft-rewritten for WebKit — not every Chrome/Firefox API exists.")
+                    Text("Prefer Oriel Store to browse Chrome and Firefox catalogs. You can also install .zip / .crx / .xpi, unpacked folders, or Safari .appex. Manifests are soft-rewritten for WebKit — not every Chrome/Firefox API exists.")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
-                    #endif
                 }
                 .padding(.vertical, 4)
                 .listRowBackground(Color.clear)
@@ -136,7 +134,7 @@ struct ExtensionsView: View {
             } header: {
                 Text("Get extensions")
             } footer: {
-                Text("Prefer Oriel Store on iPhone/iPad — it loads Chrome and Firefox catalogs in a readable list. Website store pages stay available if you need them. Also: .zip / .crx / .xpi, folders, or Safari .appex.")
+                Text("Prefer Oriel Store (Mac, iPhone, iPad) for Chrome and Firefox catalogs. Opening the store websites shows a tip. Also: .zip / .crx / .xpi, folders, or Safari .appex.")
                     .fixedSize(horizontal: false, vertical: true)
             }
 

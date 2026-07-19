@@ -90,9 +90,8 @@ enum ChromeWebStoreBridge {
       }
       window.__orielPostInstall = postInstall;
 
-      // Spoof desktop Chrome *APIs / navigator* so install CTAs appear.
-      // HTTP UA is already desktop Chrome on CWS (catalog HTML); layout stays phone-width
-      // via StoreReadableLayout (CWS .IqBfM min-width override).
+      // Spoof desktop Chrome APIs / navigator so website install CTAs still work if the
+      // user keeps browsing CWS instead of Oriel Store. Page UA stays Safari (no desktop push).
       var desktopUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
       try {
         Object.defineProperty(navigator, 'userAgent', { configurable: true, get: function () { return desktopUA; } });
@@ -187,7 +186,7 @@ enum ChromeWebStoreBridge {
     """#
 
     /// DOM bridge — hide “desktop only”, rewrite native CTAs, sticky Install bar on detail pages.
-    /// Readable layout stays in `StoreReadableLayout`; install does not need a Python proxy.
+    /// Prefer Oriel Store for browsing; this helps when the user keeps the website open.
     static let userScriptSource = #"""
     (function () {
       if (window.__orielChromeWebStoreBridge) return;

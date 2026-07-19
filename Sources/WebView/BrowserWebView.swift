@@ -251,28 +251,12 @@ struct BrowserWebView: PlatformViewRepresentable {
             forMainFrameOnly: true,
             in: .page
         )
-        // Readable store layout before SPA boot (viewport + CWS .IqBfM min-width kill).
-        let storeReadableStart = WKUserScript(
-            source: StoreReadableLayout.userScriptSource,
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: true,
-            in: .page
-        )
-        // Re-assert after DOM so late CWS body-class swaps stay phone-width.
-        let storeReadableEnd = WKUserScript(
-            source: StoreReadableLayout.userScriptSource,
-            injectionTime: .atDocumentEnd,
-            forMainFrameOnly: true,
-            in: .page
-        )
-        // i18n catalog first so CWS/AMO bridges can localize CTAs + tips.
+        // Website store bridges (install CTAs if the user keeps browsing). Catalogs → Oriel Store.
         ucc.addUserScript(storeI18n)
-        ucc.addUserScript(storeReadableStart)
         ucc.addUserScript(apiStub)
         ucc.addUserScript(firefoxSpoof)
         ucc.addUserScript(uiBridge)
         ucc.addUserScript(firefoxBridge)
-        ucc.addUserScript(storeReadableEnd)
     }
     #endif
 

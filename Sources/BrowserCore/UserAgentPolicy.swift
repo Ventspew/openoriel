@@ -3,15 +3,15 @@ import Foundation
 /// User-Agent selection. Prefer WebKit’s native Safari UA so sites (Google, Cloudflare)
 /// don’t treat Oriel as a spoofed Chrome browser and trigger bot checks.
 ///
-/// Chrome Web Store is special: a mobile Safari UA gets a **marketing landing page**
-/// with no installable catalog. Oriel uses desktop Chrome UA **only** on CWS hosts,
-/// then `StoreReadableLayout` keeps that catalog phone-readable.
+/// Chrome Web Store / Firefox AMO **page browsing** no longer forces a desktop UA —
+/// use the native **Oriel Store** for catalogs. `chromeDesktop` remains for CRX downloads
+/// and Oriel Store’s own Chrome catalog fetch.
 enum UserAgentPolicy {
-    /// Chrome desktop UA — Chrome Web Store **page browsing** + CRX downloads.
+    /// Chrome desktop UA — CRX downloads + Oriel Store Chrome catalog fetch only.
     static let chromeDesktop =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 
-    /// Firefox desktop UA — reserved for rare cases; AMO browsing uses Safari + JS spoof on iOS.
+    /// Firefox desktop UA — reserved; AMO website install spoof is JS-side if the user keeps browsing.
     static let firefoxDesktop =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0"
 
@@ -61,7 +61,7 @@ enum UserAgentPolicy {
         isFirefoxAddonsHost(url?.host)
     }
 
-    /// Extension / theme store pages (readable mobile layout + JS install spoof on iOS).
+    /// Chrome Web Store / Firefox Add-ons website URLs (tip → Oriel Store).
     static func isExtensionStoreURL(_ url: URL?) -> Bool {
         isChromeWebStoreURL(url) || isFirefoxAddonsURL(url)
     }
@@ -73,18 +73,12 @@ enum UserAgentPolicy {
         return isFirefoxAddonsHost(host)
     }
 
-    /// `nil` means “use WebKit’s default Safari UA” (mobile-friendly on iPhone/iPad).
-    ///
-    /// - **Chrome Web Store only:** desktop Chrome UA so Google serves the real catalog
-    ///   (mobile UA = “boost your desktop browser” marketing page with no items).
-    /// - **Everywhere else:** never auto-desktop; only an explicit Request Desktop Website.
+    /// `nil` means “use WebKit’s default Safari UA”.
+    /// Never auto-desktop store websites — Oriel Store is the catalog UI.
+    /// Only an explicit Request Desktop Website changes the UA.
     static func customUserAgent(for url: URL?, requestsDesktopSite: Bool) -> String? {
         if requestsDesktopSite {
             return safariDesktop
-        }
-        // Catalog HTML is UA-gated; readability is handled by StoreReadableLayout + CSS.
-        if isChromeWebStoreURL(url) {
-            return chromeDesktop
         }
         return nil
     }

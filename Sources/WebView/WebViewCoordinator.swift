@@ -311,17 +311,9 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
 
             #if os(iOS)
             // Content mode is decided per navigation — never leave desktop stuck on for every site.
+            // Store websites are not forced to desktop; catalogs live in Oriel Store.
             if navigationAction.targetFrame?.isMainFrame != false {
-                if tab.requestsDesktopSite {
-                    preferences.preferredContentMode = .desktop
-                } else if UserAgentPolicy.isChromeWebStoreURL(url) {
-                    // CWS must use desktop content mode + Chrome UA or Google serves a
-                    // marketing landing page with no extensions/themes. Phone readability
-                    // comes from StoreReadableLayout (min-width kill), not mobile content mode.
-                    preferences.preferredContentMode = .desktop
-                } else {
-                    preferences.preferredContentMode = .mobile
-                }
+                preferences.preferredContentMode = tab.requestsDesktopSite ? .desktop : .mobile
             }
             #endif
 

@@ -21,34 +21,17 @@ A full “run Chromium extensions exactly like Chrome” or “run Gecko add-ons
 | Scan `/Applications` for Safari | macOS only | No Applications scan on iOS |
 | Extension themes (`theme` in manifest) | Yes | Colors + optional NTP image |
 
-## Oriel Store (recommended on iPhone / iPad)
+## Oriel Store (recommended on Mac, iPhone, iPad)
 
-The Chrome Web Store **desktop catalog** does not reflow well on a phone. Prefer the native **Oriel Store**:
+Prefer the native **Oriel Store** over the Chrome / Firefox websites:
 
-- **Chrome:** public CWS search/category HTML → list (desktop UA fetch)
+- **Chrome:** public CWS search/category HTML → list (desktop UA only for that fetch)
 - **Firefox:** AMO API v5 `addons/search/`
 - Extensions and themes; install via existing CRX/XPI pipeline
 - Entry: Extensions → Browse Oriel Store, Settings, or overflow menu **Oriel Store**
-- Opening the Chrome Web Store or Firefox Add-ons **website** in a tab shows a one-time tip: **Use Oriel Store?**
+- Opening the Chrome Web Store or Firefox Add-ons **website** in a tab shows a one-time tip: **Use Oriel Store?** (all platforms)
 
-## Chrome Web Store website on iPhone / iPad
-
-When opening the website store, Oriel still:
-
-1. **Desktop Chrome UA + desktop content mode on CWS only** (mobile UA = marketing page with no catalog).
-2. **Readable layout** best-effort (`StoreReadableLayout`).
-3. **JS spoof** + hide desktop-only banners + sticky **Add to Oriel** on detail pages.
-4. **CRX downloads** use desktop Chrome UA; multilingual CTA rewrite + installed-state injection (incl. themes).
-
-## Firefox Add-ons (AMO) on iPhone / iPad
-
-Prefer **Oriel Store** (Firefox tab). Website AMO still gets:
-
-1. **Mobile Safari UA** for AMO browsing; XPI download keeps its own request headers.
-2. **Mobile content mode** unless the user requests desktop.
-3. **JS spoof** + `InstallTrigger` stub at document-start.
-4. **Hide** download-Firefox banners; relabel the native install control to **Add to Oriel** / **Remove from Oriel**.
-5. Same shared **`StoreBridgeI18n`** catalog for localized Firefox CTAs and Oriel labels.
+Store **websites** are not forced to desktop mode/UA. Desktop Chrome UA is kept only for CRX downloads and Oriel Store’s Chrome catalog fetch. Website tabs still get JS bridges (CTA rewrite / sticky Add to Oriel) if the user keeps browsing.
 
 ## Built-in compat (`ManifestCompatNormalizer`)
 
