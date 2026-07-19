@@ -42,7 +42,7 @@ final class ManifestCompatNormalizerTests: XCTestCase {
         XCTAssertNil(json["page_action"])
     }
 
-    func testRemovesPersistentKeyEntirelyAndDropsDuplicateScripts() throws {
+    func testForcesPersistentFalseAndDropsDuplicateScripts() throws {
         let url = try writeManifest([
             "manifest_version": 3,
             "name": "SW",
@@ -57,11 +57,41 @@ final class ManifestCompatNormalizerTests: XCTestCase {
         let background = try XCTUnwrap(try load(url)["background"] as? [String: Any])
         XCTAssertEqual(background["service_worker"] as? String, "bg.js")
         XCTAssertNil(background["scripts"])
-        // WebKit error: Invalid `persistent` manifest entry — key must be absent.
-        XCTAssertNil(background["persistent"])
+        XCTAssertEqual(background["persistent"] as? Bool, false)
     }
 
-    func testRemovesPersistentFalseAsWell() throws {
+    func testMV2PageBackgroundGetsExplicitPersistentFalse() throws {
+        // Bitwarden-style: omitting persistent defaults to true on iOS → install error.
+        let url = try writeManifest([
+            "manifest_version": 2,
+            "name": "BitwardenLike",
+            "version": "1.0",
+            "background": [
+                "page": "background.html",
+                "persistent": true
+            ]
+        ])
+        XCTAssertTrue(try ManifestCompatNormalizer.normalize(at: url))
+        let background = try XCTUnwrap(try load(url)["background"] as? [String: Any])
+        XCTAssertEqual(background["page"] as? String, "background.html")
+        XCTAssertEqual(background["persistent"] as? Bool, false)
+    }
+
+    func testMV2ScriptsMissingPersistentKeyGetsFalse() throws {
+        let url = try writeManifest([
+            "manifest_version": 2,
+            "name": "Scripts",
+            "version": "1.0",
+            "background": [
+                "scripts": ["bg.js"]
+            ]
+        ])
+        XCTAssertTrue(try ManifestCompatNormalizer.normalize(at: url))
+        let background = try XCTUnwrap(try load(url)["background"] as? [String: Any])
+        XCTAssertEqual(background["persistent"] as? Bool, false)
+    }
+
+    func testKeepsExistingPersistentFalse() throws {
         let url = try writeManifest([
             "manifest_version": 2,
             "name": "BG",
@@ -71,9 +101,11 @@ final class ManifestCompatNormalizerTests: XCTestCase {
                 "persistent": false
             ]
         ])
-        XCTAssertTrue(try ManifestCompatNormalizer.normalize(at: url))
+        // Only other fields unchanged; persistent already false — normalize may still
+        // return false if nothing else changes.
+        _ = try ManifestCompatNormalizer.normalize(at: url)
         let background = try XCTUnwrap(try load(url)["background"] as? [String: Any])
-        XCTAssertNil(background["persistent"])
+        XCTAssertEqual(background["persistent"] as? Bool, false)
         XCTAssertEqual(background["scripts"] as? [String], ["bg.js"])
     }
 
@@ -91,7 +123,7 @@ final class ManifestCompatNormalizerTests: XCTestCase {
         let background = try XCTUnwrap(try load(url)["background"] as? [String: Any])
         XCTAssertEqual(background["service_worker"] as? String, "worker.js")
         XCTAssertNil(background["scripts"])
-        XCTAssertNil(background["persistent"])
+        XCTAssertEqual(background["persistent"] as? Bool, false)
     }
 
     func testStripsSafariBSSNativeMessagingAndChromeStyle() throws {

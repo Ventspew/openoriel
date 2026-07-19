@@ -283,6 +283,8 @@ final class WebExtensionManager {
             let folder = extensionsDirectory.appendingPathComponent(entry.directoryName, isDirectory: true)
             guard fileManager.fileExists(atPath: folder.path) else { continue }
             do {
+                // Re-apply compat (e.g. force persistent:false) so older installs keep loading on iOS.
+                ManifestCompatNormalizer.normalizePackage(at: folder)
                 let webExtension = try await WKWebExtension(resourceBaseURL: folder)
                 let context = WKWebExtensionContext(for: webExtension)
                 context.uniqueIdentifier = entry.directoryName
@@ -645,7 +647,9 @@ final class WebExtensionManager {
         guard let manifest = findManifest(in: tempRoot) else {
             throw ExtensionError.missingManifest
         }
-        try? ManifestCompatNormalizer.normalize(at: manifest)
+        // Prefer throwing normalize failures over silently loading a persistent background on iOS.
+        try ManifestCompatNormalizer.normalize(at: manifest)
+        ManifestCompatNormalizer.normalizePackage(at: tempRoot)
 
         let root = manifest.deletingLastPathComponent()
         if root != tempRoot {
@@ -654,8 +658,9 @@ final class WebExtensionManager {
             try fileManager.moveItem(at: root, to: promoted)
             try? fileManager.removeItem(at: tempRoot)
             if let promotedManifest = findManifest(in: promoted) {
-                try? ManifestCompatNormalizer.normalize(at: promotedManifest)
+                try ManifestCompatNormalizer.normalize(at: promotedManifest)
             }
+            ManifestCompatNormalizer.normalizePackage(at: promoted)
             return promoted
         }
         return tempRoot

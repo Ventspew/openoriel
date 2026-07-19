@@ -56,26 +56,34 @@ enum ManifestCompatNormalizer {
             }
         }
 
-        // --- Background: WebKit rejects ANY `persistent` key ("Invalid `persistent` manifest entry") ---
+        // --- Background persistence (iOS / iPadOS) ---
+        // WebKit error string "Invalid `persistent` manifest entry" means the background
+        // is (or defaults to) persistent — not that the key is forbidden.
+        // On iOS, MV2 `page`/`scripts` backgrounds default to persistent when the key is
+        // omitted. Explicit `persistent: false` is required (see WebKit BackgroundParsing tests).
         if var background = root["background"] as? [String: Any] {
             var bgChanged = false
-            if background["persistent"] != nil {
-                // Do not rewrite to false — WKWebExtension rejects the key entirely.
-                background.removeValue(forKey: "persistent")
-                bgChanged = true
-            }
             // Prefer a single service_worker when both shapes are present.
             if background["service_worker"] != nil, background["scripts"] != nil {
                 background.removeValue(forKey: "scripts")
                 bgChanged = true
             }
             // MV3-shaped packages sometimes still list `scripts` without a worker.
+            let manifestVersion = (root["manifest_version"] as? Int)
+                ?? (root["manifest_version"] as? NSNumber)?.intValue
             if background["service_worker"] == nil,
                let scripts = background["scripts"] as? [String],
                let first = scripts.first,
-               (root["manifest_version"] as? Int) == 3 {
+               manifestVersion == 3 {
                 background["service_worker"] = first
                 background.removeValue(forKey: "scripts")
+                bgChanged = true
+            }
+            // Force non-persistent. Never omit on MV2 page/scripts — omission ⇒ persistent ⇒ iOS error.
+            let alreadyFalse = (background["persistent"] as? Bool) == false
+                || (background["persistent"] as? NSNumber)?.boolValue == false
+            if !alreadyFalse {
+                background["persistent"] = false
                 bgChanged = true
             }
             if bgChanged {
@@ -139,17 +147,26 @@ enum ManifestCompatNormalizer {
 
     /// Normalize every `manifest.json` under a staged package root.
     static func normalizePackage(at packageRoot: URL, fileManager: FileManager = .default) {
-        let manifests = [
+        var seen = Set<String>()
+        let preferred = [
             packageRoot.appendingPathComponent("manifest.json"),
             packageRoot.appendingPathComponent("Contents/Resources/manifest.json"),
             packageRoot.appendingPathComponent("Resources/manifest.json")
         ]
-        for url in manifests where fileManager.fileExists(atPath: url.path) {
+        for url in preferred where fileManager.fileExists(atPath: url.path) {
+            seen.insert(url.standardizedFileURL.path)
             try? normalize(at: url)
-            return
         }
-        if let found = SafariWebExtensionImporter.findManifest(in: packageRoot, fileManager: fileManager) {
-            try? normalize(at: found)
+        guard let enumerator = fileManager.enumerator(
+            at: packageRoot,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        ) else { return }
+        for case let fileURL as URL in enumerator where fileURL.lastPathComponent == "manifest.json" {
+            let path = fileURL.standardizedFileURL.path
+            guard !seen.contains(path) else { continue }
+            seen.insert(path)
+            try? normalize(at: fileURL)
         }
     }
 }
