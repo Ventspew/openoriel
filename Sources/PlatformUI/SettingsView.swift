@@ -388,19 +388,27 @@ struct SettingsView: View {
                     }
                     if environment.extensions.isSupported {
                         Button {
+                            environment.showOrielStore = true
+                            if showsDoneButton {
+                                dismiss()
+                            }
+                        } label: {
+                            Label("Browse Oriel Store", systemImage: "storefront")
+                        }
+                        Button {
                             environment.openURLInNewTab(BrowserConstants.chromeWebStoreURL)
                             if showsDoneButton {
                                 dismiss()
                             }
                         } label: {
-                            Label("Browse Chrome Web Store", systemImage: "safari")
+                            Label("Chrome Web Store (website)", systemImage: "safari")
                         }
                     }
                 } header: {
                     Text("Extensions")
                 } footer: {
                     if environment.extensions.isSupported {
-                        Text("Install Chrome Web Store or WebExtension packages (.zip / .crx / folder with manifest.json). Safari App Store extensions cannot run outside Safari.")
+                        Text("Use Oriel Store on iPhone/iPad for a readable Chrome + Firefox catalog. Or install .zip / .crx / .xpi / folder with manifest.json.")
                             .fixedSize(horizontal: false, vertical: true)
                     } else {
                         Text(environment.extensions.lastError

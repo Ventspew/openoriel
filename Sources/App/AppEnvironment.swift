@@ -41,6 +41,8 @@ final class AppEnvironment {
     var showFindInPage = false
     var showSettings = false
     var showExtensions = false
+    /// Native phone-readable Chrome/Firefox catalog (avoids broken desktop CWS layout).
+    var showOrielStore = false
     var showLinkQueue = false
     var showFireButton = false
     var showTranslate = false

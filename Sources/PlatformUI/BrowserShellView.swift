@@ -84,6 +84,18 @@ struct BrowserShellView: View {
                 .frame(minWidth: 420, idealWidth: 520, minHeight: 380, idealHeight: 520)
                 #endif
         }
+        .sheet(isPresented: $environment.showOrielStore) {
+            NavigationStack {
+                OrielStoreView(showsDoneButton: true)
+            }
+            .orielTheming(settings: environment.settings)
+            #if os(iOS)
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+            #else
+            .frame(minWidth: 440, idealWidth: 560, minHeight: 420, idealHeight: 640)
+            #endif
+        }
         .sheet(isPresented: $environment.showSettings) {
             SettingsView(showsDoneButton: true)
                 .orielSheetChrome(preferLargeOnCompact: true)
@@ -778,6 +790,7 @@ struct BrowserShellView: View {
                 Button("Downloads") { environment.showDownloads = true }
                 if environment.extensions.isSupported {
                     Button("Extensions") { environment.showExtensions = true }
+                    Button("Oriel Store") { environment.showOrielStore = true }
                 }
                 Button(environment.linkQueue.count == 0 ? "Open Later" : "Open Later (\(environment.linkQueue.count))") {
                     environment.showLinkQueue = true
@@ -907,6 +920,7 @@ struct BrowserShellView: View {
                 Button("Downloads") { environment.showDownloads = true }
                 if environment.extensions.isSupported {
                     Button("Extensions") { environment.showExtensions = true }
+                    Button("Oriel Store") { environment.showOrielStore = true }
                 }
                 Button(environment.linkQueue.count == 0 ? "Open Later" : "Open Later (\(environment.linkQueue.count))") {
                     environment.showLinkQueue = true

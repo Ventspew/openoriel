@@ -103,18 +103,24 @@ struct ExtensionsView: View {
             }
 
             Section {
+                NavigationLink {
+                    OrielStoreView(showsDoneButton: false)
+                } label: {
+                    Label("Browse Oriel Store", systemImage: "storefront")
+                }
+
                 Button {
                     environment.openURLInNewTab(BrowserConstants.chromeWebStoreURL)
                     dismiss()
                 } label: {
-                    Label("Open Chrome Web Store", systemImage: "bag")
+                    Label("Open Chrome Web Store (website)", systemImage: "bag")
                 }
 
                 Button {
                     environment.openURLInNewTab(BrowserConstants.firefoxAddonsURL)
                     dismiss()
                 } label: {
-                    Label("Open Firefox Add-ons", systemImage: "flame")
+                    Label("Open Firefox Add-ons (website)", systemImage: "flame")
                 }
 
                 Button {
@@ -130,7 +136,7 @@ struct ExtensionsView: View {
             } header: {
                 Text("Get extensions")
             } footer: {
-                Text("Chrome Web Store, Firefox Add-ons (Add to Oriel), .zip / .crx / .xpi, unpacked folders, or Safari Web Extension .appex packages. Theme packages apply colors automatically.")
+                Text("Prefer Oriel Store on iPhone/iPad — it loads Chrome and Firefox catalogs in a readable list. Website store pages stay available if you need them. Also: .zip / .crx / .xpi, folders, or Safari .appex.")
                     .fixedSize(horizontal: false, vertical: true)
             }
 

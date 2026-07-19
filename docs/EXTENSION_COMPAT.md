@@ -21,22 +21,27 @@ A full “run Chromium extensions exactly like Chrome” or “run Gecko add-ons
 | Scan `/Applications` for Safari | macOS only | No Applications scan on iOS |
 | Extension themes (`theme` in manifest) | Yes | Colors + optional NTP image |
 
-## Chrome Web Store on iPhone / iPad
+## Oriel Store (recommended on iPhone / iPad)
 
-The store often shows **“not compatible with a phone”** when it sees a mobile Safari UA. Oriel counters that **without** forcing a tiny desktop layout on every site:
+The Chrome Web Store **desktop catalog** does not reflow well on a phone. Prefer the native **Oriel Store**:
 
-1. **Desktop Chrome UA + desktop content mode on CWS only** — a mobile Safari UA makes Google serve a marketing landing page (“boost your desktop browser”) with **no** extension/theme catalog. Other sites stay mobile unless the user requests desktop.
-2. **Readable layout** (`StoreReadableLayout`) on CWS/AMO — kills CWS’s `.IqBfM { min-width: 1249px/1280px }` shell so the real catalog stays phone-readable.
-3. **JS spoof** of `navigator.userAgent` / `userAgentData` / `platform` / `maxTouchPoints` so install UI stays available.
-4. **CRX downloads** also use the desktop Chrome UA in `WebExtensionManager`.
-5. **Hide** phone-incompatibility / “desktop only” banners (multilingual).
-6. **Sticky Install bar** on extension detail pages (**Add to Oriel**) when the mobile-width store hides Chrome’s native install CTA — plus rewrite any native CTA that does appear. Install is handled in-app (CRX download); no Python proxy.
-7. **Multilingual** (`StoreBridgeI18n`): 60+ locales for CTA detection and Oriel labels.
-8. **Installed state**: inject Chrome store IDs + Firefox AMO slugs on **macOS, iOS, and iPadOS** — including **theme-only** packages.
+- **Chrome:** public CWS search/category HTML → list (desktop UA fetch)
+- **Firefox:** AMO API v5 `addons/search/`
+- Extensions and themes; install via existing CRX/XPI pipeline
+- Entry: Extensions → Browse Oriel Store, Settings, or overflow menu **Oriel Store**
+
+## Chrome Web Store website on iPhone / iPad
+
+When opening the website store, Oriel still:
+
+1. **Desktop Chrome UA + desktop content mode on CWS only** (mobile UA = marketing page with no catalog).
+2. **Readable layout** best-effort (`StoreReadableLayout`).
+3. **JS spoof** + hide desktop-only banners + sticky **Add to Oriel** on detail pages.
+4. **CRX downloads** use desktop Chrome UA; multilingual CTA rewrite + installed-state injection (incl. themes).
 
 ## Firefox Add-ons (AMO) on iPhone / iPad
 
-AMO often shows **“You’ll need Firefox…”** / Download Firefox when it does not see desktop Firefox. Same readable-mobile approach:
+Prefer **Oriel Store** (Firefox tab). Website AMO still gets:
 
 1. **Mobile Safari UA** for AMO browsing; XPI download keeps its own request headers.
 2. **Mobile content mode** unless the user requests desktop.
