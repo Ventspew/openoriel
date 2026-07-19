@@ -170,7 +170,7 @@ struct BrowserShellView: View {
                 .orielTheming(settings: environment.settings)
         }
         .sheet(isPresented: $environment.showProfiles) {
-            ProfilesView()
+            ProfilesSheet()
                 .orielSheetChrome()
                 .orielTheming(settings: environment.settings)
         }

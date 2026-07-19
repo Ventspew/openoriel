@@ -28,7 +28,7 @@ struct MacGovernorsView: View {
     private var formContent: some View {
         Form {
             Section {
-                Text("These governors act on Oriel’s WebKit tabs (timer throttle + live engine cap + memory-pressure hibernate). They are real resource controls — not a decorative GX gauge, and not a kernel CPU quota.")
+                Text("These governors work in Classic Oriel and Oriel Pulse. They act on WebKit tabs (timer throttle + live engine cap + memory-pressure hibernate) — real resource controls, not a decorative GX gauge.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

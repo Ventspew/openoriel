@@ -7,7 +7,6 @@ struct SettingsView: View {
 
     /// When true, show a Done button (sheet). Native macOS Settings window can omit it.
     var showsDoneButton: Bool = true
-    @State private var showProfilesSheet = false
 
     var body: some View {
         NavigationStack {
@@ -47,7 +46,15 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    profileSummaryRow
+                    NavigationLink {
+                        ProfilesView(showsDoneButton: false)
+                    } label: {
+                        settingsRow(
+                            "Profiles",
+                            systemImage: "person.crop.circle.fill",
+                            detail: environment.profiles.activeProfile.name
+                        )
+                    }
 
                     NavigationLink {
                         AccountsSettingsPage(showsDoneButton: showsDoneButton)
@@ -126,14 +133,6 @@ struct SettingsView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showProfilesSheet) {
-                ProfilesView()
-                    .environment(environment)
-                    .orielTheming(settings: environment.settings)
-                    #if os(macOS)
-                    .frame(minWidth: 420, idealWidth: 480, minHeight: 360, idealHeight: 480)
-                    #endif
-            }
         }
     }
 
@@ -145,37 +144,6 @@ struct SettingsView: View {
             return "Pulse"
         }
         return environment.settings.appearance.displayName
-    }
-
-    private var profileSummaryRow: some View {
-        Button {
-            if showsDoneButton {
-                environment.showProfiles = true
-                dismiss()
-            } else {
-                showProfilesSheet = true
-            }
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(environment.settings.brandColor)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(environment.profiles.activeProfile.name)
-                        .foregroundStyle(.primary)
-                    Text("Active profile")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     private func settingsRow(_ title: String, systemImage: String, detail: String? = nil) -> some View {
@@ -305,6 +273,21 @@ private struct AppearanceSettingsPage: View {
             // Classic + Pulse — dual-engine preference is not Pulse-gated.
             PageEngineSettingsSection()
 
+            #if os(macOS)
+            Section {
+                NavigationLink {
+                    MacGovernorsView(showsDoneButton: false)
+                } label: {
+                    Label("Mac Governors", systemImage: "gauge.with.dots.needle.33percent")
+                }
+            } header: {
+                Text("Mac performance")
+            } footer: {
+                Text("CPU/RAM governors work in Classic Oriel and Oriel Pulse — not Pulse-only. Page-engine / Chromium options are above.")
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            #endif
+
             if settings.edition.isPulse {
                 Section {
                     NavigationLink {
@@ -321,7 +304,7 @@ private struct AppearanceSettingsPage: View {
                         environment.icloudSync.noteLocalChange()
                     }
                 } footer: {
-                    Text("Live page-engine limits, Data/Network Saver, Lucid Mode, and ambience.")
+                    Text("Pulse-only look: Data/Network Saver, Lucid Mode, ambience, and Corner. Mac Governors above still apply.")
                 }
             }
 
@@ -599,8 +582,10 @@ private struct AccountsSettingsPage: View {
                     environment.showPasswordVault = true
                 }
                 #if os(macOS)
-                Button("Mac Governors…") {
-                    environment.showMacGovernors = true
+                NavigationLink {
+                    MacGovernorsView(showsDoneButton: false)
+                } label: {
+                    Label("Mac Governors", systemImage: "gauge.with.dots.needle.33percent")
                 }
                 #endif
                 Button("Workspaces…") {

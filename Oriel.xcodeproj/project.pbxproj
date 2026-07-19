@@ -9,9 +9,6 @@
 /* Begin PBXBuildFile section */
 		031CD0495C873598AF6F38C4 /* NavigationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = C223CB51AB8532708D4195C6 /* NavigationPolicy.swift */; };
 		03655CFDC6FBB813A10A6133 /* MacGovernorsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D0D8BA0D305603082109C3 /* MacGovernorsView.swift */; };
-		EF115B2FE3914D61BA900C70 /* CefWebHostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B835EEFD1B6542E1A58B3164 /* CefWebHostView.swift */; };
-		29FF5271B3814BF5803F087F /* OrielCEFSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E9755854D384763BDE4C6C8 /* OrielCEFSupport.swift */; };
-		7D18FE44EF704381990B2FF9 /* OrielCEFBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = C31F315B7EE145FF86CC66FA /* OrielCEFBridge.mm */; };
 		03A58F71719329648F6B3590 /* Phase4FeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D80B0019A1802BBCD08249E2 /* Phase4FeatureTests.swift */; };
 		062CFFBE06CF8D1B9D60EAAD /* StartPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137A3D8074BF71FCA60476D1 /* StartPageView.swift */; };
 		074B4CC3C2670D865A3103CE /* ChromiumNativeHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76FFE6CABAB9AAC5A228C396 /* ChromiumNativeHost.swift */; };
@@ -20,6 +17,7 @@
 		0B37DDC67D87E467B4FBF91E /* OrielLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964B007F398281F78B5719E7 /* OrielLayout.swift */; };
 		14BAE8C60E1E2EF817A43F55 /* Entry.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C47F098B13BD4124F906CE /* Entry.swift */; };
 		15CB54AA9856322493F3599A /* TranslatePageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECEFAAFB04395F85200EE906 /* TranslatePageView.swift */; };
+		19157E131CEA1AB0DFAFB9EF /* CefWebHostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 211C1E2B8E4BA00E9366D206 /* CefWebHostView.swift */; };
 		1925A2386083E6C357B7C082 /* PasswordAutofillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C44B3ABD7BD041D7C982BBB /* PasswordAutofillService.swift */; };
 		19974925BF137D06A608E1DF /* BrowserEdition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FFB4EF635654D155B106264 /* BrowserEdition.swift */; };
 		1ADCF553BB2449889BF1E2A5 /* BrowserShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9596246F720EF499196A3B2 /* BrowserShellView.swift */; };
@@ -58,6 +56,7 @@
 		46BFE9446C753D4B4C0FDFC3 /* WorkspacePreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55A48A017442C336F14A94B2 /* WorkspacePreset.swift */; };
 		476195A2EF3A386EAAB3750A /* ThirdPartyCookieBlocker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01381C90C042AFCE3C1AC613 /* ThirdPartyCookieBlocker.swift */; };
 		4B01D56A338761078917825C /* ExtensionStoreCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3DCEC09B581A87C0C7D51E /* ExtensionStoreCatalogTests.swift */; };
+		4CB8448BD1C97F0A9CFC4B80 /* OrielCEFSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76972E59C2B9D413D6A713B2 /* OrielCEFSupport.swift */; };
 		4DBA4F9AF3E7A1D14A5BE719 /* TabOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E57EB5D6608140050A9EF32F /* TabOverviewView.swift */; };
 		50162F7C67210582B090D16E /* JSONFileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14528446EC763702DBF33729 /* JSONFileStore.swift */; };
 		5190871AD9CBF711DF52E115 /* oriel-site-fixes.json in Resources */ = {isa = PBXBuildFile; fileRef = 391D5296FD71B5C67F7B845F /* oriel-site-fixes.json */; };
@@ -106,6 +105,7 @@
 		8F6A8D23F0520A8186022633 /* StoreBridgeI18nTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 393229A75452FA85E59E8A26 /* StoreBridgeI18nTests.swift */; };
 		94815792778A372D451887CF /* WebsitePermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E1060ADCB8E8D21A1D5CBC2 /* WebsitePermissionManager.swift */; };
 		95A9EC4E34689A7B91D39AB7 /* ContentBlockerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39A58A41442546BAFBEF499F /* ContentBlockerManager.swift */; };
+		95C1931F57A6D8284B3E90AC /* OrielCEFBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = 870FE74046EF54CF1CDAB606 /* OrielCEFBridge.mm */; };
 		96A916131DB65E85EF7D5804 /* ChromiumMacFeaturesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3AB40D9530AFE2BCDDC1B4F /* ChromiumMacFeaturesTests.swift */; };
 		96B0467E7356AC6C487004C8 /* WorkspaceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDC26E9B7FE4C4ADAC0885B7 /* WorkspaceStore.swift */; };
 		96B6BC4B7E61B59656BCFED2 /* BookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92DEC41377429AF5865F7209 /* BookmarksView.swift */; };
@@ -213,11 +213,6 @@
 		03C2BA1CA17C36F4696A6FFA /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		04E71E92ED9AC72D87C237EB /* ProfileSwitcherControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSwitcherControl.swift; sourceTree = "<group>"; };
 		05D0D8BA0D305603082109C3 /* MacGovernorsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacGovernorsView.swift; sourceTree = "<group>"; };
-		B835EEFD1B6542E1A58B3164 /* CefWebHostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CefWebHostView.swift"; sourceTree = "<group>"; };
-		9E9755854D384763BDE4C6C8 /* OrielCEFSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OrielCEFSupport.swift"; sourceTree = "<group>"; };
-		71E708C826D446EAB1C760CB /* Oriel-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Oriel-Bridging-Header.h"; sourceTree = "<group>"; };
-		C31F315B7EE145FF86CC66FA /* OrielCEFBridge.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = "OrielCEFBridge.mm"; sourceTree = "<group>"; };
-		827700EA7B154F4C9F307355 /* OrielCEFBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "OrielCEFBridge.h"; sourceTree = "<group>"; };
 		092239664755EDC7A6047129 /* oriel-ads-2.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "oriel-ads-2.json"; sourceTree = "<group>"; };
 		0AA43A2E565A0824FEA3EFC5 /* Data+Serialization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Data+Serialization.swift"; sourceTree = "<group>"; };
 		0C214503B2A56B0F0ED48CF0 /* PulsePerformanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulsePerformanceView.swift; sourceTree = "<group>"; };
@@ -238,6 +233,7 @@
 		1D20AA232BDD97C1F8310947 /* SafariWebExtensionImporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionImporterTests.swift; sourceTree = "<group>"; };
 		1D556585A2E605A1B130EF8E /* ManifestCompatNormalizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManifestCompatNormalizerTests.swift; sourceTree = "<group>"; };
 		1FD44E208EC0D437878BD22A /* oriel-privacy-2.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "oriel-privacy-2.json"; sourceTree = "<group>"; };
+		211C1E2B8E4BA00E9366D206 /* CefWebHostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CefWebHostView.swift; sourceTree = "<group>"; };
 		2165EC01E581EC629E0F0551 /* Archive+ReadingDeprecated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Archive+ReadingDeprecated.swift"; sourceTree = "<group>"; };
 		21ABD0F76E102B04F9932DE3 /* PasswordVaultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordVaultView.swift; sourceTree = "<group>"; };
 		2217E60267513166ABDC37AF /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -245,6 +241,7 @@
 		2667FA8649141F4D44987B08 /* FireButtonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FireButtonView.swift; sourceTree = "<group>"; };
 		268B72BE5E382393CEE9E5D6 /* Date+ZIP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+ZIP.swift"; sourceTree = "<group>"; };
 		26CAF999F4B608DCBB9D0259 /* Archive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Archive.swift; sourceTree = "<group>"; };
+		2838A34B1FC4D9C48F118215 /* OrielCEFBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OrielCEFBridge.h; sourceTree = "<group>"; };
 		2CAA503AA1BB5B6FE0606DF0 /* URLParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLParserTests.swift; sourceTree = "<group>"; };
 		2D19B9E0FFE1E0521CA922E0 /* PageEngineSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageEngineSettingsSection.swift; sourceTree = "<group>"; };
 		2FCC1CD26C6F58FAE58425BF /* PulseWallpaper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseWallpaper.swift; sourceTree = "<group>"; };
@@ -271,6 +268,7 @@
 		4DA7212A964CD575F5A4A3A1 /* WebExtensionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebExtensionManager.swift; sourceTree = "<group>"; };
 		4DD17FFF022753DBC14A2CC2 /* FaviconImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconImage.swift; sourceTree = "<group>"; };
 		4EFC6720D42DE67395DF9AF4 /* FingerprintingProtectionScript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FingerprintingProtectionScript.swift; sourceTree = "<group>"; };
+		4F47B63A4B94D062515699FC /* Oriel-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Oriel-Bridging-Header.h"; sourceTree = "<group>"; };
 		521C318ACAD6A56CA263A705 /* ChromiumFeaturesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChromiumFeaturesView.swift; sourceTree = "<group>"; };
 		5350D0B8D051011A875581CF /* ExtensionThemeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionThemeStore.swift; sourceTree = "<group>"; };
 		55A48A017442C336F14A94B2 /* WorkspacePreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspacePreset.swift; sourceTree = "<group>"; };
@@ -291,6 +289,7 @@
 		6FE8D9A03851157D589E88F9 /* ExtensionThemeParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionThemeParser.swift; sourceTree = "<group>"; };
 		6FFB4EF635654D155B106264 /* BrowserEdition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserEdition.swift; sourceTree = "<group>"; };
 		70753291C03D19791E7D6661 /* FileManager+ZIP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FileManager+ZIP.swift"; sourceTree = "<group>"; };
+		76972E59C2B9D413D6A713B2 /* OrielCEFSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrielCEFSupport.swift; sourceTree = "<group>"; };
 		76FFE6CABAB9AAC5A228C396 /* ChromiumNativeHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChromiumNativeHost.swift; sourceTree = "<group>"; };
 		7AA6FA08B917C0F4A81D7E1C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7ABA8781AB579187B7E33D8C /* HistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryEntry.swift; sourceTree = "<group>"; };
@@ -303,6 +302,7 @@
 		835E9DA3F43215CF038F6A1B /* ProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesView.swift; sourceTree = "<group>"; };
 		83AC3BB6323513845985F125 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		8679C669CDF57E26ADF202D5 /* DefaultBrowserSettingsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultBrowserSettingsPage.swift; sourceTree = "<group>"; };
+		870FE74046EF54CF1CDAB606 /* OrielCEFBridge.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = OrielCEFBridge.mm; sourceTree = "<group>"; };
 		88D349DAD9D01457D3EFFB78 /* Archive+BackingConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Archive+BackingConfiguration.swift"; sourceTree = "<group>"; };
 		899DAF18D972B3BA4A1EA5EC /* NavigationControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationControlsView.swift; sourceTree = "<group>"; };
 		8F7E101025B2FC9C929E5D07 /* ChromeWebStoreAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChromeWebStoreAPITests.swift; sourceTree = "<group>"; };
@@ -393,18 +393,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
-		56B0AA278D2E46E3A01E23E6 /* CEF */ = {
-			isa = PBXGroup;
-			children = (
-				B835EEFD1B6542E1A58B3164 /* CefWebHostView.swift */,
-				9E9755854D384763BDE4C6C8 /* OrielCEFSupport.swift */,
-				71E708C826D446EAB1C760CB /* Oriel-Bridging-Header.h */,
-				C31F315B7EE145FF86CC66FA /* OrielCEFBridge.mm */,
-				827700EA7B154F4C9F307355 /* OrielCEFBridge.h */,
-			);
-			path = CEF;
-			sourceTree = "<group>";
-		};
 		09BA50A92D275D5ECC3B85F8 /* ZIPFoundation */ = {
 			isa = PBXGroup;
 			children = (
@@ -431,6 +419,18 @@
 				B2A906F43071771A98203EA1 /* URL+ZIP.swift */,
 			);
 			path = ZIPFoundation;
+			sourceTree = "<group>";
+		};
+		140BA22106C4CC0519DB798E /* CEF */ = {
+			isa = PBXGroup;
+			children = (
+				211C1E2B8E4BA00E9366D206 /* CefWebHostView.swift */,
+				4F47B63A4B94D062515699FC /* Oriel-Bridging-Header.h */,
+				2838A34B1FC4D9C48F118215 /* OrielCEFBridge.h */,
+				870FE74046EF54CF1CDAB606 /* OrielCEFBridge.mm */,
+				76972E59C2B9D413D6A713B2 /* OrielCEFSupport.swift */,
+			);
+			path = CEF;
 			sourceTree = "<group>";
 		};
 		1E1A291CCF0885F5C5BF1F6D /* Persistence */ = {
@@ -717,10 +717,10 @@
 		E888F9045ECBE77F9699147D /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				56B0AA278D2E46E3A01E23E6 /* CEF */,
 				CC4D5E5ADC537CAE9A9D94C0 /* App */,
 				E563573CBD2854D51EB085CE /* Bookmarks */,
 				DAAEFA357E432123327E2569 /* BrowserCore */,
+				140BA22106C4CC0519DB798E /* CEF */,
 				E396DBE6BF4F7E3A206FD3D5 /* ContentBlocking */,
 				4647E01A9DBE11B445960A5B /* Downloads */,
 				8D296896DC7C9738C6B2F791 /* Extensions */,
@@ -949,6 +949,7 @@
 				1ADCF553BB2449889BF1E2A5 /* BrowserShellView.swift in Sources */,
 				782C2C4F7354EA78F9239794 /* BrowserTab.swift in Sources */,
 				EA61CA2644CE7FEE170C6664 /* BrowserWebView.swift in Sources */,
+				19157E131CEA1AB0DFAFB9EF /* CefWebHostView.swift in Sources */,
 				7D63DB298B0A9D2C153B99DE /* ChromeWebStoreBridge.swift in Sources */,
 				DE832FD6C310054F99EDE36F /* ChromiumEngineBridge.swift in Sources */,
 				B11B46FBE05176148887EFF6 /* ChromiumFeaturesView.swift in Sources */,
@@ -993,9 +994,6 @@
 				B6F31BBEFE3A71309253DE09 /* LinkQueueStore.swift in Sources */,
 				5435FDB81F50EB04C50F8A42 /* LinkQueueView.swift in Sources */,
 				03655CFDC6FBB813A10A6133 /* MacGovernorsView.swift in Sources */,
-				EF115B2FE3914D61BA900C70 /* CefWebHostView.swift in Sources */,
-				29FF5271B3814BF5803F087F /* OrielCEFSupport.swift in Sources */,
-				7D18FE44EF704381990B2FF9 /* OrielCEFBridge.mm in Sources */,
 				E1CE158E5876953362B30FA1 /* MacPerformanceGovernor.swift in Sources */,
 				735F2A3D2988BD4E17EDCCF4 /* ManifestCompatNormalizer.swift in Sources */,
 				31CD8FE1951535233E663D49 /* NavigationControlsView.swift in Sources */,
@@ -1003,6 +1001,8 @@
 				D7E704953945FC2B3CE55422 /* NavigationState.swift in Sources */,
 				2CB9F3A149EA674A5A55A6E7 /* OnboardingView.swift in Sources */,
 				FF5F8E058A1A7C1D9328AC1B /* OrielApp.swift in Sources */,
+				95C1931F57A6D8284B3E90AC /* OrielCEFBridge.mm in Sources */,
+				4CB8448BD1C97F0A9CFC4B80 /* OrielCEFSupport.swift in Sources */,
 				0B37DDC67D87E467B4FBF91E /* OrielLayout.swift in Sources */,
 				7C93B0B1A9EA03185AA143E4 /* OrielMark.swift in Sources */,
 				2A465103C4A44371D5794A56 /* OrielStoreDetailView.swift in Sources */,
@@ -1177,6 +1177,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_ENTITLEMENTS = Oriel.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
@@ -1208,9 +1210,8 @@
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
-				SWIFT_STRICT_CONCURRENCY = targeted;
 				SWIFT_OBJC_BRIDGING_HEADER = "Sources/CEF/Oriel-Bridging-Header.h";
-				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				SWIFT_STRICT_CONCURRENCY = targeted;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -1266,6 +1267,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_ENTITLEMENTS = Oriel.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
@@ -1297,9 +1300,8 @@
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
-				SWIFT_STRICT_CONCURRENCY = targeted;
 				SWIFT_OBJC_BRIDGING_HEADER = "Sources/CEF/Oriel-Bridging-Header.h";
-				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				SWIFT_STRICT_CONCURRENCY = targeted;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
