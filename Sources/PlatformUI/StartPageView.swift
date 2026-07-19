@@ -4,6 +4,7 @@ struct StartPageView: View {
     @Environment(AppEnvironment.self) private var environment
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @State private var containerWidth: CGFloat = 1000
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let tab: BrowserTab
 
@@ -44,7 +45,12 @@ struct StartPageView: View {
     }
 
     private var isWide: Bool {
-        sizeClass == .regular
+        #if os(macOS)
+        // Mac size class is almost always .regular — use real width so narrow windows stay compact.
+        return containerWidth >= 720
+        #else
+        return sizeClass == .regular
+        #endif
     }
 
     private var contentSpacing: CGFloat { isWide ? 22 : 18 }
@@ -199,6 +205,15 @@ struct StartPageView: View {
             .scrollIndicators(.hidden)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { containerWidth = geo.size.width }
+                    .onChange(of: geo.size.width) { _, width in
+                        containerWidth = width
+                    }
+            }
+        }
         // Soft/Paper/etc. paint against pageScheme — lock before children read Environment.
         .environment(\.colorScheme, pageScheme)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: environment.settings.backgroundTheme)
@@ -349,6 +364,8 @@ struct StartPageView: View {
 
     private var pulseUtilityRow: some View {
         HStack(spacing: 0) {
+            pulseUtilityLink("Profiles") { environment.showProfiles = true }
+            pulseUtilityDivider
             pulseUtilityLink("Settings") { environment.showSettings = true }
             pulseUtilityDivider
             pulseUtilityLink("Shields") { environment.showPrivacyShield = true }

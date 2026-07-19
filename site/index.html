@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Oriel — Native browser for iPhone, iPad, and Mac</title>
-  <meta name="description" content="Oriel is a native Swift browser for iPhone, iPad, and Mac. Classic or Pulse, Shields, extensions, Oriel Engine (Blink) on Mac, Password Vault, governors. Download IPA and DMG from GitHub." />
+  <title>Oriel — Browser for iPhone, iPad, and Mac</title>
+  <meta name="description" content="Oriel is a native Swift browser for Apple devices. Classic or Pulse. Shields, extensions, and Oriel Engine (real Blink) on Mac. Open source." />
   <link rel="canonical" href="https://openoriel.com/" />
   <meta name="theme-color" content="#2E616B" />
-  <meta property="og:title" content="Oriel — Native browser for Apple platforms" />
-  <meta property="og:description" content="Classic or Pulse. Shields, extensions, Oriel Engine with real Blink on Mac, Password Vault, governors. Open source by inveil.net." />
+  <meta property="og:title" content="Oriel — Native browser for Apple" />
+  <meta property="og:description" content="Classic calm or Oriel Pulse. Shields, extensions, Oriel Engine with Blink on Mac. Open source by inveil.net." />
   <meta property="og:url" content="https://openoriel.com" />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="https://openoriel.com/assets/hero.jpg" />
@@ -30,8 +30,7 @@
     <nav class="nav-links" aria-label="Primary">
       <a href="#download">Download</a>
       <a href="#editions">Editions</a>
-      <a href="#features">Features</a>
-      <a href="#engines">Engines</a>
+      <a href="#engines">Engine</a>
       <a href="#privacy">Privacy</a>
       <a href="https://github.com/Ventspew/openoriel">GitHub</a>
     </nav>
@@ -46,10 +45,10 @@
       <div class="hero-copy">
         <p class="brand">Oriel</p>
         <h1>A calm view of the web.</h1>
-        <p class="lede">Native for iPhone, iPad, and Mac. Classic calm or Oriel Pulse — Shields, extensions, and Oriel Engine with real Blink on Mac.</p>
+        <p class="lede">Native on iPhone, iPad, and Mac. Pick Classic or Pulse. On Mac, Oriel Engine brings real Blink into your tabs.</p>
         <div class="cta">
           <a class="btn btn-primary" href="#download">Download</a>
-          <a class="btn btn-ghost" href="https://github.com/Ventspew/openoriel">View on GitHub</a>
+          <a class="btn btn-ghost" href="https://github.com/Ventspew/openoriel">Source on GitHub</a>
         </div>
       </div>
     </section>
@@ -57,20 +56,25 @@
     <section class="band" id="download">
       <div class="band-inner band-wide reveal">
         <h2>Download</h2>
-        <p>Installers ship on GitHub Releases — unsigned IPA for iPhone &amp; iPad, DMG for Mac.</p>
+        <p>Installers from GitHub Releases. Mac builds include Oriel Engine. No Terminal steps.</p>
         <p class="release-meta" id="release-meta" hidden></p>
         <ul class="download-list" id="download-list">
+          <li>
+            <span class="download-platform">Mac (recommended)</span>
+            <a class="btn btn-on-paper btn-compact" id="download-pkg" href="https://github.com/Ventspew/openoriel/releases/latest">Get installer</a>
+          </li>
+          <li>
+            <span class="download-platform">Mac (DMG)</span>
+            <a class="btn btn-on-paper btn-compact" id="download-dmg" href="https://github.com/Ventspew/openoriel/releases/latest">Get DMG</a>
+          </li>
           <li>
             <span class="download-platform">iPhone &amp; iPad</span>
             <a class="btn btn-on-paper btn-compact" id="download-ipa" href="https://github.com/Ventspew/openoriel/releases/latest">Get IPA</a>
           </li>
-          <li>
-            <span class="download-platform">Mac</span>
-            <a class="btn btn-on-paper btn-compact" id="download-dmg" href="https://github.com/Ventspew/openoriel/releases/latest">Get DMG</a>
-          </li>
         </ul>
         <p class="note">
-          Sideload the IPA with your usual installer (e.g. TrollStore). On Mac, open the DMG and drag Oriel into Applications — first launch may need right-click → Open.
+          Mac: open the <strong>.pkg</strong> and install, or drag from the DMG into Applications. First launch may need right-click → Open.
+          iPhone/iPad: sideload the IPA (e.g. TrollStore).
           <a class="text-link" href="https://github.com/Ventspew/openoriel/releases">All releases</a>
         </p>
       </div>
@@ -78,18 +82,18 @@
 
     <section class="band band-alt" id="editions">
       <div class="band-inner band-wide reveal">
-        <h2>Two editions, one app</h2>
-        <p>Switch anytime in Settings → Appearance. Same Shields, sync, and page tools — different chrome.</p>
+        <h2>Two looks, one app</h2>
+        <p>Switch in Settings → Appearance. Same Shields, sync, and tools — different chrome.</p>
         <div class="edition-split">
           <div class="edition-block">
             <img class="edition-mark" src="assets/oriel-mark.svg" width="40" height="40" alt="" />
             <h3>Classic</h3>
-            <p>Calm teal chrome, serif titles, and a start page that stays out of the way.</p>
+            <p>Teal chrome, quiet start page, nothing in the way.</p>
           </div>
           <div class="edition-block edition-pulse">
             <img class="edition-mark" src="assets/oriel-pulse-mark.svg" width="40" height="40" alt="" />
             <h3>Pulse</h3>
-            <p>Obsidian studio look, Pulse Corner, Data Saver, ambience, and Mac governors — no fake CPU meters.</p>
+            <p>Obsidian studio, Pulse Corner, Data Saver, ambience, and Mac governors.</p>
           </div>
         </div>
       </div>
@@ -98,13 +102,13 @@
     <section class="band pulse-band" id="pulse">
       <div class="band-inner band-wide reveal">
         <p class="pulse-kicker">Oriel Pulse</p>
-        <h2>Built for play. Still private.</h2>
-        <p>A darker studio edition inside the same binary — Corner controls, performance limits, local ambience, and workspace presets. Same privacy model as Classic. No Opera-style account.</p>
+        <h2>Built for play. Still yours.</h2>
+        <p>A darker edition in the same binary — Corner controls, performance limits, local ambience. Same privacy model as Classic.</p>
         <ul class="pulse-points">
           <li>Pulse Corner — launch, savers, ambience, mute, hibernate</li>
-          <li>Data / Network Saver, Lucid Mode, Low Power Mode tightening</li>
-          <li>Mac CPU &amp; RAM governors (timer throttle + memory-pressure hibernate)</li>
-          <li>Optional Pulse home-screen / Dock icon</li>
+          <li>Data Saver, Lucid Mode, Low Power tightening</li>
+          <li>Mac CPU &amp; RAM governors (real timer throttle)</li>
+          <li>Optional Pulse Dock / home-screen icon</li>
         </ul>
       </div>
     </section>
@@ -112,53 +116,43 @@
     <section class="band" id="features">
       <div class="band-inner band-wide reveal">
         <h2>What you get</h2>
-        <p>Everyday browsing tools that work in Classic and Pulse.</p>
         <ul class="feature-list">
-          <li><strong>Tabs &amp; library</strong> — groups, search, Reading List, bookmarks, history, download history that survives relaunch</li>
-          <li><strong>Page tools</strong> — find with match counts, mute tab, screenshot, Save as PDF, zoom remembered per site, Reader, translate, print</li>
-          <li><strong>Profiles &amp; workspaces</strong> — separate cookie jars; Play / Stream / Focus presets</li>
-          <li><strong>Extensions</strong> — Chrome Web Store, Firefox Add-ons, and Safari package import via Oriel Store (WebExtensions where the OS allows)</li>
-          <li><strong>Password Vault</strong> — optional AES-GCM vault with Keychain-wrapped key and Touch ID unlock; system Keychain autofill still available</li>
-          <li><strong>Mac governors</strong> — real timer throttle and RAM / live-engine caps with memory-pressure hibernate (not a fake GX gauge)</li>
-          <li><strong>iCloud sync</strong> — bookmarks, Reading List, open tabs, limited history, appearance (not vault secrets)</li>
+          <li><strong>Tabs &amp; library</strong> — groups, bookmarks, Reading List, history, downloads that survive relaunch</li>
+          <li><strong>Page tools</strong> — find, mute, screenshot, PDF, zoom per site, Reader, translate</li>
+          <li><strong>Profiles</strong> — separate cookie jars; Play / Stream / Focus workspaces</li>
+          <li><strong>Extensions</strong> — Chrome Web Store, Firefox Add-ons, Safari packages via Oriel Store</li>
+          <li><strong>Password Vault</strong> — optional AES-GCM vault with Touch ID; Keychain autofill still works</li>
+          <li><strong>iCloud sync</strong> — bookmarks, Reading List, tabs, appearance (not vault secrets)</li>
         </ul>
       </div>
     </section>
 
     <section class="band band-alt" id="engines">
       <div class="band-inner band-wide reveal">
-        <h2>Best of both engines</h2>
-        <p>On <strong>Mac</strong>, release builds ship <strong>Oriel Engine</strong> — real Blink inside the app (CEF). Smart (default) sends stubborn web apps there; Apple and captcha-sensitive hosts stay on WebKit. If Engine isn’t available, Smart falls back to <strong>Chromium Compatible</strong> (Chrome UA on WebKit — not Blink).</p>
-        <p>Lock every tab, set per-site overrides, or turn off “Smart prefers Oriel Engine” in settings. The Mac DMG is larger because the engine travels with the app.</p>
-        <p><strong>iPhone and iPad</strong> stay on WebKit only. That’s Apple’s rule — stated honestly, not papered over.</p>
+        <h2>Oriel Engine on Mac</h2>
+        <p><strong>Oriel Engine</strong> is Oriel’s own Blink surface (CEF), open-sourced under <code>Sources/CEF/</code> and bundled in Mac installers. Smart mode sends tough sites there; Apple hosts stay on WebKit.</p>
+        <p><strong>iPhone and iPad</strong> stay on WebKit only — Apple’s rule, stated plainly.</p>
       </div>
     </section>
 
     <section class="band" id="privacy">
       <div class="band-inner band-wide reveal">
         <h2>Oriel Shields</h2>
-        <p>Bundled content-blocker lists — EasyList, AdGuard-derived filters, DuckDuckGo tracker hosts — plus cosmetics, HTTPS upgrades, tracking-parameter strip, and Fire (clears WebKit data and embedded CEF cookies when Native is linked). Honest about WebKit limits: some first-party stacks still slip through.</p>
-        <p class="note">See <a class="text-link" href="https://github.com/Ventspew/openoriel/blob/main/docs/PRIVACY.md">docs/PRIVACY.md</a> for what stays local vs Keychain vs iCloud.</p>
+        <p>Bundled blocker lists, cosmetics, HTTPS upgrades, tracking-parameter strip, and Fire. Honest about WebKit limits.</p>
+        <p class="note">Details in <a class="text-link" href="https://github.com/Ventspew/openoriel/blob/main/docs/PRIVACY.md">docs/PRIVACY.md</a>.</p>
       </div>
     </section>
 
-    <section class="band band-alt" id="platforms">
+    <section class="band band-alt" id="open">
       <div class="band-inner reveal">
-        <h2>One browser, three surfaces</h2>
+        <h2>Open source</h2>
+        <p>Full app source on GitHub — including Oriel Engine bridge code. Apache 2.0.</p>
+        <p><a class="text-link" href="https://github.com/Ventspew/openoriel">github.com/Ventspew/openoriel</a></p>
         <ul class="platforms">
           <li>iPhone</li>
           <li>iPad</li>
           <li>Mac</li>
         </ul>
-        <p class="note">Swift · SwiftUI · WebKit · Apache 2.0. Build with Xcode from the repository, or use the installers above.</p>
-      </div>
-    </section>
-
-    <section class="band" id="open">
-      <div class="band-inner reveal">
-        <h2>Open source</h2>
-        <p>Source, issues, docs, and releases live on GitHub. Dual-engine notes, CEF setup, extension compat, and architecture are in the repo.</p>
-        <p><a class="text-link" href="https://github.com/Ventspew/openoriel">github.com/Ventspew/openoriel</a></p>
       </div>
     </section>
   </main>
@@ -172,7 +166,6 @@
       <div class="footer-links">
         <a href="#download">Download</a>
         <a href="#editions">Editions</a>
-        <a href="https://openoriel.com">openoriel.com</a>
         <a href="https://inveil.net">inveil.net</a>
         <a href="https://github.com/Ventspew/openoriel/releases">Releases</a>
         <a href="https://github.com/Ventspew/openoriel">GitHub</a>

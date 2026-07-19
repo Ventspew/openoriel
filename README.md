@@ -10,7 +10,7 @@ Native browser for **iPhone, iPad, and Mac**. Swift, SwiftUI, WebKit — with Cl
   <a href="https://inveil.net">inveil.net</a>
 </p>
 
-Bundle ID: `net.inveil.oriel` · Marketing site source: [`site/`](site/) · Latest: **1.0.0 (71)**
+Bundle ID: `net.inveil.oriel` · Marketing site source: [`site/`](site/) · Latest: **1.0.0 (73)**
 
 ---
 
@@ -20,7 +20,7 @@ Installers ship on [GitHub Releases](https://github.com/Ventspew/openoriel/relea
 
 | Platform | Asset | Notes |
 |----------|--------|--------|
-| **Mac** | `Oriel-*-macOS.dmg` | Includes **Oriel Engine** (Blink/CEF). Open → drag into Applications. First launch: right-click → Open |
+| **Mac** | `Oriel-*-macOS.pkg` (recommended) or `.dmg` | Includes **Oriel Engine** (Blink/CEF). Double-click PKG, or drag from DMG into Applications. First launch: right-click → Open |
 | **iPhone / iPad** | `Oriel-*-unsigned.ipa` | WebKit only (Apple rule). Sideload (e.g. TrollStore) |
 
 TestFlight uploads: `Scripts/upload-testflight.sh` (needs Apple Developer Program).
@@ -119,7 +119,7 @@ git push origin v1.0.0-N
 Sources/
   App/              # Entry, composition root
   BrowserCore/      # Engines, Smart routing, Chromium Native host
-  CEF/              # Oriel Engine bridge + Helper source (Mac Blink)
+  CEF/              # Oriel Engine bridge + Helper (open source; see Sources/CEF/README.md)
   WebView/          # WKWebView, pool, navigation
   Tabs/ History/ Bookmarks/ Downloads/
   Privacy/          # Shields, fingerprint, Fire
@@ -129,9 +129,10 @@ Sources/
   PlatformUI/       # Chrome, start page, Pulse Corner, settings
   Settings/ Persistence/
 Resources/          # Icons, content blocker lists
-Scripts/            # IPA, DMG, CEF, TestFlight
+Scripts/            # IPA, DMG/PKG, CEF, TestFlight
 site/               # openoriel.com
 docs/               # Architecture, privacy, dual engine, CEF, …
+THIRD_PARTY_NOTICES.md  # CEF / Chromium notices for bundled Engine
 ```
 
 ---

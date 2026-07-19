@@ -60,6 +60,8 @@ struct ProfilesView: View {
                     }
                     renameTarget = nil
                 }
+            } message: {
+                Text("Choose a name for this profile.")
             }
     }
 
@@ -84,7 +86,7 @@ struct ProfilesView: View {
                 }
             }
         }
-        .frame(minWidth: 420, idealWidth: 480, minHeight: 360, idealHeight: 480)
+        .frame(minWidth: 360, idealWidth: 440, minHeight: 360, idealHeight: 480)
         #else
         List {
             Section {

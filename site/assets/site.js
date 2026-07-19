@@ -25,10 +25,10 @@
     document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
   }
 
-  // Wire Download buttons to the latest GitHub release assets when available.
   const meta = document.getElementById("release-meta");
   const ipa = document.getElementById("download-ipa");
   const dmg = document.getElementById("download-dmg");
+  const pkg = document.getElementById("download-pkg");
   const releasesURL = "https://api.github.com/repos/Ventspew/openoriel/releases/latest";
 
   fetch(releasesURL, {
@@ -40,6 +40,7 @@
       const find = (pred) => assets.find(pred);
       const ipaAsset = find((a) => /\.ipa$/i.test(a.name || ""));
       const dmgAsset = find((a) => /\.dmg$/i.test(a.name || "") && !/\.sha256$/i.test(a.name || ""));
+      const pkgAsset = find((a) => /\.pkg$/i.test(a.name || "") && !/\.sha256$/i.test(a.name || ""));
       if (ipa && ipaAsset?.browser_download_url) {
         ipa.href = ipaAsset.browser_download_url;
         ipa.textContent = "Download IPA";
@@ -48,18 +49,23 @@
         dmg.href = dmgAsset.browser_download_url;
         dmg.textContent = "Download DMG";
       }
+      if (pkg && pkgAsset?.browser_download_url) {
+        pkg.href = pkgAsset.browser_download_url;
+        pkg.textContent = "Download PKG";
+      }
       if (meta && data.tag_name) {
         meta.hidden = false;
         const label = data.name || data.tag_name;
         const bits = [];
-        if (ipaAsset) bits.push("IPA");
+        if (pkgAsset) bits.push("PKG");
         if (dmgAsset) bits.push("DMG");
+        if (ipaAsset) bits.push("IPA");
         meta.textContent = bits.length
-          ? `Latest: ${label} · ${bits.join(" + ")} ready`
+          ? `Latest: ${label} · ${bits.join(" + ")}`
           : `Latest: ${label}`;
       }
     })
     .catch(() => {
-      // Keep the /releases/latest fallbacks from the HTML.
+      // Keep HTML fallbacks to /releases/latest.
     });
 })();

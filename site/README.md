@@ -26,11 +26,13 @@ Static landing page for [openoriel.com](https://openoriel.com) (Cloudflare Pages
 
 ## Deploy
 
-Publish the `site/` folder to Cloudflare Pages (or any static host). The download buttons hit:
+Publish the `site/` folder to Cloudflare Pages (or any static host). If the project is linked to this GitHub repo with root `site/`, pushes to `main` redeploy automatically.
+
+Download buttons hit:
 
 `https://api.github.com/repos/Ventspew/openoriel/releases/latest`
 
-No build step. Edit HTML/CSS/JS and redeploy.
+and prefer **PKG**, then DMG, then IPA when those assets exist.
 
 ## Local preview
 

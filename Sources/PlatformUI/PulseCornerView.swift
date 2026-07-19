@@ -220,7 +220,10 @@ struct PulseCornerView: View {
             ))
             saverToggle("Keep Corner open", isOn: Binding(
                 get: { environment.settings.pulseCornerEnabled },
-                set: { environment.settings.pulseCornerEnabled = $0 }
+                set: {
+                    environment.settings.pulseCornerEnabled = $0
+                    environment.showPulseCorner = $0
+                }
             ))
         }
     }

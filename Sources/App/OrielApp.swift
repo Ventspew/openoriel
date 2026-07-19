@@ -163,7 +163,7 @@ struct OrielApp: App {
             Button("Profiles…") {
                 environment.showProfiles = true
             }
-            .keyboardShortcut("p", modifiers: [.command, .shift])
+            .keyboardShortcut("p", modifiers: [.command, .option])
 
             Button("Shields") {
                 environment.showPrivacyShield = true

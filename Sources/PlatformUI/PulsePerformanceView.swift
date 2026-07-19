@@ -238,6 +238,9 @@ struct PulsePerformanceView: View {
                 }
             }
         }
+        #if os(macOS)
+        .formStyle(.grouped)
+        #endif
     }
 
     private func shortcutRow(_ title: String, keys: String) -> some View {

@@ -59,23 +59,55 @@ final class AppIconService {
             }
         }
         #elseif os(macOS)
-        if enabled, let image = NSImage(named: "AppIconPulse") ?? Self.bundledPulseIcon() {
-            NSApplication.shared.applicationIconImage = image
-        } else if let primary = NSImage(named: "AppIcon") {
-            NSApplication.shared.applicationIconImage = primary
+        // applicationIconImage bypasses the system squircle mask — always mask ourselves
+        // so the Dock icon stays inside the same kaders as every other Mac app.
+        if enabled {
+            if let image = Self.bestPulseDockImage() {
+                // Runtime Dock overrides skip the system mask — clip to a squircle ourselves.
+                NSApplication.shared.applicationIconImage = Self.dockMasked(image)
+            } else {
+                lastError = "Pulse Dock icon asset missing."
+            }
         } else {
+            // Restore bundle AppIcon so macOS applies the real continuous-corner mask.
             NSApplication.shared.applicationIconImage = nil
         }
         #endif
     }
 
     #if os(macOS)
-    private static func bundledPulseIcon() -> NSImage? {
-        if let url = Bundle.main.url(forResource: "AppIconPulse", withExtension: "png"),
-           let image = NSImage(contentsOf: url) {
-            return image
+    /// Prefer large catalog / imageset assets — never the tiny AlternateIcons IPA sidecars.
+    private static func bestPulseDockImage() -> NSImage? {
+        let names = ["AppIconPulse", "OrielMarkPulse"]
+        for name in names {
+            if let image = NSImage(named: name), image.size.width >= 128 {
+                return image
+            }
         }
-        return nil
+        for name in ["mac512@2x", "mac512", "Icon-1024", "AppIconPulse"] {
+            if let url = Bundle.main.url(forResource: name, withExtension: "png"),
+               let image = NSImage(contentsOf: url),
+               image.size.width >= 64 {
+                return image
+            }
+        }
+        return NSImage(named: "OrielMarkPulse") ?? NSImage(named: "AppIconPulse")
+    }
+
+    /// Clip to a continuous squircle so Dock overrides match system-masked AppIcon assets.
+    private static func dockMasked(_ source: NSImage) -> NSImage {
+        let pixel = max(128, Int(max(source.size.width, source.size.height).rounded()))
+        let size = NSSize(width: pixel, height: pixel)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        defer { image.unlockFocus() }
+        NSGraphicsContext.current?.imageInterpolation = .high
+        let rect = NSRect(origin: .zero, size: size)
+        let path = NSBezierPath(roundedRect: rect, xRadius: size.width * 0.2237, yRadius: size.height * 0.2237)
+        path.addClip()
+        source.draw(in: rect, from: .zero, operation: .copy, fraction: 1)
+        image.isTemplate = false
+        return image
     }
     #endif
 }

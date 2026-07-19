@@ -581,13 +581,6 @@ private struct AccountsSettingsPage: View {
                 Button("Password Vault…") {
                     environment.showPasswordVault = true
                 }
-                #if os(macOS)
-                NavigationLink {
-                    MacGovernorsView(showsDoneButton: false)
-                } label: {
-                    Label("Mac Governors", systemImage: "gauge.with.dots.needle.33percent")
-                }
-                #endif
                 Button("Workspaces…") {
                     environment.showWorkspaces = true
                 }

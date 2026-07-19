@@ -43,21 +43,27 @@ struct BrowserShellView: View {
                             Capsule(style: .continuous)
                                 .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
                         }
-                        .padding(.bottom, 72)
-                        .padding(.trailing, 16)
+                        .padding(.bottom, environment.showPulseCorner && environment.settings.edition.isPulse ? 12 : 72)
+                        .padding(.trailing, environment.showPulseCorner && environment.settings.edition.isPulse ? 300 : 16)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                         .zIndex(30)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                         .allowsHitTesting(false)
                 }
 
                 if environment.showPulseCorner, environment.settings.edition.isPulse {
                     PulseCornerView()
                         .padding(12)
+                        .frame(
+                            maxWidth: min(296, proxy.size.width),
+                            maxHeight: max(240, proxy.size.height - 8),
+                            alignment: .bottomTrailing
+                        )
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                         .zIndex(20)
                 }
             }
+            .clipped()
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: environment.showPulseCorner)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: environment.statusBanner)
         }
