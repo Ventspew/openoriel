@@ -51,7 +51,24 @@ if [[ "$BUNDLE_CEF" == "1" ]]; then
   )
 fi
 
-# Ad-hoc sign so the binary is runnable; notarization can be added later with release secrets.
+# Prefer development-team signing when certificates exist (local Mac).
+# On CI (no Apple certs), fall back to unsigned compile + ad-hoc codesign below.
+SIGN_ARGS=(
+  CODE_SIGN_STYLE=Automatic
+  DEVELOPMENT_TEAM=2PP6UH4PWA
+)
+if ! security find-identity -v -p codesigning 2>/dev/null | grep -q "Apple Development\|Developer ID"; then
+  echo "note: no Apple signing identity — building unsigned, then ad-hoc codesign"
+  SIGN_ARGS=(
+    CODE_SIGN_STYLE=Manual
+    CODE_SIGN_IDENTITY="-"
+    CODE_SIGNING_REQUIRED=NO
+    CODE_SIGNING_ALLOWED=NO
+    DEVELOPMENT_TEAM=
+    PROVISIONING_PROFILE_SPECIFIER=
+  )
+fi
+
 xcodebuild \
   -scheme Oriel \
   -configuration Release \
@@ -59,10 +76,7 @@ xcodebuild \
   -derivedDataPath "$DERIVED" \
   -quiet \
   "${ARCH_ARGS[@]}" \
-  CODE_SIGN_IDENTITY="-" \
-  CODE_SIGNING_REQUIRED=NO \
-  CODE_SIGNING_ALLOWED=YES \
-  DEVELOPMENT_TEAM= \
+  "${SIGN_ARGS[@]}" \
   CURRENT_PROJECT_VERSION="$BUILD" \
   MARKETING_VERSION="$MARKETING" \
   "${XCODEBUILD_EXTRA[@]+"${XCODEBUILD_EXTRA[@]}"}" \
@@ -76,6 +90,15 @@ fi
 
 if [[ "$BUNDLE_CEF" == "1" ]]; then
   bash "$ROOT/Scripts/embed-oriel-engine-macos.sh" "$APP"
+fi
+
+# Ad-hoc re-sign so machines outside the Apple Development profile can still
+# launch via Gatekeeper right-click → Open (not notarized).
+ENTITLEMENTS_FILE="${ORIEL_ENGINE_ENTITLEMENTS:-$ROOT/Resources/Oriel-macOS-Engine.entitlements}"
+if [[ "$BUNDLE_CEF" == "1" && -f "$ENTITLEMENTS_FILE" ]]; then
+  codesign --force --deep --sign - --entitlements "$ENTITLEMENTS_FILE" "$APP"
+else
+  codesign --force --deep --sign - "$APP"
 fi
 
 # --- Drag-and-drop DMG ---
