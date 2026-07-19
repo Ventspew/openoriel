@@ -27,6 +27,7 @@ struct BrowserWebView: PlatformViewRepresentable {
     var shouldStripTracking: () -> Bool = { true }
     var onElementHidden: ((String, String) -> Void)?
     var onInstallChromeExtension: ((String) -> Void)?
+    var onInstallFirefoxAddon: ((String) -> Void)?
     var onManageChromeExtensions: (() -> Void)?
     var webExtensionController: AnyObject?
     var blockAutoplay: Bool = true
@@ -71,6 +72,7 @@ struct BrowserWebView: PlatformViewRepresentable {
             shouldStripTracking: shouldStripTracking,
             onElementHidden: onElementHidden,
             onInstallChromeExtension: onInstallChromeExtension,
+            onInstallFirefoxAddon: onInstallFirefoxAddon,
             onManageChromeExtensions: onManageChromeExtensions,
             installedChromeStoreIDs: installedChromeStoreIDs
         )
@@ -97,6 +99,11 @@ struct BrowserWebView: PlatformViewRepresentable {
             ucc.removeScriptMessageHandler(forName: ChromeWebStoreBridge.handlerName, contentWorld: .defaultClient)
             ucc.add(handler, contentWorld: .page, name: ChromeWebStoreBridge.handlerName)
 
+            let firefoxHandler = context.coordinator.firefoxAddonsScriptMessageHandler()
+            ucc.removeScriptMessageHandler(forName: FirefoxAddonsBridge.handlerName, contentWorld: .page)
+            ucc.removeScriptMessageHandler(forName: FirefoxAddonsBridge.handlerName, contentWorld: .defaultClient)
+            ucc.add(firefoxHandler, contentWorld: .page, name: FirefoxAddonsBridge.handlerName)
+
             let apiStub = WKUserScript(
                 source: ChromeWebStoreBridge.chromeAPIStubSource,
                 injectionTime: .atDocumentStart,
@@ -109,8 +116,15 @@ struct BrowserWebView: PlatformViewRepresentable {
                 forMainFrameOnly: true,
                 in: .page
             )
+            let firefoxBridge = WKUserScript(
+                source: FirefoxAddonsBridge.userScriptSource,
+                injectionTime: .atDocumentEnd,
+                forMainFrameOnly: true,
+                in: .page
+            )
             ucc.addUserScript(apiStub)
             ucc.addUserScript(uiBridge)
+            ucc.addUserScript(firefoxBridge)
         }
         #endif
 
@@ -187,6 +201,7 @@ struct BrowserWebView: PlatformViewRepresentable {
         context.coordinator.shouldStripTracking = shouldStripTracking
         context.coordinator.onElementHidden = onElementHidden
         context.coordinator.onInstallChromeExtension = onInstallChromeExtension
+        context.coordinator.onInstallFirefoxAddon = onInstallFirefoxAddon
         context.coordinator.onManageChromeExtensions = onManageChromeExtensions
         context.coordinator.installedChromeStoreIDs = installedChromeStoreIDs
         #if os(macOS)

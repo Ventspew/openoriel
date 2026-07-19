@@ -48,6 +48,7 @@ struct ExtensionsView: View {
                     allowedContentTypes: [
                         .zip,
                         UTType(filenameExtension: "crx") ?? .data,
+                        UTType(filenameExtension: "xpi") ?? .data,
                         UTType(filenameExtension: "appex") ?? .data,
                         .folder
                     ],
@@ -77,7 +78,7 @@ struct ExtensionsView: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text("Safari Web Extensions (the modern ones with manifest.json inside an .appex) can be imported. Legacy native Safari App Extensions still cannot leave Safari.")
+                    Text("Chrome, Firefox (.xpi), and Safari Web Extensions are supported. Static themes from those packages can restyle Oriel’s chrome — pick them under Settings → Appearance.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -110,6 +111,13 @@ struct ExtensionsView: View {
                 }
 
                 Button {
+                    environment.openURLInNewTab(BrowserConstants.firefoxAddonsURL)
+                    dismiss()
+                } label: {
+                    Label("Open Firefox Add-ons", systemImage: "flame")
+                }
+
+                Button {
                     #if os(macOS)
                     Task { await pickAndInstallMac() }
                     #else
@@ -122,13 +130,15 @@ struct ExtensionsView: View {
             } header: {
                 Text("Get extensions")
             } footer: {
-                Text("Chrome Web Store, .zip / .crx, unpacked folders, or Safari Web Extension .appex / project folders that include manifest.json.")
+                Text("Chrome Web Store, Firefox Add-ons (Add to Oriel), .zip / .crx / .xpi, unpacked folders, or Safari Web Extension .appex packages. Theme packages apply colors automatically.")
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             #if os(macOS)
             safariSection
             #endif
+
+            extensionThemesSection
 
             Section {
                 if environment.extensions.extensions.isEmpty {
@@ -154,7 +164,7 @@ struct ExtensionsView: View {
                 Text("Installed")
             }
 
-            if let error = environment.extensions.lastError {
+            if let error = environment.extensions.lastError ?? environment.extensionThemes.lastError {
                 Section("Status") {
                     Label(error, systemImage: "exclamationmark.triangle.fill")
                         .font(.footnote)
@@ -168,6 +178,78 @@ struct ExtensionsView: View {
         #else
         .listStyle(.inset)
         #endif
+    }
+
+    private var extensionThemesSection: some View {
+        Section {
+            if environment.extensionThemes.themes.isEmpty {
+                Text("Install a Chrome, Firefox, or Safari theme package (manifest with a theme key) to see it here.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                ForEach(environment.extensionThemes.themes) { theme in
+                    HStack(spacing: 12) {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [theme.accentColor, theme.backgroundColor],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 36, height: 24)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+                            }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(theme.displayName)
+                                .font(.body.weight(.semibold))
+                                .lineLimit(1)
+                            Text("\(theme.sourceLabel) · v\(theme.version)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer(minLength: 8)
+
+                        if environment.settings.activeExtensionThemeID == theme.id {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(environment.settings.brandColor)
+                        }
+
+                        Button("Apply") {
+                            environment.extensionThemes.apply(id: theme.id)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .disabled(environment.settings.activeExtensionThemeID == theme.id)
+
+                        Button(role: .destructive) {
+                            environment.extensionThemes.remove(id: theme.id)
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel("Remove \(theme.displayName)")
+                    }
+                    .padding(.vertical, 2)
+                }
+
+                if environment.settings.usesExtensionTheme {
+                    Button("Use built-in Oriel theme") {
+                        environment.extensionThemes.clearActive()
+                    }
+                }
+            }
+        } header: {
+            Text("Themes")
+        } footer: {
+            Text("Themes come from Chrome Web Store themes, Firefox themes on AMO, and Safari Web Extension packages that include a theme block.")
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     #if os(macOS)
@@ -327,10 +409,11 @@ struct ExtensionsView: View {
         panel.allowedContentTypes = [
             .zip,
             UTType(filenameExtension: "crx") ?? .data,
+            UTType(filenameExtension: "xpi") ?? .data,
             UTType(filenameExtension: "appex") ?? .data,
             .folder
         ]
-        panel.message = "Choose a WebExtension folder, .zip, .crx, Safari Web Extension .appex, or any package that contains manifest.json."
+        panel.message = "Choose a WebExtension folder, .zip, .crx, Firefox .xpi, Safari .appex, or a theme package with manifest.json."
         panel.prompt = "Install"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         await install(from: url)

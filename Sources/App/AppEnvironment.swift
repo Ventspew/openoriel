@@ -22,6 +22,7 @@ final class AppEnvironment {
     let downloads: DownloadManager
     let permissions: WebsitePermissionManager
     let extensions: WebExtensionManager
+    let extensionThemes: ExtensionThemeStore
     let linkQueue: LinkQueueStore
     let searchSuggestions: SearchSuggestionProvider
     let elementHide: ElementHideStore
@@ -72,6 +73,7 @@ final class AppEnvironment {
         downloads: DownloadManager? = nil,
         permissions: WebsitePermissionManager? = nil,
         extensions: WebExtensionManager? = nil,
+        extensionThemes: ExtensionThemeStore? = nil,
         linkQueue: LinkQueueStore? = nil,
         searchSuggestions: SearchSuggestionProvider? = nil,
         elementHide: ElementHideStore? = nil,
@@ -91,6 +93,7 @@ final class AppEnvironment {
         let resolvedDownloads = downloads ?? DownloadManager()
         let resolvedPermissions = permissions ?? WebsitePermissionManager()
         let resolvedExtensions = extensions ?? WebExtensionManager()
+        let resolvedThemes = extensionThemes ?? ExtensionThemeStore()
         let resolvedLinkQueue = linkQueue ?? LinkQueueStore()
 
         self.settings = resolvedSettings
@@ -103,7 +106,10 @@ final class AppEnvironment {
         self.downloads = resolvedDownloads
         self.permissions = resolvedPermissions
         self.extensions = resolvedExtensions
+        self.extensionThemes = resolvedThemes
         self.linkQueue = resolvedLinkQueue
+        resolvedThemes.attach(settings: resolvedSettings)
+        resolvedExtensions.themeStore = resolvedThemes
         self.searchSuggestions = searchSuggestions ?? SearchSuggestionProvider()
         self.elementHide = elementHide ?? ElementHideStore()
         self.icloudSync = icloudSync ?? iCloudSyncService()

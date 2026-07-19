@@ -31,6 +31,9 @@ final class WebExtensionManager {
     private(set) var safariCandidates: [SafariExtensionCandidate] = []
     private(set) var isScanningSafari = false
 
+    /// Applies Chrome/Firefox/Safari static themes from packages that include `theme`.
+    weak var themeStore: ExtensionThemeStore?
+
     private var controllerStorage: AnyObject?
     private var hostStorage: AnyObject?
     private let fileManager = FileManager.default
@@ -119,11 +122,11 @@ final class WebExtensionManager {
     func installFromPackage(at url: URL) async {
         #if os(macOS)
         if #available(macOS 15.4, *) {
-            await installFromPackageImpl(url, preferredUniqueID: nil, chromeStoreID: nil)
+            await installFromPackageImpl(url, preferredUniqueID: nil, chromeStoreID: nil, firefoxSlug: nil)
         }
         #elseif os(iOS)
         if #available(iOS 18.4, *) {
-            await installFromPackageImpl(url, preferredUniqueID: nil, chromeStoreID: nil)
+            await installFromPackageImpl(url, preferredUniqueID: nil, chromeStoreID: nil, firefoxSlug: nil)
         }
         #endif
     }
@@ -142,6 +145,22 @@ final class WebExtensionManager {
         }
         #endif
         lastError = "Chrome Web Store install requires a newer OS with Oriel extensions."
+    }
+
+    /// Downloads a signed `.xpi` from addons.mozilla.org and installs it (extensions + themes).
+    func installFromFirefoxAMO(slugOrID: String) async {
+        #if os(macOS)
+        if #available(macOS 15.4, *) {
+            await installFromFirefoxAMOImpl(slugOrID)
+            return
+        }
+        #elseif os(iOS)
+        if #available(iOS 18.4, *) {
+            await installFromFirefoxAMOImpl(slugOrID)
+            return
+        }
+        #endif
+        lastError = "Firefox add-on install requires a newer OS with Oriel extensions."
     }
 
     func setEnabled(_ enabled: Bool, id: String) async {
@@ -304,11 +323,77 @@ final class WebExtensionManager {
                 .appendingPathComponent("oriel-cws-\(id)-\(UUID().uuidString).\(fileExtension)")
             try data.write(to: tempPackage, options: .atomic)
             statusMessage = "Installing…"
-            await installFromPackageImpl(tempPackage, preferredUniqueID: id, chromeStoreID: id)
+            await installFromPackageImpl(tempPackage, preferredUniqueID: id, chromeStoreID: id, firefoxSlug: nil)
             try? fileManager.removeItem(at: tempPackage)
 
             if lastError == nil {
-                statusMessage = "Installed from Chrome Web Store."
+                statusMessage = statusMessage ?? "Installed from Chrome Web Store."
+            } else {
+                statusMessage = nil
+            }
+        } catch {
+            lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            statusMessage = nil
+        }
+    }
+
+    @available(macOS 15.4, iOS 18.4, *)
+    private func installFromFirefoxAMOImpl(_ slugOrID: String) async {
+        lastError = nil
+        statusMessage = nil
+        let slug = slugOrID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !slug.isEmpty else {
+            lastError = "That Firefox add-on page does not look valid."
+            return
+        }
+        guard let detailURL = FirefoxAddonsAPI.detailURL(forSlugOrID: slug) else {
+            lastError = "Could not build a Firefox add-ons download URL."
+            return
+        }
+
+        isInstallingFromStore = true
+        statusMessage = "Downloading from Firefox Add-ons…"
+        defer { isInstallingFromStore = false }
+
+        do {
+            var detailRequest = URLRequest(url: detailURL)
+            detailRequest.setValue("OrielBrowser/1.0", forHTTPHeaderField: "User-Agent")
+            let (detailData, detailResponse) = try await URLSession.shared.data(for: detailRequest)
+            if let http = detailResponse as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                throw ExtensionError.storeDownloadFailed
+            }
+            guard let xpiURL = FirefoxAddonsAPI.xpiURL(fromDetailJSON: detailData) else {
+                throw ExtensionError.storeDownloadFailed
+            }
+
+            var xpiRequest = URLRequest(url: xpiURL)
+            xpiRequest.setValue("OrielBrowser/1.0", forHTTPHeaderField: "User-Agent")
+            xpiRequest.setValue("https://addons.mozilla.org/", forHTTPHeaderField: "Referer")
+            let (data, response) = try await URLSession.shared.data(for: xpiRequest)
+            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                throw ExtensionError.storeDownloadFailed
+            }
+            guard data.starts(with: [0x50, 0x4B, 0x03, 0x04]) else {
+                throw ExtensionError.storeDownloadFailed
+            }
+
+            let tempPackage = fileManager.temporaryDirectory
+                .appendingPathComponent("oriel-amo-\(slug)-\(UUID().uuidString).xpi")
+            try data.write(to: tempPackage, options: .atomic)
+            statusMessage = "Installing…"
+            await installFromPackageImpl(
+                tempPackage,
+                preferredUniqueID: slug,
+                chromeStoreID: nil,
+                firefoxSlug: slug
+            )
+            try? fileManager.removeItem(at: tempPackage)
+
+            if lastError == nil {
+                let name = FirefoxAddonsAPI.displayName(fromDetailJSON: detailData)
+                statusMessage = statusMessage
+                    ?? (name.map { "Installed “\($0)” from Firefox Add-ons." }
+                        ?? "Installed from Firefox Add-ons.")
             } else {
                 statusMessage = nil
             }
@@ -322,11 +407,38 @@ final class WebExtensionManager {
     private func installFromPackageImpl(
         _ url: URL,
         preferredUniqueID: String?,
-        chromeStoreID: String?
+        chromeStoreID: String?,
+        firefoxSlug: String?
     ) async {
         lastError = nil
         do {
             let staging = try await stagePackage(at: url)
+            let source = themeSource(
+                for: url,
+                chromeStoreID: chromeStoreID,
+                firefoxSlug: firefoxSlug
+            )
+
+            // Static themes (Chrome/Firefox/Safari): apply to Oriel chrome.
+            if ExtensionThemeParser.manifestContainsTheme(at: staging),
+               let themeStore {
+                do {
+                    let (theme, isThemeOnly) = try themeStore.importStagedPackage(
+                        at: staging,
+                        source: source,
+                        preferredID: preferredUniqueID ?? firefoxSlug ?? chromeStoreID
+                    )
+                    if isThemeOnly {
+                        try? fileManager.removeItem(at: staging)
+                        statusMessage = "Applied \(theme.sourceLabel) theme “\(theme.displayName)”."
+                        return
+                    }
+                    statusMessage = "Installed \(theme.sourceLabel) theme “\(theme.displayName)”."
+                } catch {
+                    // Hybrid / parse failure — still try loading as a normal WebExtension.
+                }
+            }
+
             let webExtension = try await WKWebExtension(resourceBaseURL: staging)
             let context = WKWebExtensionContext(for: webExtension)
             if let preferredUniqueID, !preferredUniqueID.isEmpty {
@@ -361,6 +473,21 @@ final class WebExtensionManager {
             await reloadFromDiskImpl()
         } catch {
             lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    private func themeSource(
+        for url: URL,
+        chromeStoreID: String?,
+        firefoxSlug: String?
+    ) -> ExtensionThemeSource {
+        if chromeStoreID != nil { return .chrome }
+        if firefoxSlug != nil { return .firefox }
+        switch url.pathExtension.lowercased() {
+        case "appex": return .safari
+        case "xpi": return .firefox
+        case "crx": return .chrome
+        default: return .file
         }
     }
 
@@ -464,7 +591,8 @@ final class WebExtensionManager {
                 )
             }
         } else {
-            guard ext == "zip" || ext == "crx" else { throw ExtensionError.unsupportedFormat }
+            // `.xpi` is a ZIP (Firefox / AMO). `.crx` is Chrome’s signed ZIP.
+            guard ext == "zip" || ext == "crx" || ext == "xpi" else { throw ExtensionError.unsupportedFormat }
             try unzip(url, to: tempRoot)
         }
 
@@ -678,11 +806,11 @@ enum ExtensionError: LocalizedError {
         switch self {
         case .invalidPackage: "This package could not be read as a web extension."
         case .unsupportedFormat:
-            "Use an unpacked folder with manifest.json, a .zip / .crx, or a Safari Web Extension .appex that still contains WebExtension resources."
+            "Use an unpacked folder with manifest.json, a .zip / .crx / .xpi, or a Safari Web Extension .appex that still contains WebExtension resources."
         case .missingManifest:
             "No manifest.json found. Safari Web Extensions need a WebExtension manifest; legacy native Safari App Extensions cannot run in Oriel."
         case .unzipFailed: "Could not extract the extension archive."
-        case .storeDownloadFailed: "Could not download this extension from the Chrome Web Store."
+        case .storeDownloadFailed: "Could not download this extension from the store."
         }
     }
 }

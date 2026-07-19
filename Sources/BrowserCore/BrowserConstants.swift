@@ -20,6 +20,7 @@ enum BrowserConstants {
 
     /// Chrome Web Store — on macOS, “Add to Oriel” installs via CRX download.
     static let chromeWebStoreURL = URL(string: "https://chromewebstore.google.com/")!
+    static let firefoxAddonsURL = URL(string: "https://addons.mozilla.org/firefox/")!
 
     /// Safari-like desktop UA for “Request Desktop Website” (keep relatively current).
     static let desktopUserAgent =

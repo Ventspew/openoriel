@@ -98,8 +98,84 @@ final class BrowserSettings {
         return BrowserConstants.productWebsiteURL
     }
 
+    /// Active Chrome/Firefox/Safari extension theme id, if any.
+    var activeExtensionThemeID: String? {
+        didSet {
+            if let activeExtensionThemeID {
+                defaults.set(activeExtensionThemeID, forKey: activeExtensionThemeKey)
+            } else {
+                defaults.removeObject(forKey: activeExtensionThemeKey)
+            }
+        }
+    }
+
+    /// Custom accent from an extension theme (RGB 0…1). Nil → built-in accent.
+    var customAccentRGB: [Double]? {
+        didSet {
+            if let customAccentRGB {
+                defaults.set(customAccentRGB, forKey: customAccentRGBKey)
+            } else {
+                defaults.removeObject(forKey: customAccentRGBKey)
+            }
+        }
+    }
+
+    /// Custom chrome / start-page base fill from an extension theme.
+    var customBackgroundRGB: [Double]? {
+        didSet {
+            if let customBackgroundRGB {
+                defaults.set(customBackgroundRGB, forKey: customBackgroundRGBKey)
+            } else {
+                defaults.removeObject(forKey: customBackgroundRGBKey)
+            }
+        }
+    }
+
+    /// When set by an extension theme, locks light/dark for contrast.
+    var extensionThemePrefersDark: Bool? {
+        didSet {
+            if let extensionThemePrefersDark {
+                defaults.set(extensionThemePrefersDark, forKey: extensionThemePrefersDarkKey)
+            } else {
+                defaults.removeObject(forKey: extensionThemePrefersDarkKey)
+            }
+        }
+    }
+
     var brandColor: Color {
-        OrielTheme.brandPrimary(accent: accentTheme)
+        if let rgb = customAccentRGB, rgb.count >= 3 {
+            return Color(red: rgb[0], green: rgb[1], blue: rgb[2])
+        }
+        return OrielTheme.brandPrimary(accent: accentTheme)
+    }
+
+    var customBackgroundColor: Color? {
+        guard let rgb = customBackgroundRGB, rgb.count >= 3 else { return nil }
+        return Color(red: rgb[0], green: rgb[1], blue: rgb[2])
+    }
+
+    var usesExtensionTheme: Bool {
+        activeExtensionThemeID != nil && customAccentRGB != nil
+    }
+
+    func applyExtensionTheme(
+        id: String,
+        accentRGB: [Double],
+        backgroundRGB: [Double],
+        prefersDark: Bool
+    ) {
+        activeExtensionThemeID = id
+        customAccentRGB = accentRGB
+        customBackgroundRGB = backgroundRGB
+        extensionThemePrefersDark = prefersDark
+        appearance = prefersDark ? .dark : .light
+    }
+
+    func clearExtensionTheme() {
+        activeExtensionThemeID = nil
+        customAccentRGB = nil
+        customBackgroundRGB = nil
+        extensionThemePrefersDark = nil
     }
 
     private let defaults: UserDefaults
@@ -114,6 +190,10 @@ final class BrowserSettings {
     private let blockAutoplayKey = "oriel.blockAutoplay"
     private let stripTrackingKey = "oriel.stripTrackingParameters"
     private let onboardingKey = "oriel.hasCompletedOnboarding"
+    private let activeExtensionThemeKey = "oriel.activeExtensionThemeID"
+    private let customAccentRGBKey = "oriel.customAccentRGB"
+    private let customBackgroundRGBKey = "oriel.customBackgroundRGB"
+    private let extensionThemePrefersDarkKey = "oriel.extensionThemePrefersDark"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -170,8 +250,17 @@ final class BrowserSettings {
             self.stripTrackingParameters = defaults.bool(forKey: stripTrackingKey)
         }
         self.hasCompletedOnboarding = defaults.bool(forKey: onboardingKey)
+        self.activeExtensionThemeID = defaults.string(forKey: activeExtensionThemeKey)
+        self.customAccentRGB = Self.doubleArray(from: defaults, key: customAccentRGBKey)
+        self.customBackgroundRGB = Self.doubleArray(from: defaults, key: customBackgroundRGBKey)
+        if defaults.object(forKey: extensionThemePrefersDarkKey) != nil {
+            self.extensionThemePrefersDark = defaults.bool(forKey: extensionThemePrefersDarkKey)
+        } else {
+            self.extensionThemePrefersDark = nil
+        }
         // Repair Soft/Paper/Sand stored with Dark (or Midnight with Light) from older builds.
-        if let forced = backgroundTheme.forcedColorScheme {
+        // Skip when an extension theme is driving appearance.
+        if activeExtensionThemeID == nil, let forced = backgroundTheme.forcedColorScheme {
             let repaired: AppAppearance = forced == .dark ? .dark : .light
             if (forced == .light && appearance == .dark) || (forced == .dark && appearance == .light) {
                 appearance = repaired
@@ -181,5 +270,11 @@ final class BrowserSettings {
 
     private func persistSearchEngine() {
         defaults.set(searchEngine.rawValue, forKey: searchEngineKey)
+    }
+
+    private static func doubleArray(from defaults: UserDefaults, key: String) -> [Double]? {
+        guard let arr = defaults.array(forKey: key) else { return nil }
+        let doubles = arr.compactMap { ($0 as? NSNumber)?.doubleValue }
+        return doubles.count >= 3 ? Array(doubles.prefix(3)) : nil
     }
 }

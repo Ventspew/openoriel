@@ -18,11 +18,25 @@ struct StartPageView: View {
     }
 
     private var pageScheme: ColorScheme {
-        environment.settings.backgroundTheme.resolvedColorScheme(system: systemColorScheme)
+        if let prefersDark = environment.settings.extensionThemePrefersDark {
+            return prefersDark ? .dark : .light
+        }
+        return environment.settings.backgroundTheme.resolvedColorScheme(system: systemColorScheme)
     }
 
     private var accent: Color {
-        environment.settings.accentTheme.readable(on: pageScheme)
+        if environment.settings.usesExtensionTheme {
+            return environment.settings.brandColor
+        }
+        return environment.settings.accentTheme.readable(on: pageScheme)
+    }
+
+    private var activeExtensionThemeNTPImageURL: URL? {
+        guard let id = environment.settings.activeExtensionThemeID,
+              let theme = environment.extensionThemes.themes.first(where: { $0.id == id }) else {
+            return nil
+        }
+        return environment.extensionThemes.ntpImageURL(for: theme)
     }
 
     private var stats: PrivacyStats {
@@ -49,7 +63,10 @@ struct StartPageView: View {
             OrielTheme.startPageBackground(
                 accent: environment.settings.accentTheme,
                 background: environment.settings.backgroundTheme,
-                scheme: pageScheme
+                scheme: pageScheme,
+                customAccent: environment.settings.usesExtensionTheme ? environment.settings.brandColor : nil,
+                customBackground: environment.settings.customBackgroundColor,
+                ntpImageURL: activeExtensionThemeNTPImageURL
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 

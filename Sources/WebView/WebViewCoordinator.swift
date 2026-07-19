@@ -42,6 +42,8 @@ private final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
             guard let target else { return }
             if name == TrackerHitProbe.handlerName {
                 target.handleTrackerHitMessage(body)
+            } else if name == FirefoxAddonsBridge.handlerName {
+                target.handleFirefoxAddonsMessage(name: name, body: body)
             } else {
                 target.handleChromeWebStoreMessage(name: name, body: body)
             }
@@ -64,6 +66,7 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     var shouldStripTracking: () -> Bool = { true }
     var onElementHidden: ((String, String) -> Void)?
     var onInstallChromeExtension: ((String) -> Void)?
+    var onInstallFirefoxAddon: ((String) -> Void)?
     var onManageChromeExtensions: (() -> Void)?
     var installedChromeStoreIDs: [String] = []
     var youTubeAdBlockingEnabled: Bool = true
@@ -73,9 +76,12 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     private var observations: [NSKeyValueObservation] = []
     private var popupTitleObservation: NSKeyValueObservation?
     private var chromeStoreMessageHandler: WeakScriptMessageHandler?
+    private var firefoxAddonsMessageHandler: WeakScriptMessageHandler?
     private var trackerHitMessageHandler: WeakScriptMessageHandler?
     private var lastStoreInstallRequestAt: Date?
     private var lastStoreInstallID: String?
+    private var lastFirefoxInstallRequestAt: Date?
+    private var lastFirefoxInstallSlug: String?
     /// Dedupes probe hits across rapid duplicate posts (same URL within a short window).
     private var recentTrackerHitKeys: [String: Date] = [:]
 
@@ -93,6 +99,7 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         shouldStripTracking: @escaping () -> Bool = { true },
         onElementHidden: ((String, String) -> Void)? = nil,
         onInstallChromeExtension: ((String) -> Void)? = nil,
+        onInstallFirefoxAddon: ((String) -> Void)? = nil,
         onManageChromeExtensions: (() -> Void)? = nil,
         installedChromeStoreIDs: [String] = []
     ) {
@@ -109,6 +116,7 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         self.shouldStripTracking = shouldStripTracking
         self.onElementHidden = onElementHidden
         self.onInstallChromeExtension = onInstallChromeExtension
+        self.onInstallFirefoxAddon = onInstallFirefoxAddon
         self.onManageChromeExtensions = onManageChromeExtensions
         self.installedChromeStoreIDs = installedChromeStoreIDs
     }
@@ -120,6 +128,15 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         }
         let handler = WeakScriptMessageHandler(target: self)
         chromeStoreMessageHandler = handler
+        return handler
+    }
+
+    func firefoxAddonsScriptMessageHandler() -> WKScriptMessageHandler {
+        if let firefoxAddonsMessageHandler {
+            return firefoxAddonsMessageHandler
+        }
+        let handler = WeakScriptMessageHandler(target: self)
+        firefoxAddonsMessageHandler = handler
         return handler
     }
 
@@ -185,6 +202,33 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         onInstallChromeExtension?(id)
     }
 
+    func handleFirefoxAddonsMessage(name: String, body: Any) {
+        guard name == FirefoxAddonsBridge.handlerName else { return }
+        let slug: String?
+        if let body = body as? [String: Any] {
+            slug = (body["slug"] as? String) ?? (body["id"] as? String)
+        } else if let body = body as? String {
+            slug = body
+        } else {
+            slug = nil
+        }
+        requestFirefoxAddonInstall(slug)
+    }
+
+    func requestFirefoxAddonInstall(_ rawSlug: String?) {
+        guard let rawSlug else { return }
+        let slug = rawSlug.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !slug.isEmpty else { return }
+        if lastFirefoxInstallSlug == slug,
+           let lastFirefoxInstallRequestAt,
+           Date().timeIntervalSince(lastFirefoxInstallRequestAt) < 2 {
+            return
+        }
+        lastFirefoxInstallSlug = slug
+        lastFirefoxInstallRequestAt = Date()
+        onInstallFirefoxAddon?(slug)
+    }
+
     func observe(_ webView: WKWebView) {
         observations.forEach { $0.invalidate() }
         observations = [
@@ -242,13 +286,19 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             }
 
             #if os(macOS) || os(iOS)
-            if ChromeWebStoreAPI.isManageExtensionsURL(url) {
+            if ChromeWebStoreAPI.isManageExtensionsURL(url)
+                || FirefoxAddonsAPI.isManageExtensionsURL(url) {
                 onManageChromeExtensions?()
                 decisionHandler(.cancel, preferences)
                 return
             }
             if let extensionID = ChromeWebStoreAPI.extensionID(fromInstallURL: url) {
                 requestChromeExtensionInstall(extensionID)
+                decisionHandler(.cancel, preferences)
+                return
+            }
+            if let slug = FirefoxAddonsAPI.slug(fromInstallURL: url) {
+                requestFirefoxAddonInstall(slug)
                 decisionHandler(.cancel, preferences)
                 return
             }

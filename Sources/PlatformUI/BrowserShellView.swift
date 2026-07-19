@@ -37,7 +37,9 @@ struct BrowserShellView: View {
             OrielTheme.chromeWash(
                 accent: environment.settings.accentTheme,
                 background: environment.settings.backgroundTheme,
-                scheme: colorScheme
+                scheme: colorScheme,
+                customAccent: environment.settings.usesExtensionTheme ? environment.settings.brandColor : nil,
+                customBackground: environment.settings.customBackgroundColor
             )
             .ignoresSafeArea()
         }
@@ -1099,6 +1101,12 @@ struct BrowserShellView: View {
                 onInstallChromeExtension: { extensionID in
                     Task { @MainActor in
                         await environment.extensions.installFromChromeWebStore(extensionID: extensionID)
+                        environment.showExtensions = true
+                    }
+                },
+                onInstallFirefoxAddon: { slug in
+                    Task { @MainActor in
+                        await environment.extensions.installFromFirefoxAMO(slugOrID: slug)
                         environment.showExtensions = true
                     }
                 },

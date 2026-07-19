@@ -5,7 +5,7 @@ final class ThemeAndPrivacyStatsTests: XCTestCase {
     func testBackgroundThemeLocksReadableColorScheme() {
         XCTAssertEqual(BrowserBackgroundTheme.midnight.resolvedColorScheme(system: .light), .dark)
         XCTAssertEqual(BrowserBackgroundTheme.paper.resolvedColorScheme(system: .dark), .light)
-        XCTAssertEqual(BrowserBackgroundTheme.soft.resolvedColorScheme(system: .dark), .dark)
+        XCTAssertEqual(BrowserBackgroundTheme.soft.resolvedColorScheme(system: .dark), .light)
     }
 
     func testAccentAndBackgroundThemesPersist() async {

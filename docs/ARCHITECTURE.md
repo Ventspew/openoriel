@@ -13,7 +13,7 @@ Oriel is a single multiplatform app target (XcodeGen). Source folders are module
 | `History` / `Bookmarks` / `Downloads` | Local stores |
 | `Privacy` | Shields settings, per-site overrides, persisted stats (session until Fire + lifetime) |
 | `ContentBlocking` | Rule compile + YouTube skip script |
-| `Extensions` | `WKWebExtension` host, Chrome Web Store bridge, Safari Web Extension `.appex` import |
+| `Extensions` | `WKWebExtension` host, Chrome/Firefox store bridges, Safari `.appex` import, extension themes |
 | `Settings` / `Persistence` | Preferences and storage |
 | `PlatformUI` | Shared chrome (toolbars, start page, sheets) |
 

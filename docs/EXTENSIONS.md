@@ -2,50 +2,41 @@
 
 Chrome/Firefox-style WebExtensions on **macOS 15.4+** and **iOS / iPadOS 18.4+** via `WKWebExtension`.
 
-## Safari extensions
-
-Safari ships two different extension worlds. Only one is portable to Oriel.
-
-| Kind | Extension point | In Oriel? |
-|------|-----------------|-----------|
-| **Safari Web Extension** | `com.apple.Safari.web-extension` | Yes, when the `.appex` still contains a WebExtension `manifest.json` (+ resources) |
-| Legacy Safari App Extension | `com.apple.Safari.extension` | No — native Cocoa code, Safari-only |
-| Safari content blocker | `com.apple.Safari.content-blocker` | No — use Oriel Shields instead |
-
-### How import works
-
-1. Classify the `.appex` from its `Info.plist` (`NSExtensionPointIdentifier`).
-2. Locate `manifest.json` (usually `Contents/Resources/manifest.json`).
-3. Copy **only** the WebExtension resource tree into Oriel’s Extensions folder (not the native appex Mach-O).
-4. Soft-normalize Safari-only manifest quirks, then load with `WKWebExtension(resourceBaseURL:)`.
-5. If resources are missing but WebKit can still open the bundle, fall back to `WKWebExtension(appExtensionBundle:)` and re-extract.
-
-macOS: **Extensions → Scan Applications for Safari extensions** walks `/Applications` and `~/Applications` for candidate `.appex` packages. You can also pick an `.appex` or Safari Web Extension project folder via **Install from file or folder…**.
-
-iOS / iPadOS: import an `.appex` or a folder that contains `manifest.json` through the file picker. There is no Applications scan.
-
-### Limits
-
-- App Store packages that ship **only** native Safari App Extension code (no WebExtension resources) cannot be imported.
-- APIs that talk to Safari-specific native messaging hosts may not work outside Safari.
-- WebKit’s permission / API surface is not identical to Chromium.
-
-## Other install paths
+## Install sources
 
 | Source | Notes |
 |--------|--------|
-| Chrome Web Store | On chromewebstore.google.com Oriel relabels install controls to **Add to Oriel** |
-| `.zip` / `.crx` | Extensions → Install from file… |
+| Chrome Web Store | Install controls become **Add to Oriel** |
+| Firefox Add-ons (AMO) | On addons.mozilla.org, install / theme buttons become **Add to Oriel** / **Add theme to Oriel** |
+| `.zip` / `.crx` / `.xpi` | Extensions → Install from file… |
 | Unpacked folder | Directory with `manifest.json` |
+| Safari Web Extension `.appex` | Peel WebExtension resources (macOS can scan Applications) |
 
-## UI
+## Safari extensions
 
-| Path | Notes |
-|------|--------|
-| Manage | Extensions sheet (⌘⇧E on Mac) |
-| Popup | macOS: toolbar / NSPopover · iOS: sheet via `popupViewController` when the extension provides one |
-| Content scripts | Run in Oriel tabs once the extension is enabled |
+| Kind | Extension point | In Oriel? |
+|------|-----------------|-----------|
+| **Safari Web Extension** | `com.apple.Safari.web-extension` | Yes, when the `.appex` still contains `manifest.json` |
+| Legacy Safari App Extension | `com.apple.Safari.extension` | No |
+| Safari content blocker | `com.apple.Safari.content-blocker` | No — use Oriel Shields |
 
-## Limits (general)
+macOS: **Extensions → Scan Applications for Safari extensions**.
 
-WebKit’s API surface differs from Chromium. Chrome Apps are not supported. Prefer Manifest V2/V3 packages that WebKit accepts.
+## Themes (Chrome / Firefox / Safari)
+
+Packages whose `manifest.json` includes a top-level `"theme"` block are imported as **Oriel extension themes**:
+
+1. Parse `theme.colors` (Chrome RGB arrays or Firefox CSS colors) and optional `theme.images`.
+2. Store under Application Support → `Oriel/ExtensionThemes`.
+3. Apply accent + chrome / start-page background (and NTP image when present).
+4. Theme-only packages (no background / content scripts / action) skip `WKWebExtension` load.
+5. Hybrid packages install both the theme and the functional extension.
+
+Pick themes under **Extensions → Themes** or **Settings → Appearance → Extension themes**.
+
+## Limits
+
+- WebKit’s API surface differs from Chromium / Gecko.
+- Legacy native Safari App Extensions cannot leave Safari.
+- Firefox add-ons that need privileged Gecko APIs may not run fully in Oriel.
+- Theme mapping covers colors + NTP image; Chrome’s full tint / frame-image engine is not emulated.

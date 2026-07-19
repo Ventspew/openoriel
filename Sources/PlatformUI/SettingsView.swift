@@ -75,12 +75,67 @@ struct SettingsView: View {
                         environment.icloudSync.noteLocalChange()
                     }
 
+                    if !environment.extensionThemes.themes.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Extension themes")
+                                .font(.subheadline.weight(.semibold))
+                            ForEach(environment.extensionThemes.themes) { theme in
+                                Button {
+                                    environment.extensionThemes.apply(id: theme.id)
+                                    environment.icloudSync.noteLocalChange()
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [theme.accentColor, theme.backgroundColor],
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                            )
+                                            .frame(width: 44, height: 28)
+                                            .overlay {
+                                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                                    .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+                                            }
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(theme.displayName)
+                                                .foregroundStyle(.primary)
+                                            Text(theme.sourceLabel)
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer(minLength: 0)
+                                        if settings.activeExtensionThemeID == theme.id {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundStyle(settings.brandColor)
+                                        }
+                                    }
+                                    .padding(.vertical, 4)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityAddTraits(
+                                    settings.activeExtensionThemeID == theme.id ? [.isSelected] : []
+                                )
+                            }
+                            if settings.usesExtensionTheme {
+                                Button("Clear extension theme") {
+                                    environment.extensionThemes.clearActive()
+                                    environment.icloudSync.noteLocalChange()
+                                }
+                                .font(.caption.weight(.semibold))
+                            }
+                        }
+                    }
+
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Accent color")
                             .font(.subheadline.weight(.semibold))
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 8)], spacing: 8) {
                             ForEach(BrowserAccentTheme.allCases) { theme in
                                 Button {
+                                    environment.extensionThemes.clearActive()
                                     settings.accentTheme = theme
                                     environment.icloudSync.noteLocalChange()
                                 } label: {
@@ -133,6 +188,7 @@ struct SettingsView: View {
                             .font(.subheadline.weight(.semibold))
                         ForEach(BrowserBackgroundTheme.allCases) { theme in
                             Button {
+                                environment.extensionThemes.clearActive()
                                 settings.backgroundTheme = theme
                                 // Keep Appearance in sync with backgrounds that lock contrast,
                                 // and reset to System for adaptive themes (Mist/Aurora).
@@ -169,7 +225,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Appearance")
                 } footer: {
-                    Text("Accent colors tint buttons and Shields. Soft, Paper, and Sand stay light; Midnight stays dark. Mist and Aurora follow System appearance.")
+                    Text("Accent colors tint buttons and Shields. Soft, Paper, and Sand stay light; Midnight stays dark. Mist and Aurora follow System. Extension themes from Chrome, Firefox, or Safari override these until cleared.")
                         .fixedSize(horizontal: false, vertical: true)
                 }
 

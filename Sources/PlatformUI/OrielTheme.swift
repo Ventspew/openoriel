@@ -116,13 +116,20 @@ enum OrielTheme {
     static func chromeWash(
         accent: BrowserAccentTheme,
         background: BrowserBackgroundTheme,
-        scheme: ColorScheme
+        scheme: ColorScheme,
+        customAccent: Color? = nil,
+        customBackground: Color? = nil
     ) -> some View {
         let pageScheme = background.resolvedColorScheme(system: scheme)
         return ZStack {
-            baseFill(for: background, scheme: pageScheme).opacity(0.92)
+            (customBackground ?? baseFill(for: background, scheme: pageScheme)).opacity(0.92)
             Group {
-                bloom(accent: accent, background: background, scheme: pageScheme)
+                bloom(
+                    accent: accent,
+                    background: background,
+                    scheme: pageScheme,
+                    customAccent: customAccent
+                )
             }
             .opacity(0.55)
         }
@@ -132,12 +139,31 @@ enum OrielTheme {
     static func startPageBackground(
         accent: BrowserAccentTheme,
         background: BrowserBackgroundTheme,
-        scheme: ColorScheme
+        scheme: ColorScheme,
+        customAccent: Color? = nil,
+        customBackground: Color? = nil,
+        ntpImageURL: URL? = nil
     ) -> some View {
         let pageScheme = background.resolvedColorScheme(system: scheme)
         ZStack {
-            baseFill(for: background, scheme: pageScheme)
-            bloom(accent: accent, background: background, scheme: pageScheme)
+            customBackground ?? baseFill(for: background, scheme: pageScheme)
+            if let ntpImageURL {
+                AsyncImage(url: ntpImageURL) { phase in
+                    if case .success(let image) = phase {
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .opacity(0.55)
+                    }
+                }
+                .allowsHitTesting(false)
+            }
+            bloom(
+                accent: accent,
+                background: background,
+                scheme: pageScheme,
+                customAccent: customAccent
+            )
             LinearGradient(
                 colors: veilColors(scheme: pageScheme),
                 startPoint: .top,
@@ -198,10 +224,11 @@ enum OrielTheme {
     private static func bloom(
         accent: BrowserAccentTheme,
         background: BrowserBackgroundTheme,
-        scheme: ColorScheme
+        scheme: ColorScheme,
+        customAccent: Color? = nil
     ) -> some View {
-        let soft = accent.softColor
-        let strong = accent.color
+        let soft = customAccent?.opacity(0.75) ?? accent.softColor
+        let strong = customAccent ?? accent.color
         switch background {
         case .soft:
             RadialGradient(
@@ -254,6 +281,23 @@ enum OrielTheme {
             return [Color.white.opacity(0.05), Color.clear]
         }
         return [Color.black.opacity(0.025), Color.clear, Color.black.opacity(0.03)]
+    }
+
+    @ViewBuilder
+    private static func extensionThemeNTPImage(_ url: URL) -> some View {
+        #if os(macOS)
+        if let image = NSImage(contentsOf: url) {
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFill()
+        }
+        #elseif os(iOS)
+        if let image = UIImage(contentsOfFile: url.path) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+        }
+        #endif
     }
 }
 
@@ -329,10 +373,15 @@ private struct OrielThemingModifier: ViewModifier {
             .onChange(of: settings.appearance) { _, _ in syncPlatformChrome() }
             .onChange(of: settings.accentTheme) { _, _ in syncPlatformChrome() }
             .onChange(of: settings.backgroundTheme) { _, _ in syncPlatformChrome() }
+            .onChange(of: settings.activeExtensionThemeID) { _, _ in syncPlatformChrome() }
+            .onChange(of: settings.customAccentRGB) { _, _ in syncPlatformChrome() }
     }
 
-    /// Background theme locks (Soft/Paper/Midnight) beat Appearance so previews match the page.
+    /// Extension themes and background locks beat Appearance so contrast stays correct.
     private var resolvedPreferredScheme: ColorScheme? {
+        if let prefersDark = settings.extensionThemePrefersDark {
+            return prefersDark ? .dark : .light
+        }
         if let forced = settings.backgroundTheme.forcedColorScheme {
             return forced
         }
