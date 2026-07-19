@@ -291,6 +291,12 @@ struct TabOverviewView: View {
                         .foregroundStyle(Color.accentColor)
                         .accessibilityLabel("Pinned")
                 }
+                if tab.isMediaMuted {
+                    Image(systemName: "speaker.slash.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("Muted")
+                }
                 if tab.isPrivate {
                     Image(systemName: "eyeglasses")
                         .foregroundStyle(.purple)
@@ -304,6 +310,10 @@ struct TabOverviewView: View {
                     Button(tab.isPinned ? "Unpin" : "Pin") {
                         environment.tabs.togglePin(id: tab.id)
                     }
+                    Button(tab.isMediaMuted ? "Unmute" : "Mute") {
+                        tab.toggleMediaMute()
+                    }
+                    .disabled(tab.isShowingStartPage)
                     Menu("Move to Group") {
                         Button("Ungrouped") {
                             environment.tabs.assign(tabID: tab.id, toGroup: nil)

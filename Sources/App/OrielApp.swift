@@ -116,6 +116,21 @@ struct OrielApp: App {
             }
             .keyboardShortcut("p", modifiers: .command)
 
+            Button("Mute Tab") {
+                environment.activeTab?.toggleMediaMute()
+            }
+            .keyboardShortcut("m", modifiers: [.command, .shift])
+
+            Button("Screenshot…") {
+                Task { await environment.sharePageScreenshot() }
+            }
+            .keyboardShortcut("s", modifiers: [.command, .shift])
+
+            Button("Save as PDF…") {
+                Task { await environment.sharePagePDF() }
+            }
+            .keyboardShortcut("p", modifiers: [.command, .shift])
+
             Button("Request Desktop Website") {
                 environment.activeTab?.toggleDesktopSite()
             }

@@ -266,6 +266,19 @@ struct PulseCornerView: View {
             }
             .buttonStyle(.plain)
 
+            Button {
+                environment.activeTab?.toggleMediaMute()
+            } label: {
+                Text(environment.activeTab?.isMediaMuted == true ? "Unmute tab" : "Mute tab")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(steel.opacity(0.10), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(environment.activeTab?.isShowingStartPage != false)
+
             #if os(macOS)
             if let url = environment.activeTab?.navigation.url,
                !URLParser.isStartPage(url) {
