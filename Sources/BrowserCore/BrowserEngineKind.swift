@@ -142,6 +142,11 @@ enum RenderingEnginePolicy {
         #if os(iOS)
         return .webkit
         #else
+        // Google Search must stay on WebKit + Safari UA — Chrome spoof → “are you a robot?”.
+        if UserAgentPolicy.isGoogleSearchHost(host) {
+            return .webkit
+        }
+
         if let tabOverride {
             let locked = tabOverride == .smart ? bestEngine(forHost: host, policy: policy) : resolved(tabOverride)
             return locked

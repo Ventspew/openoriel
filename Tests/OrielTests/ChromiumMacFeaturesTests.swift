@@ -13,6 +13,38 @@ final class ChromiumMacFeaturesTests: XCTestCase {
         XCTAssertTrue(ChromiumAutoSiteList.prefersWebKitIdentity("appleid.apple.com"))
         XCTAssertTrue(ChromiumAutoSiteList.prefersWebKitIdentity("accounts.google.com"))
         XCTAssertFalse(ChromiumAutoSiteList.prefersWebKitIdentity("meet.google.com"))
+        // Google Search must stay WebKit (CAPTCHA); Meet may use Compatible.
+        XCTAssertTrue(ChromiumAutoSiteList.prefersWebKitIdentity("www.google.com"))
+        XCTAssertTrue(ChromiumAutoSiteList.prefersWebKitIdentity("google.nl"))
+        XCTAssertTrue(ChromiumAutoSiteList.prefersWebKitIdentity("images.google.com"))
+    }
+
+    func testGoogleSearchAlwaysResolvesToWebKit() {
+        let policy = ChromiumSitePolicy()
+        #if os(macOS)
+        for host in ["www.google.com", "google.nl", "google.co.uk", "images.google.com"] {
+            XCTAssertEqual(
+                RenderingEnginePolicy.resolve(global: .smart, tabOverride: nil, host: host, policy: policy),
+                .webkit,
+                host
+            )
+            XCTAssertEqual(
+                RenderingEnginePolicy.resolve(
+                    global: .chromiumCompatibility,
+                    tabOverride: nil,
+                    host: host,
+                    policy: policy
+                ),
+                .webkit,
+                host
+            )
+        }
+        // Product hosts are not forced off Compatible by this rule.
+        XCTAssertEqual(
+            RenderingEnginePolicy.resolve(global: .smart, tabOverride: nil, host: "meet.google.com", policy: policy),
+            .chromiumCompatibility
+        )
+        #endif
     }
 
     func testSmartPicksChromiumForMeetAndWebKitForApple() {

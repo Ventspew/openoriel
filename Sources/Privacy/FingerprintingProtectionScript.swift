@@ -5,6 +5,16 @@ enum FingerprintingProtectionScript {
     static let source = #"""
     (function() {
       if (window.__orielFPProtect) return;
+      // Google Search / SERP — canvas noise triggers “unusual traffic” / robot checks.
+      try {
+        var h = (location.hostname || '').toLowerCase().replace(/^www\./, '');
+        if (/^google\.(com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})$/.test(h) ||
+            h === 'images.google.com' || h === 'news.google.com' ||
+            h === 'scholar.google.com' || h === 'books.google.com' ||
+            h === 'video.google.com' || h === 'encrypted.google.com') {
+          return;
+        }
+      } catch (e) {}
       window.__orielFPProtect = true;
 
       function noise(value, salt) {

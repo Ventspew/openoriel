@@ -440,6 +440,10 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
               RenderingEnginePolicy.usesChromeDesktopUserAgent(tab.preferredEngine) else {
             return
         }
+        // Never inject Chrome Client Hints on Google Search — bot checks.
+        if UserAgentPolicy.isGoogleSearchHost(webView.url?.host ?? tab.navigation.url?.host) {
+            return
+        }
         webView.evaluateJavaScript(ChromiumIdentityScript.source, in: nil, in: .page) { _ in }
     }
     #endif

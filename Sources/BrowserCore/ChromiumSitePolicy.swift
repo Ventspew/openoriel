@@ -104,7 +104,11 @@ enum ChromiumAutoSiteList {
     }
 
     static func prefersWebKitIdentity(_ host: String?) -> Bool {
-        matches(host, in: webkitPreferredHosts)
+        // Google Search CAPTCHA-safe: always Safari/WebKit (not all *.google.com).
+        if UserAgentPolicy.isGoogleSearchHost(host) {
+            return true
+        }
+        return matches(host, in: webkitPreferredHosts)
     }
 
     static func prefersRealBlink(_ host: String?) -> Bool {

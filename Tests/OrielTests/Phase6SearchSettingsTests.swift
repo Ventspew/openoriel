@@ -19,10 +19,28 @@ final class Phase6SearchSettingsTests: XCTestCase {
         XCTAssertEqual(ddg.host, "duckduckgo.com")
     }
 
+    @MainActor
     func testGoogleHostsUseSafariUserAgent() {
         let google = URL(string: "https://www.google.com/search?q=test")!
         // Spoofing Chrome on WebKit triggers bot checks — stay on Safari UA.
         XCTAssertNil(UserAgentPolicy.customUserAgent(for: google, requestsDesktopSite: false))
+        XCTAssertTrue(UserAgentPolicy.isGoogleSearchHost("www.google.com"))
+        XCTAssertTrue(UserAgentPolicy.isGoogleSearchHost("google.nl"))
+        XCTAssertTrue(UserAgentPolicy.isGoogleSearchHost("www.google.co.uk"))
+        XCTAssertFalse(UserAgentPolicy.isGoogleSearchHost("mail.google.com"))
+        XCTAssertFalse(UserAgentPolicy.isGoogleSearchHost("meet.google.com"))
+        XCTAssertFalse(UserAgentPolicy.isGoogleSearchHost("accounts.google.com"))
+
+        // Even Compatible mode must not Chrome-spoof Google Search.
+        #if os(macOS)
+        XCTAssertNil(
+            UserAgentPolicy.customUserAgent(
+                for: google,
+                requestsDesktopSite: false,
+                preferredEngine: .chromiumCompatibility
+            )
+        )
+        #endif
 
         let example = URL(string: "https://example.com")!
         XCTAssertNil(UserAgentPolicy.customUserAgent(for: example, requestsDesktopSite: false))
@@ -31,6 +49,7 @@ final class Phase6SearchSettingsTests: XCTestCase {
         XCTAssertEqual(desktop, UserAgentPolicy.safariDesktop)
     }
 
+    @MainActor
     func testStoreWebsitesDoNotForceDesktopUserAgent() {
         let store = URL(string: "https://chromewebstore.google.com/detail/foo/cjpalhdlnbpafiamejdnhcphjbkeiagm")!
         XCTAssertTrue(UserAgentPolicy.isChromeWebStoreURL(store))
@@ -53,6 +72,7 @@ final class Phase6SearchSettingsTests: XCTestCase {
         XCTAssertNil(UserAgentPolicy.customUserAgent(for: example, requestsDesktopSite: false))
     }
 
+    @MainActor
     func testOnlyExplicitDesktopToggleChangesUA() {
         let example = URL(string: "https://example.com")!
         XCTAssertNil(UserAgentPolicy.customUserAgent(for: example, requestsDesktopSite: false))

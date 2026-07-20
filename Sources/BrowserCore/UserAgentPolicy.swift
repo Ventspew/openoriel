@@ -17,18 +17,50 @@ enum UserAgentPolicy {
 
     static let safariDesktop = BrowserConstants.desktopUserAgent
 
-    static func isGoogleHost(_ host: String?) -> Bool {
+    /// Google Search / SERP hosts only — not Gmail, Docs, Meet, Accounts, etc.
+    /// Spoofing Chrome on these triggers “unusual traffic” / robot checks.
+    static func isGoogleSearchHost(_ host: String?) -> Bool {
         guard var host = host?.lowercased(), !host.isEmpty else { return false }
         if host.hasPrefix("www.") {
             host = String(host.dropFirst(4))
         }
-        if host == "google.com" || host.hasSuffix(".google.com") {
+        // google.com / google.nl / google.co.uk / google.com.au
+        if Self.googleSearchApexPattern.firstMatch(
+            in: host,
+            range: NSRange(host.startIndex..., in: host)
+        ) != nil {
             return true
         }
-        if host.hasPrefix("google.") {
+        // Search-adjacent properties that share the same bot checks
+        switch host {
+        case "images.google.com",
+             "news.google.com",
+             "scholar.google.com",
+             "books.google.com",
+             "video.google.com",
+             "encrypted.google.com":
             return true
+        default:
+            return false
         }
-        return false
+    }
+
+    /// Apex Google Search domains only (not mail.google.com / docs.google.com).
+    private static let googleSearchApexPattern: NSRegularExpression = {
+        // google.com | google.nl | google.co.uk | google.com.au
+        try! NSRegularExpression(
+            pattern: #"^google\.(com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})$"#
+        )
+    }()
+
+    /// Broader Google property check (legacy). Prefer ``isGoogleSearchHost`` for CAPTCHA policy.
+    static func isGoogleHost(_ host: String?) -> Bool {
+        if isGoogleSearchHost(host) { return true }
+        guard var host = host?.lowercased(), !host.isEmpty else { return false }
+        if host.hasPrefix("www.") {
+            host = String(host.dropFirst(4))
+        }
+        return host == "google.com" || host.hasSuffix(".google.com")
     }
 
     /// Host-only helper (tests / simple checks). Prefer ``isChromeWebStoreURL(_:)`` for policy.
@@ -82,6 +114,10 @@ enum UserAgentPolicy {
         requestsDesktopSite: Bool,
         preferredEngine: BrowserEngineKind = .webkit
     ) -> String? {
+        // Google Search must never get a Chrome UA — WebKit + Chrome identity → robot checks.
+        if isGoogleSearchHost(url?.host) {
+            return requestsDesktopSite ? safariDesktop : nil
+        }
         if RenderingEnginePolicy.usesChromeDesktopUserAgent(preferredEngine) {
             return chromeDesktop
         }
